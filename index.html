@@ -15,9 +15,7 @@
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #1e293b; }
     ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
-    .tab-active { border-bottom: 2px solid #6366f1; color: #a5b4fc; }
-    .tab-inactive { border-bottom: 2px solid transparent; color: #94a3b8; }
-    .tab-inactive:hover { color: #cbd5e1; }
+
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     .fade-in { animation: fadeIn 0.3s ease-out; }
   </style>
@@ -39,8 +37,8 @@
   <script type="text/babel">
   const { useState, useMemo } = React;
   const {
-    BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-    Legend, ResponsiveContainer, ComposedChart, Cell, PieChart, Pie
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+    ResponsiveContainer, Cell
   } = Recharts;
 
   const DATA = window.DATA;
@@ -55,71 +53,6 @@
   const formatR$ = (v) => `R$ ${Number(v).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
   const formatK = (v) => v >= 1000 ? `R$ ${(v/1000).toFixed(0)}k` : formatR$(v);
   const formatM = (v) => `R$ ${(v/1000000).toFixed(2)}M`;
-
-  // ============================================================================
-  // COMPUTED DATA
-  // ============================================================================
-  function computeData() {
-    const stores = DATA.stores;
-    const storeNames = Object.keys(stores).filter(s => s !== 'CD Sancashop').sort();
-    const months = DATA.monthlyTotals.map(m => m.mes).sort((a,b) => a - b);
-    const maxMonth = Math.max(...months);
-
-    // Per-store aggregates
-    const storeAggregates = {};
-    storeNames.forEach(name => {
-      const yearData = stores[name]?.['2026'] || {};
-      let fatYTD = 0, vendasYTD = 0;
-      const monthlyData = {};
-      Object.entries(yearData).forEach(([m, d]) => {
-        fatYTD += d.valor;
-        vendasYTD += d.vendas;
-        monthlyData[parseInt(m)] = d;
-      });
-      storeAggregates[name] = {
-        fatYTD, vendasYTD,
-        ticketMedio: vendasYTD > 0 ? fatYTD / vendasYTD : 0,
-        monthlyData,
-        fatMesAtual: monthlyData[maxMonth]?.valor || 0,
-        vendasMesAtual: monthlyData[maxMonth]?.vendas || 0,
-      };
-    });
-
-    // Overall KPIs
-    const fatYTD = Object.values(storeAggregates).reduce((s, a) => s + a.fatYTD, 0);
-    const vendasYTD = Object.values(storeAggregates).reduce((s, a) => s + a.vendasYTD, 0);
-    const ticketMedio = vendasYTD > 0 ? fatYTD / vendasYTD : 0;
-    const lojasAtivas = storeNames.length;
-    const fatMesAtual = DATA.monthlyTotals.find(m => m.mes === maxMonth)?.faturamento || 0;
-
-    // Ranking by YTD
-    const rankingYTD = storeNames
-      .map(name => ({ name, ...storeAggregates[name] }))
-      .sort((a, b) => b.fatYTD - a.fatYTD)
-      .map((s, i) => ({ ...s, ranking: i + 1 }));
-
-    // Ranking by current month
-    const rankingMes = storeNames
-      .map(name => ({ name, ...storeAggregates[name] }))
-      .sort((a, b) => b.fatMesAtual - a.fatMesAtual)
-      .map((s, i) => ({ ...s, rankingMes: i + 1 }));
-
-    // Monthly chart data
-    const monthlyChart = [];
-    for (let m = 1; m <= 12; m++) {
-      const entry = DATA.monthlyTotals.find(t => t.mes === m);
-      if (entry) {
-        monthlyChart.push({
-          mes: MESES[m-1],
-          faturamento: entry.faturamento,
-          vendas: entry.vendas,
-          ticket: entry.ticket,
-        });
-      }
-    }
-
-    return { storeNames, storeAggregates, fatYTD, vendasYTD, ticketMedio, lojasAtivas, fatMesAtual, maxMonth, rankingYTD, rankingMes, monthlyChart };
-  }
 
   // ============================================================================
   // COMPONENTS
@@ -163,283 +96,44 @@
   };
 
   // ============================================================================
-  // TAB 1 — VISÃO MENSAL
+  // MAIN APP
   // ============================================================================
-  const VisaoMensal = ({ data }) => {
-    const [sortCol, setSortCol] = useState('fatYTD');
-    const [sortDir, setSortDir] = useState('desc');
-
-    const handleSort = (col) => {
-      if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-      else { setSortCol(col); setSortDir('desc'); }
-    };
-
-    const sortedStores = useMemo(() => {
-      return data.storeNames.map(name => {
-        const agg = data.storeAggregates[name];
-        return { name, ...agg };
-      }).sort((a, b) => {
-        let va, vb;
-        if (sortCol === 'name') { va = a.name; vb = b.name; }
-        else if (sortCol === 'fatYTD') { va = a.fatYTD; vb = b.fatYTD; }
-        else if (sortCol === 'vendasYTD') { va = a.vendasYTD; vb = b.vendasYTD; }
-        else if (sortCol === 'ticketMedio') { va = a.ticketMedio; vb = b.ticketMedio; }
-        else if (sortCol === 'fatMesAtual') { va = a.fatMesAtual; vb = b.fatMesAtual; }
-        else { va = a[sortCol]; vb = b[sortCol]; }
-        if (typeof va === 'string') return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
-        return sortDir === 'asc' ? (va||0) - (vb||0) : (vb||0) - (va||0);
-      });
-    }, [data, sortCol, sortDir]);
-
-    const SortHeader = ({ col, label }) => (
-      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 cursor-pointer hover:text-white select-none whitespace-nowrap" onClick={() => handleSort(col)}>
-        {label} {sortCol === col ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-      </th>
-    );
-
-    return (
-      <div className="space-y-6 fade-in">
-        {/* Monthly bar chart */}
-        <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">Faturamento Mensal 2026</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <ComposedChart data={data.monthlyChart}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-              <XAxis dataKey="mes" stroke="#94a3b8" />
-              <YAxis yAxisId="left" stroke="#94a3b8" tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
-              <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" domain={[0, 'auto']} tickFormatter={v => `R$${v.toFixed(0)}`} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar yAxisId="left" dataKey="faturamento" fill={CORES.primary} radius={[4, 4, 0, 0]} name="Faturamento" />
-              <Line yAxisId="right" type="monotone" dataKey="ticket" stroke={CORES.tertiary} strokeWidth={2} name="Ticket Médio" dot={{ fill: CORES.tertiary }} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </Card>
-
-        {/* Store table */}
-        <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">Detalhamento por Loja</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-700">
-                  <SortHeader col="name" label="Loja" />
-                  <SortHeader col="fatMesAtual" label={`Fat. ${MESES[data.maxMonth-1]}`} />
-                  <SortHeader col="fatYTD" label="Fat. YTD" />
-                  <SortHeader col="vendasYTD" label="Vendas YTD" />
-                  <SortHeader col="ticketMedio" label="Ticket Médio" />
-                </tr>
-              </thead>
-              <tbody>
-                {sortedStores.map((s, i) => (
-                  <tr key={s.name} className={`border-b border-slate-700/50 ${i % 2 === 0 ? 'bg-slate-800/30' : ''}`}>
-                    <td className="px-3 py-2 text-white font-medium whitespace-nowrap">{s.name}</td>
-                    <td className="px-3 py-2 text-slate-300 whitespace-nowrap">{formatR$(s.fatMesAtual)}</td>
-                    <td className="px-3 py-2 text-slate-300 whitespace-nowrap">{formatR$(s.fatYTD)}</td>
-                    <td className="px-3 py-2 text-slate-300 whitespace-nowrap">{s.vendasYTD.toLocaleString('pt-BR')}</td>
-                    <td className="px-3 py-2 text-slate-300 whitespace-nowrap">R$ {s.ticketMedio.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </div>
-    );
-  };
-
-  // ============================================================================
-  // TAB 2 — RANKING
-  // ============================================================================
-  const Ranking = ({ data }) => {
-    const [view, setView] = useState('ytd');
-    const ranking = view === 'ytd' ? data.rankingYTD : data.rankingMes.sort((a,b) => b.fatMesAtual - a.fatMesAtual);
-    const maxFat = view === 'ytd' ? Math.max(...ranking.map(r => r.fatYTD)) : Math.max(...ranking.map(r => r.fatMesAtual));
-
-    return (
-      <div className="space-y-6 fade-in">
-        <div className="flex gap-3">
-          <button onClick={() => setView('ytd')} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${view === 'ytd' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'bg-slate-700/50 text-slate-400 border border-slate-600'}`}>
-            Ranking YTD
-          </button>
-          <button onClick={() => setView('mes')} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${view === 'mes' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'bg-slate-700/50 text-slate-400 border border-slate-600'}`}>
-            Ranking {MESES[data.maxMonth-1]}
-          </button>
-        </div>
-
-        <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">
-            {view === 'ytd' ? 'Ranking por Faturamento YTD' : `Ranking — ${MESES[data.maxMonth-1]} 2026`}
-          </h3>
-          <div className="space-y-2">
-            {ranking.map((s, i) => {
-              const fat = view === 'ytd' ? s.fatYTD : s.fatMesAtual;
-              const pct = maxFat > 0 ? (fat / maxFat) * 100 : 0;
-              const isTop5 = i < 5;
-              const isBottom5 = i >= ranking.length - 5;
-              let badge = '';
-              if (isTop5) badge = '🏆';
-              if (isBottom5) badge = '⚠️';
-
-              return (
-                <div key={s.name} className={`flex items-center gap-3 p-2 rounded-lg ${isTop5 ? 'bg-green-500/5 border border-green-500/10' : isBottom5 ? 'bg-red-500/5 border border-red-500/10' : 'bg-slate-800/30'}`}>
-                  <span className={`text-sm font-bold w-8 text-center ${isTop5 ? 'text-green-400' : isBottom5 ? 'text-red-400' : 'text-slate-500'}`}>
-                    #{i+1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-white text-sm font-medium truncate">{s.name}</span>
-                      {badge && <span className="text-xs">{badge}</span>}
-                    </div>
-                    <div className="w-full bg-slate-700/50 rounded-full h-1.5 mt-1">
-                      <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: isTop5 ? '#22c55e' : isBottom5 ? '#ef4444' : '#6366f1' }} />
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-white text-sm font-medium">{formatR$(fat)}</p>
-                    <p className="text-slate-500 text-xs">{(view === 'ytd' ? s.vendasYTD : s.vendasMesAtual || 0).toLocaleString('pt-BR')} vendas</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      </div>
-    );
-  };
-
-  // ============================================================================
-  // TAB 3 — POR LOJA
-  // ============================================================================
-  const PorLoja = ({ data }) => {
-    const [selectedStore, setSelectedStore] = useState(data.storeNames[0]);
-    const agg = data.storeAggregates[selectedStore];
-    const ranking = data.rankingYTD.find(r => r.name === selectedStore);
-
-    const chartData = [];
-    for (let m = 1; m <= 12; m++) {
-      const d = agg?.monthlyData?.[m];
-      if (d) {
-        chartData.push({ mes: MESES[m-1], faturamento: d.valor, vendas: d.vendas, ticket: d.ticket });
-      }
-    }
-
-    return (
-      <div className="space-y-6 fade-in">
-        <div>
-          <label className="text-slate-400 text-sm mb-2 block">Selecione a Loja</label>
-          <select value={selectedStore} onChange={e => setSelectedStore(e.target.value)}
-            className="bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white text-sm w-full max-w-md">
-            {data.storeNames.map(name => <option key={name} value={name}>{name}</option>)}
-          </select>
-        </div>
-
-        {/* Store KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <MetricCard title="Faturamento YTD" value={formatR$(agg?.fatYTD || 0)} icon="💰" color="indigo" />
-          <MetricCard title="Vendas YTD" value={(agg?.vendasYTD || 0).toLocaleString('pt-BR')} icon="🛒" color="green" />
-          <MetricCard title="Ticket Médio" value={`R$ ${(agg?.ticketMedio || 0).toFixed(2)}`} icon="🎫" color="amber" />
-          <MetricCard title="Ranking YTD" value={`#${ranking?.ranking || '-'}`} subtitle={`de ${data.storeNames.length} lojas`} icon="🏆" color="purple" />
-        </div>
-
-        {/* Monthly evolution chart */}
-        <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">Evolução Mensal — {selectedStore}</h3>
-          {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <ComposedChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="mes" stroke="#94a3b8" />
-                <YAxis yAxisId="left" stroke="#94a3b8" tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
-                <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" tickFormatter={v => `R$${v.toFixed(0)}`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Bar yAxisId="left" dataKey="faturamento" fill={CORES.primary} radius={[4, 4, 0, 0]} name="Faturamento" />
-                <Line yAxisId="right" type="monotone" dataKey="ticket" stroke={CORES.tertiary} strokeWidth={2} name="Ticket Médio" dot={{ fill: CORES.tertiary }} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-slate-500 text-center py-8">Sem dados para esta loja</p>
-          )}
-        </Card>
-
-        {/* Monthly detail table */}
-        <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">Dados Mensais</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-400">Mês</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-slate-400">Faturamento</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-slate-400">Vendas</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-slate-400">Ticket</th>
-                </tr>
-              </thead>
-              <tbody>
-                {chartData.map((d, i) => (
-                  <tr key={d.mes} className={`border-b border-slate-700/50 ${i % 2 === 0 ? 'bg-slate-800/30' : ''}`}>
-                    <td className="px-3 py-2 text-white">{d.mes}</td>
-                    <td className="px-3 py-2 text-slate-300 text-right">{formatR$(d.faturamento)}</td>
-                    <td className="px-3 py-2 text-slate-300 text-right">{d.vendas.toLocaleString('pt-BR')}</td>
-                    <td className="px-3 py-2 text-slate-300 text-right">R$ {d.ticket.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </div>
-    );
-  };
-
-  // ============================================================================
-  // TAB 4 — COMPARATIVO YoY
-  // ============================================================================
-  const ComparativoYoY = ({ data }) => {
+  const App = () => {
     const [sortCol, setSortCol] = useState('fat2026');
     const [sortDir, setSortDir] = useState('desc');
-    const [selectedStore, setSelectedStore] = useState('');
+    const [chartStore, setChartStore] = useState('');
 
     const YEAR_COLORS = { 2023: '#64748b', 2024: '#3b82f6', 2025: '#8b5cf6', 2026: '#22c55e' };
 
     const computed = useMemo(() => {
-      // Include ALL months with data, including partial current month (projected)
-      const lastUpdate = DATA.lastUpdate; // "2026-03-28"
+      const lastUpdate = DATA.lastUpdate;
       const lastUpdateDate = new Date(lastUpdate + 'T12:00:00');
       const lastUpdateMonth = lastUpdateDate.getMonth() + 1;
       const lastUpdateDay = lastUpdateDate.getDate();
       const months2026 = Object.keys(DATA.stores[Object.keys(DATA.stores)[0]]?.['2026'] || {}).map(Number);
       const maxMonth2026 = Math.max(...months2026);
 
-      // Days in each month of 2026
       const DAYS_IN_MONTH = { 1: 31, 2: 28, 3: 31, 4: 30, 5: 31, 6: 30, 7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31 };
 
-      // Include ALL months up to maxMonth (including partial)
       const monthRange = [];
       for (let m = 1; m <= maxMonth2026; m++) monthRange.push(m);
 
-      // Determine which month is partial and projection factor
       const partialMonth = (lastUpdateMonth === maxMonth2026) ? maxMonth2026 : null;
       const daysElapsed = partialMonth ? lastUpdateDay : null;
       const daysInPartial = partialMonth ? DAYS_IN_MONTH[partialMonth] : null;
-      // Projection factor: linear extrapolation to full month
       const projectionFactor = partialMonth ? (daysInPartial / daysElapsed) : 1;
 
       const periodLabel = monthRange.length === 1 ? MESES[monthRange[0]-1] : MESES[monthRange[0]-1] + '-' + MESES[monthRange[monthRange.length-1]-1];
       const hasProjection = partialMonth !== null;
 
-      // Get active 2026 stores (exclude CD)
       const stores2026 = Object.keys(DATA.stores).filter(s => s !== 'CD Sancashop');
 
-      // For each 2026 store, compute fat/vendas including projection for partial month
       const storeRows = stores2026.map(name => {
         const d2026 = DATA.stores[name]?.['2026'] || {};
         let fat2026 = 0, vendas2026 = 0;
         monthRange.forEach(m => {
           if (d2026[m]) {
             if (m === partialMonth) {
-              // Project partial month linearly
               fat2026 += d2026[m].valor * projectionFactor;
               vendas2026 += Math.round(d2026[m].vendas * projectionFactor);
             } else {
@@ -450,7 +144,6 @@
         });
         const ticket2026 = vendas2026 > 0 ? fat2026 / vendas2026 : 0;
 
-        // Historical years — use full months (no projection needed, they're complete)
         const yearData = {};
         [2023, 2024, 2025].forEach(year => {
           const hStore = HISTORICAL[name];
@@ -458,7 +151,6 @@
           const hYear = hStore[String(year)];
           if (!hYear || Object.keys(hYear).length === 0) { yearData[year] = null; return; }
 
-          // Check store has data for ALL months in range
           let fat = 0, vendas = 0, hasAll = true;
           monthRange.forEach(m => {
             const md = hYear[String(m)];
@@ -492,13 +184,11 @@
         };
       });
 
-      // KPIs: compare 2026 vs 2025 on same-store basis (stores in both)
       const comparableStores = storeRows.filter(s => s.fat2025 !== null && s.fat2026 > 0);
       const totalFat2026 = comparableStores.reduce((s, r) => s + r.fat2026, 0);
       const totalFat2025 = comparableStores.reduce((s, r) => s + r.fat2025, 0);
       const varTotal = totalFat2025 > 0 ? ((totalFat2026 / totalFat2025) - 1) * 100 : 0;
 
-      // Consolidated chart: stores that exist in ALL 4 years
       const allYearsStores = storeRows.filter(s => s.existsIn[2023] && s.existsIn[2024] && s.existsIn[2025] && s.fat2026 > 0);
       const consolidatedChart = [2023, 2024, 2025, 2026].map(year => {
         const total = allYearsStores.reduce((sum, s) => {
@@ -508,8 +198,8 @@
         return { ano: String(year), faturamento: total };
       });
 
-      // Per-store evolution data
-      const storeEvolution = (storeName) => {
+      // Per-store chart data for the dropdown filter
+      const storeChartData = (storeName) => {
         const row = storeRows.find(s => s.name === storeName);
         if (!row) return [];
         const result = [];
@@ -520,12 +210,21 @@
         return result;
       };
 
+      // Sorted store names for dropdown
+      const storeNames2026 = stores2026.slice().sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+      // Fat YTD for header
+      const fatYTD = Object.keys(DATA.stores).filter(s => s !== 'CD Sancashop').reduce((sum, name) => {
+        const yearData = DATA.stores[name]?.['2026'] || {};
+        return sum + Object.values(yearData).reduce((s, d) => s + d.valor, 0);
+      }, 0);
+
       return {
         storeRows, comparableStores, totalFat2026, totalFat2025, varTotal,
-        consolidatedChart, allYearsStores, storeEvolution,
+        consolidatedChart, allYearsStores, storeChartData, storeNames2026, fatYTD,
         periodLabel, monthRange, hasProjection, partialMonth, daysElapsed, daysInPartial
       };
-    }, [data]);
+    }, []);
 
     const handleSort = (col) => {
       if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -552,158 +251,16 @@
 
     const { periodLabel, hasProjection, partialMonth, daysElapsed, daysInPartial } = computed;
 
-    return (
-      <div className="space-y-6 fade-in">
-        {/* Projection banner */}
-        {hasProjection && (
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 flex items-center gap-3">
-            <span className="text-amber-400 text-lg">⚠️</span>
-            <p className="text-amber-300 text-sm">
-              <strong>{MESES[partialMonth-1]} 2026 projetado:</strong> dados reais de {daysElapsed} dias, projetado linearmente para {daysInPartial} dias.
-              Valores de 2026 incluem projeção para o mês corrente.
-            </p>
-          </div>
-        )}
+    // Chart data based on store filter
+    const chartData = useMemo(() => {
+      if (!chartStore) return computed.consolidatedChart;
+      return computed.storeChartData(chartStore);
+    }, [chartStore, computed]);
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-          <MetricCard
-            title={`Fat. ${periodLabel} 2026${hasProjection ? '*' : ''}`}
-            value={formatK(computed.totalFat2026)}
-            icon="📊"
-            color="green"
-          />
-          <MetricCard
-            title={`Fat. ${periodLabel} 2025`}
-            value={formatK(computed.totalFat2025)}
-            subtitle="(mesmas lojas)"
-            icon="📊"
-            color="purple"
-          />
-          <MetricCard
-            title="Variação YoY"
-            value={`${computed.varTotal >= 0 ? '+' : ''}${computed.varTotal.toFixed(1)}%`}
-            icon={computed.varTotal >= 0 ? "📈" : "📉"}
-            color={computed.varTotal >= 0 ? "green" : "amber"}
-          />
-          <MetricCard
-            title="Lojas comparáveis"
-            value={computed.comparableStores.length}
-            subtitle={`de ${computed.storeRows.length} ativas`}
-            icon="🏬"
-            color="blue"
-          />
-        </div>
-
-        {/* Consolidated bar chart */}
-        <Card>
-          <h3 className="text-lg font-semibold text-white mb-1">Faturamento {periodLabel} por Ano</h3>
-          <p className="text-slate-400 text-xs mb-4">Apenas lojas presentes em todos os 4 anos ({computed.allYearsStores.length} lojas)</p>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={computed.consolidatedChart}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-              <XAxis dataKey="ano" stroke="#94a3b8" />
-              <YAxis stroke="#94a3b8" tickFormatter={v => `R${(v/1000).toFixed(0)}k`} />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="faturamento" name="Faturamento" radius={[4, 4, 0, 0]}>
-                {computed.consolidatedChart.map((entry, i) => (
-                  <Cell key={i} fill={YEAR_COLORS[parseInt(entry.ano)]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-
-        {/* Store comparison table */}
-        <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">Comparativo por Loja — {periodLabel}</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-700">
-                  <SortHeader col="name" label="Loja" />
-                  <SortHeader col="fat2023" label={`Fat ${periodLabel} 23`} align="right" />
-                  <SortHeader col="fat2024" label={`Fat ${periodLabel} 24`} align="right" />
-                  <SortHeader col="fat2025" label={`Fat ${periodLabel} 25`} align="right" />
-                  <SortHeader col="fat2026" label={`Fat ${periodLabel} 26${hasProjection ? '*' : ''}`} align="right" />
-                  <SortHeader col="varYoY" label="Var Fat 25→26" align="right" />
-                  <SortHeader col="ticket2026" label="Ticket 26" align="right" />
-                  <SortHeader col="varTicketYoY" label="Var 25→26" align="right" />
-                  <SortHeader col="vendas2026" label="Vendas 26" align="right" />
-                  <SortHeader col="varVendasYoY" label="Var 25→26" align="right" />
-                </tr>
-              </thead>
-              <tbody>
-                {sortedStores.map((s, i) => (
-                  <tr key={s.name} className={`border-b border-slate-700/50 ${i % 2 === 0 ? 'bg-slate-800/30' : ''}`}>
-                    <td className="px-3 py-2 text-white font-medium whitespace-nowrap">{s.name}</td>
-                    <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.fat2023 !== null ? formatR$(s.fat2023) : <span className="text-slate-600">—</span>}</td>
-                    <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.fat2024 !== null ? formatR$(s.fat2024) : <span className="text-slate-600">—</span>}</td>
-                    <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.fat2025 !== null ? formatR$(s.fat2025) : <span className="text-slate-600">—</span>}</td>
-                    <td className="px-3 py-2 text-white font-medium text-right whitespace-nowrap">{formatR$(s.fat2026)}</td>
-                    <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${s.varYoY === null ? 'text-slate-600' : s.varYoY >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {s.varYoY !== null ? `${s.varYoY >= 0 ? '+' : ''}${s.varYoY.toFixed(1)}%` : '—'}
-                    </td>
-                    <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">R$ {s.ticket2026.toFixed(2)}</td>
-                    <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${s.varTicketYoY === null ? 'text-slate-600' : s.varTicketYoY >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {s.varTicketYoY !== null ? `${s.varTicketYoY >= 0 ? '+' : ''}${s.varTicketYoY.toFixed(1)}%` : '—'}
-                    </td>
-                    <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.vendas2026.toLocaleString('pt-BR')}</td>
-                    <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${s.varVendasYoY === null ? 'text-slate-600' : s.varVendasYoY >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {s.varVendasYoY !== null ? `${s.varVendasYoY >= 0 ? '+' : ''}${s.varVendasYoY.toFixed(1)}%` : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        {/* Per-store evolution */}
-        <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">Evolução por Loja — {periodLabel}</h3>
-          <div className="mb-4">
-            <select value={selectedStore} onChange={e => setSelectedStore(e.target.value)}
-              className="bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white text-sm w-full max-w-md">
-              <option value="">Selecione uma loja...</option>
-              {data.storeNames.map(name => <option key={name} value={name}>{name}</option>)}
-            </select>
-          </div>
-          {selectedStore ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={computed.storeEvolution(selectedStore)}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="ano" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" tickFormatter={v => `R${(v/1000).toFixed(0)}k`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="faturamento" name="Faturamento" radius={[4, 4, 0, 0]}>
-                  {computed.storeEvolution(selectedStore).map((entry, i) => (
-                    <Cell key={i} fill={YEAR_COLORS[parseInt(entry.ano)]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-slate-500 text-center py-8">Selecione uma loja para ver a evolução</p>
-          )}
-        </Card>
-      </div>
-    );
-  };
-
-  // ============================================================================
-  // MAIN APP
-  // ============================================================================
-  const App = () => {
-    const [activeTab, setActiveTab] = useState('mensal');
-    const data = useMemo(() => computeData(), []);
-
-    const tabs = [
-      { id: 'mensal', label: 'Visão Mensal' },
-      { id: 'ranking', label: 'Ranking' },
-      { id: 'loja', label: 'Por Loja' },
-      { id: 'comparativo', label: 'Comparativo YoY' },
-    ];
+    const chartSubtitle = useMemo(() => {
+      if (!chartStore) return `Todas as lojas presentes nos 4 anos (${computed.allYearsStores.length} lojas)`;
+      return chartStore;
+    }, [chartStore, computed]);
 
     return (
       <div className="min-h-screen bg-slate-900 text-white">
@@ -716,7 +273,7 @@
                 <p className="text-slate-400 text-xs sm:text-sm">Dashboard Operacional • Atualizado: {DATA.lastUpdate}</p>
               </div>
               <div className="text-right hidden sm:block">
-                <p className="text-indigo-400 text-lg font-bold">{formatM(data.fatYTD)}</p>
+                <p className="text-indigo-400 text-lg font-bold">{formatM(computed.fatYTD)}</p>
                 <p className="text-slate-400 text-xs">Faturamento YTD</p>
               </div>
             </div>
@@ -724,30 +281,123 @@
         </div>
 
         <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+          {/* Projection banner */}
+          {hasProjection && (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 flex items-center gap-3">
+              <span className="text-amber-400 text-lg">⚠️</span>
+              <p className="text-amber-300 text-sm">
+                <strong>{MESES[partialMonth-1]} 2026 projetado:</strong> dados reais de {daysElapsed} dias, projetado linearmente para {daysInPartial} dias.
+                Valores de 2026 incluem projeção para o mês corrente.
+              </p>
+            </div>
+          )}
+
           {/* KPI Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
-            <MetricCard title="Faturamento YTD" value={formatM(data.fatYTD)} icon="💰" color="indigo" />
-            <MetricCard title="Vendas YTD" value={data.vendasYTD.toLocaleString('pt-BR')} icon="🛒" color="green" />
-            <MetricCard title="Ticket Médio" value={`R$ ${data.ticketMedio.toFixed(2)}`} icon="🎫" color="amber" />
-            <MetricCard title="Lojas Ativas" value={data.lojasAtivas} icon="🏬" color="blue" />
-            <MetricCard title={`Fat. ${MESES[data.maxMonth-1]}`} value={formatK(data.fatMesAtual)} icon="📊" color="purple" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            <MetricCard
+              title={`Fat. ${periodLabel} 2026${hasProjection ? '*' : ''}`}
+              value={formatK(computed.totalFat2026)}
+              icon="📊"
+              color="green"
+            />
+            <MetricCard
+              title={`Fat. ${periodLabel} 2025`}
+              value={formatK(computed.totalFat2025)}
+              subtitle="(mesmas lojas)"
+              icon="📊"
+              color="purple"
+            />
+            <MetricCard
+              title="Variação YoY"
+              value={`${computed.varTotal >= 0 ? '+' : ''}${computed.varTotal.toFixed(1)}%`}
+              icon={computed.varTotal >= 0 ? "📈" : "📉"}
+              color={computed.varTotal >= 0 ? "green" : "amber"}
+            />
+            <MetricCard
+              title="Lojas comparáveis"
+              value={computed.comparableStores.length}
+              subtitle={`de ${computed.storeRows.length} ativas`}
+              icon="🏬"
+              color="blue"
+            />
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-6 border-b border-slate-700/50 overflow-x-auto">
-            {tabs.map(tab => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`pb-3 px-1 text-sm font-medium whitespace-nowrap transition ${activeTab === tab.id ? 'tab-active' : 'tab-inactive'}`}>
-                {tab.label}
-              </button>
-            ))}
-          </div>
+          {/* Consolidated bar chart with store filter */}
+          <Card>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-white">Faturamento {periodLabel} por Ano</h3>
+                <p className="text-slate-400 text-xs mt-1">{chartSubtitle}</p>
+              </div>
+              <select value={chartStore} onChange={e => setChartStore(e.target.value)}
+                className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full sm:w-auto sm:min-w-[260px]">
+                <option value="">Todas as lojas (presentes em todos os anos)</option>
+                {computed.storeNames2026.map(name => <option key={name} value={name}>{name}</option>)}
+              </select>
+            </div>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="ano" stroke="#94a3b8" />
+                  <YAxis stroke="#94a3b8" tickFormatter={v => `R${(v/1000).toFixed(0)}k`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="faturamento" name="Faturamento" radius={[4, 4, 0, 0]}>
+                    {chartData.map((entry, i) => (
+                      <Cell key={i} fill={YEAR_COLORS[parseInt(entry.ano)]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-slate-500 text-center py-8">Sem dados disponíveis</p>
+            )}
+          </Card>
 
-          {/* Tab Content */}
-          {activeTab === 'mensal' && <VisaoMensal data={data} />}
-          {activeTab === 'ranking' && <Ranking data={data} />}
-          {activeTab === 'loja' && <PorLoja data={data} />}
-          {activeTab === 'comparativo' && <ComparativoYoY data={data} />}
+          {/* Store comparison table */}
+          <Card>
+            <h3 className="text-lg font-semibold text-white mb-4">Comparativo por Loja — {periodLabel}</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-700">
+                    <SortHeader col="name" label="Loja" />
+                    <SortHeader col="fat2023" label={`Fat ${periodLabel} 23`} align="right" />
+                    <SortHeader col="fat2024" label={`Fat ${periodLabel} 24`} align="right" />
+                    <SortHeader col="fat2025" label={`Fat ${periodLabel} 25`} align="right" />
+                    <SortHeader col="fat2026" label={`Fat ${periodLabel} 26${hasProjection ? '*' : ''}`} align="right" />
+                    <SortHeader col="varYoY" label="Var Fat 25→26" align="right" />
+                    <SortHeader col="ticket2026" label="Ticket 26" align="right" />
+                    <SortHeader col="varTicketYoY" label="Var 25→26" align="right" />
+                    <SortHeader col="vendas2026" label="Vendas 26" align="right" />
+                    <SortHeader col="varVendasYoY" label="Var 25→26" align="right" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedStores.map((s, i) => (
+                    <tr key={s.name} className={`border-b border-slate-700/50 ${i % 2 === 0 ? 'bg-slate-800/30' : ''}`}>
+                      <td className="px-3 py-2 text-white font-medium whitespace-nowrap">{s.name}</td>
+                      <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.fat2023 !== null ? formatR$(s.fat2023) : <span className="text-slate-600">—</span>}</td>
+                      <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.fat2024 !== null ? formatR$(s.fat2024) : <span className="text-slate-600">—</span>}</td>
+                      <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.fat2025 !== null ? formatR$(s.fat2025) : <span className="text-slate-600">—</span>}</td>
+                      <td className="px-3 py-2 text-white font-medium text-right whitespace-nowrap">{formatR$(s.fat2026)}</td>
+                      <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${s.varYoY === null ? 'text-slate-600' : s.varYoY >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {s.varYoY !== null ? `${s.varYoY >= 0 ? '+' : ''}${s.varYoY.toFixed(1)}%` : '—'}
+                      </td>
+                      <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">R$ {s.ticket2026.toFixed(2)}</td>
+                      <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${s.varTicketYoY === null ? 'text-slate-600' : s.varTicketYoY >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {s.varTicketYoY !== null ? `${s.varTicketYoY >= 0 ? '+' : ''}${s.varTicketYoY.toFixed(1)}%` : '—'}
+                      </td>
+                      <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.vendas2026.toLocaleString('pt-BR')}</td>
+                      <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${s.varVendasYoY === null ? 'text-slate-600' : s.varVendasYoY >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {s.varVendasYoY !== null ? `${s.varVendasYoY >= 0 ? '+' : ''}${s.varVendasYoY.toFixed(1)}%` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         </div>
       </div>
     );
