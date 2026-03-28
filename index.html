@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SancaShop — Dashboard Operacional 2026</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/prop-types@15/prop-types.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+  <style>
+    body { background: #0f172a; margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1e293b; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    .tab-active { border-bottom: 2px solid #6366f1; color: #a5b4fc; }
+    .tab-inactive { border-bottom: 2px solid transparent; color: #94a3b8; }
+    .tab-inactive:hover { color: #cbd5e1; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+  // ============================================================================
+  // DATA START — Auto-replaced by update script
+  // ============================================================================
+  window.DATA = {"lastUpdate":"2026-03-28","stores":{"Projac":{"2026":{"1":{"valor":121498.69,"vendas":9432,"ticket":12.88},"2":{"valor":116092.89,"vendas":8821,"ticket":13.16},"3":{"valor":110116.51,"vendas":8405,"ticket":13.1}}},"Wonderful":{"2026":{"1":{"valor":76281.23,"vendas":3527,"ticket":21.63},"2":{"valor":72639.6,"vendas":3217,"ticket":22.58},"3":{"valor":61440.51,"vendas":2739,"ticket":22.43}}},"PROJAC - Sanca Lev":{"2026":{"1":{"valor":35763.84,"vendas":1766,"ticket":20.25},"2":{"valor":36845.85,"vendas":1862,"ticket":19.79},"3":{"valor":41062.44,"vendas":2253,"ticket":18.23}}},"East Side Meier 2":{"2026":{"1":{"valor":39729.68,"vendas":2598,"ticket":15.29},"2":{"valor":47522.7,"vendas":2965,"ticket":16.03},"3":{"valor":40230.14,"vendas":2633,"ticket":15.28}}},"Key Biscayne":{"2026":{"1":{"valor":38615.59,"vendas":2091,"ticket":18.47},"2":{"valor":35228.75,"vendas":1778,"ticket":19.81},"3":{"valor":31872.02,"vendas":1684,"ticket":18.93}}},"Palais de Nice":{"2026":{"1":{"valor":35210.55,"vendas":1523,"ticket":23.12},"2":{"valor":34867.09,"vendas":1476,"ticket":23.62},"3":{"valor":30972.84,"vendas":1472,"ticket":21.04}}},"East Side Meier 3":{"2026":{"1":{"valor":37344.1,"vendas":1944,"ticket":19.21},"2":{"valor":33267.88,"vendas":1741,"ticket":19.11},"3":{"valor":27983.61,"vendas":1531,"ticket":18.28}}},"Vernissage":{"2026":{"1":{"valor":31070.79,"vendas":1220,"ticket":25.47},"2":{"valor":28994.55,"vendas":1145,"ticket":25.32},"3":{"valor":25667.04,"vendas":1068,"ticket":24.03}}},"Completo Guanabara":{"2026":{"1":{"valor":26620.49,"vendas":1409,"ticket":18.89},"2":{"valor":26188.85,"vendas":1402,"ticket":18.68},"3":{"valor":24977.03,"vendas":1345,"ticket":18.57}}},"Summer Coast":{"2026":{"1":{"valor":30597.86,"vendas":1358,"ticket":22.53},"2":{"valor":27714.44,"vendas":1302,"ticket":21.29},"3":{"valor":23948.2,"vendas":1119,"ticket":21.4}}},"Bosque Freguesia":{"2026":{"1":{"valor":27508.26,"vendas":1401,"ticket":19.63},"2":{"valor":27373.61,"vendas":1280,"ticket":21.39},"3":{"valor":22702.36,"vendas":1118,"ticket":20.31}}},"Bosque Freguesia 2":{"2026":{"1":{"valor":24354.62,"vendas":1250,"ticket":19.48},"2":{"valor":25334.88,"vendas":1249,"ticket":20.28},"3":{"valor":21693.32,"vendas":1110,"ticket":19.54}}},"Paradiso":{"2026":{"1":{"valor":22982.27,"vendas":1042,"ticket":22.06},"2":{"valor":21964.29,"vendas":1016,"ticket":21.62},"3":{"valor":19843.62,"vendas":982,"ticket":20.21}}},"East Side Meier 1":{"2026":{"1":{"valor":23554.35,"vendas":1494,"ticket":15.77},"2":{"valor":15394.49,"vendas":974,"ticket":15.81},"3":{"valor":19379.66,"vendas":1210,"ticket":16.02}}},"Saint Germain":{"2026":{"1":{"valor":23626.88,"vendas":1150,"ticket":20.55},"2":{"valor":26028.5,"vendas":1206,"ticket":21.58},"3":{"valor":18262.23,"vendas":885,"ticket":20.64}}},"Prince":{"2026":{"1":{"valor":23417.13,"vendas":1210,"ticket":19.35},"2":{"valor":19146.81,"vendas":1051,"ticket":18.22},"3":{"valor":17483.76,"vendas":903,"ticket":19.36}}},"Ilha de Cozumel":{"2026":{"1":{"valor":21241.05,"vendas":1030,"ticket":20.62},"2":{"valor":21349.32,"vendas":1047,"ticket":20.39},"3":{"valor":15834.91,"vendas":831,"ticket":19.06}}},"Trouville":{"2026":{"1":{"valor":18276.28,"vendas":843,"ticket":21.68},"2":{"valor":14421.44,"vendas":727,"ticket":19.84},"3":{"valor":14556.31,"vendas":720,"ticket":20.22}}},"Ferrara":{"2026":{"1":{"valor":17748.61,"vendas":1033,"ticket":17.18},"2":{"valor":15468.56,"vendas":866,"ticket":17.86},"3":{"valor":14461.47,"vendas":843,"ticket":17.15}}},"Maxime":{"2026":{"1":{"valor":18607.51,"vendas":1157,"ticket":16.08},"2":{"valor":17244.27,"vendas":1015,"ticket":16.99},"3":{"valor":14337.53,"vendas":897,"ticket":15.98}}},"Chácara Sacopã":{"2026":{"1":{"valor":14537.57,"vendas":649,"ticket":22.4},"2":{"valor":13490.04,"vendas":600,"ticket":22.48},"3":{"valor":14310.29,"vendas":603,"ticket":23.73}}},"Deauville":{"2026":{"1":{"valor":15883.86,"vendas":752,"ticket":21.12},"2":{"valor":15638.8,"vendas":727,"ticket":21.51},"3":{"valor":14163.66,"vendas":657,"ticket":21.56}}},"Rotondo":{"2026":{"1":{"valor":16326.87,"vendas":833,"ticket":19.6},"2":{"valor":16115.29,"vendas":848,"ticket":19},"3":{"valor":13743.05,"vendas":715,"ticket":19.22}}},"Saint Tropez":{"2026":{"1":{"valor":16367.33,"vendas":918,"ticket":17.83},"2":{"valor":15539.02,"vendas":807,"ticket":19.26},"3":{"valor":13419.29,"vendas":748,"ticket":17.94}}},"Costa Verde":{"2026":{"1":{"valor":13524.45,"vendas":698,"ticket":19.38},"2":{"valor":12309.72,"vendas":587,"ticket":20.97},"3":{"valor":10433.22,"vendas":514,"ticket":20.3}}},"Torrigiani":{"2026":{"1":{"valor":9699.58,"vendas":568,"ticket":17.08},"2":{"valor":8141.18,"vendas":474,"ticket":17.18},"3":{"valor":9060.78,"vendas":540,"ticket":16.78}}},"Pedra Bonita":{"2026":{"1":{"valor":9898.65,"vendas":590,"ticket":16.78},"2":{"valor":9753.06,"vendas":555,"ticket":17.57},"3":{"valor":8475.67,"vendas":516,"ticket":16.43}}},"Pq. Visconde Albuq.":{"2026":{"1":{"valor":9320.32,"vendas":432,"ticket":21.57},"2":{"valor":8840.42,"vendas":410,"ticket":21.56},"3":{"valor":8200.02,"vendas":362,"ticket":22.65}}},"Verrochio":{"2026":{"1":{"valor":9453.38,"vendas":390,"ticket":24.24},"2":{"valor":8647.17,"vendas":323,"ticket":26.77},"3":{"valor":7752.26,"vendas":305,"ticket":25.42}}},"Samambaia":{"2026":{"1":{"valor":9800.03,"vendas":477,"ticket":20.55},"2":{"valor":9223.43,"vendas":466,"ticket":19.79},"3":{"valor":7701.28,"vendas":377,"ticket":20.43}}},"Presidente Médici":{"2026":{"1":{"valor":7879.42,"vendas":498,"ticket":15.82},"2":{"valor":7112.22,"vendas":476,"ticket":14.94},"3":{"valor":7423.99,"vendas":501,"ticket":14.82}}},"Solari":{"2026":{"1":{"valor":10849.71,"vendas":543,"ticket":19.98},"2":{"valor":9252.41,"vendas":471,"ticket":19.64},"3":{"valor":6660.99,"vendas":339,"ticket":19.65}}},"Bruneleschi":{"2026":{"1":{"valor":7973.74,"vendas":369,"ticket":21.61},"2":{"valor":7057.12,"vendas":298,"ticket":23.68},"3":{"valor":6637.32,"vendas":310,"ticket":21.41}}},"Canoas":{"2026":{"1":{"valor":8573.14,"vendas":497,"ticket":17.25},"2":{"valor":8217.59,"vendas":447,"ticket":18.38},"3":{"valor":6481.25,"vendas":389,"ticket":16.66}}},"Ilha das Palmas":{"2026":{"1":{"valor":7260.5,"vendas":396,"ticket":18.33},"2":{"valor":7539.81,"vendas":359,"ticket":21},"3":{"valor":6394.01,"vendas":319,"ticket":20.04}}},"Brancusi":{"2026":{"1":{"valor":8124.03,"vendas":375,"ticket":21.66},"2":{"valor":6495.17,"vendas":355,"ticket":18.3},"3":{"valor":5134.68,"vendas":256,"ticket":20.06}}},"Jean Labasque":{"2026":{"1":{"valor":12686.73,"vendas":682,"ticket":18.6},"2":{"valor":9284.92,"vendas":506,"ticket":18.35},"3":{"valor":838.82,"vendas":49,"ticket":17.12}}},"CD Sancashop":{"2026":{"1":{"valor":378.98,"vendas":27,"ticket":14.04},"2":{"valor":196.44,"vendas":24,"ticket":8.19},"3":{"valor":632.76,"vendas":63,"ticket":10.04}}}},"monthlyTotals":[{"ano":2026,"mes":1,"faturamento":882588.07,"vendas":48172,"ticket":18.32},{"ano":2026,"mes":2,"faturamento":835942.58,"vendas":44873,"ticket":18.63},{"ano":2026,"mes":3,"faturamento":744288.85,"vendas":41311,"ticket":18.02}]};
+  // ============================================================================
+  // DATA END
+  // ============================================================================
+  window.HISTORICAL = {"Adorabile Tijuca":{"2023":{"3":{"valor":6290.78,"vendas":null,"ticket":null},"4":{"valor":12068.84,"vendas":null,"ticket":null},"5":{"valor":10703.47,"vendas":null,"ticket":null},"6":{"valor":12849.03,"vendas":null,"ticket":null},"7":{"valor":12545.45,"vendas":null,"ticket":null},"8":{"valor":14392.84,"vendas":null,"ticket":null},"9":{"valor":15578.25,"vendas":null,"ticket":null},"10":{"valor":16528.39,"vendas":null,"ticket":null},"11":{"valor":18056.16,"vendas":null,"ticket":null},"12":{"valor":19111.58,"vendas":null,"ticket":null}},"2024":{"1":{"valor":17473.95,"vendas":916,"ticket":19.08},"2":{"valor":18588.29,"vendas":964,"ticket":19.28},"3":{"valor":18110.74,"vendas":1048,"ticket":17.28},"4":{"valor":17285.9,"vendas":957,"ticket":18.06},"5":{"valor":17068.83,"vendas":933,"ticket":18.29},"6":{"valor":18967.42,"vendas":1033,"ticket":18.36},"7":{"valor":17334.79,"vendas":947,"ticket":18.3},"8":{"valor":18547.94,"vendas":1004,"ticket":18.47},"9":{"valor":20559.24,"vendas":1072,"ticket":19.18},"10":{"valor":20162.77,"vendas":1058,"ticket":19.06},"11":{"valor":21896.95,"vendas":1095,"ticket":20.0},"12":{"valor":26258.18,"vendas":1279,"ticket":20.53}},"2025":{"1":{"valor":22534.99,"vendas":1167,"ticket":19.31},"2":{"valor":20415.01,"vendas":1066,"ticket":19.15},"3":{"valor":20834.4,"vendas":1107,"ticket":18.82},"4":{"valor":18524.14,"vendas":964,"ticket":19.22},"5":{"valor":18171.8,"vendas":1040,"ticket":17.47},"6":{"valor":18049.62,"vendas":964,"ticket":18.72},"7":{"valor":3969.72,"vendas":223,"ticket":17.8}}},"Barra Summer Dream":{"2023":{"1":{"valor":16025.66,"vendas":null,"ticket":null},"2":{"valor":12701.61,"vendas":null,"ticket":null},"3":{"valor":11824.51,"vendas":null,"ticket":null},"4":{"valor":10345.66,"vendas":null,"ticket":null},"5":{"valor":12452.56,"vendas":null,"ticket":null},"6":{"valor":12456.72,"vendas":null,"ticket":null},"7":{"valor":17514.28,"vendas":null,"ticket":null},"8":{"valor":15358.93,"vendas":null,"ticket":null},"9":{"valor":14960.53,"vendas":null,"ticket":null},"10":{"valor":13464.92,"vendas":null,"ticket":null},"11":{"valor":15868.06,"vendas":null,"ticket":null},"12":{"valor":17760.09,"vendas":null,"ticket":null}},"2024":{"1":{"valor":17179.32,"vendas":1107,"ticket":15.52},"2":{"valor":15432.55,"vendas":944,"ticket":16.35},"3":{"valor":13324.53,"vendas":837,"ticket":15.92},"4":{"valor":12264.98,"vendas":800,"ticket":15.33},"5":{"valor":14181.28,"vendas":841,"ticket":16.86},"6":{"valor":11824.62,"vendas":774,"ticket":15.28},"7":{"valor":1417.91,"vendas":86,"ticket":16.49}},"2025":{}},"Beep Saúde":{"2023":{"1":{"valor":4713.38,"vendas":null,"ticket":null},"2":{"valor":3892.07,"vendas":null,"ticket":null},"3":{"valor":5310.78,"vendas":null,"ticket":null},"4":{"valor":2875.92,"vendas":null,"ticket":null},"5":{"valor":3344.25,"vendas":null,"ticket":null},"6":{"valor":961.01,"vendas":null,"ticket":null}},"2024":{},"2025":{}},"Bosque Freguesia":{"2023":{"1":{"valor":15747.0,"vendas":null,"ticket":null},"2":{"valor":15041.79,"vendas":null,"ticket":null},"3":{"valor":17473.65,"vendas":null,"ticket":null},"4":{"valor":14372.86,"vendas":null,"ticket":null},"5":{"valor":15818.6,"vendas":null,"ticket":null},"6":{"valor":13616.07,"vendas":null,"ticket":null},"7":{"valor":13923.96,"vendas":null,"ticket":null},"8":{"valor":12186.09,"vendas":null,"ticket":null},"9":{"valor":14279.6,"vendas":null,"ticket":null},"10":{"valor":13949.94,"vendas":null,"ticket":null},"11":{"valor":15007.74,"vendas":null,"ticket":null},"12":{"valor":17866.45,"vendas":null,"ticket":null}},"2024":{"1":{"valor":16955.92,"vendas":926,"ticket":18.31},"2":{"valor":15497.87,"vendas":860,"ticket":18.02},"3":{"valor":16250.56,"vendas":922,"ticket":17.63},"4":{"valor":16706.32,"vendas":976,"ticket":17.12},"5":{"valor":18523.2,"vendas":1086,"ticket":17.06},"6":{"valor":17341.05,"vendas":939,"ticket":18.47},"7":{"valor":17259.79,"vendas":928,"ticket":18.6},"8":{"valor":18065.06,"vendas":929,"ticket":19.45},"9":{"valor":19557.52,"vendas":1059,"ticket":18.47},"10":{"valor":21445.17,"vendas":1147,"ticket":18.7},"11":{"valor":8282.36,"vendas":415,"ticket":19.96},"12":{"valor":6876.33,"vendas":361,"ticket":19.05}},"2025":{"1":{"valor":25486.91,"vendas":1391,"ticket":18.32},"2":{"valor":24137.69,"vendas":1325,"ticket":18.22},"3":{"valor":27405.38,"vendas":1486,"ticket":18.44},"4":{"valor":24036.32,"vendas":1289,"ticket":18.65},"5":{"valor":26217.38,"vendas":1391,"ticket":18.85},"6":{"valor":28350.61,"vendas":1437,"ticket":19.73},"7":{"valor":25991.9,"vendas":1319,"ticket":19.71},"8":{"valor":26860.83,"vendas":1402,"ticket":19.16},"9":{"valor":25726.12,"vendas":1341,"ticket":19.18},"10":{"valor":27865.53,"vendas":1370,"ticket":20.34},"11":{"valor":26500.57,"vendas":1326,"ticket":19.99},"12":{"valor":31170.56,"vendas":1507,"ticket":20.68}}},"Bosque Freguesia 2":{"2023":{"1":{"valor":12882.61,"vendas":null,"ticket":null},"2":{"valor":14361.18,"vendas":null,"ticket":null},"3":{"valor":15450.04,"vendas":null,"ticket":null},"4":{"valor":14442.16,"vendas":null,"ticket":null},"5":{"valor":13052.64,"vendas":null,"ticket":null},"6":{"valor":13217.66,"vendas":null,"ticket":null},"7":{"valor":13471.91,"vendas":null,"ticket":null},"8":{"valor":13624.72,"vendas":null,"ticket":null},"9":{"valor":14472.99,"vendas":null,"ticket":null},"10":{"valor":14135.13,"vendas":null,"ticket":null},"11":{"valor":14976.23,"vendas":null,"ticket":null},"12":{"valor":15733.79,"vendas":null,"ticket":null}},"2024":{"1":{"valor":14524.95,"vendas":812,"ticket":17.89},"2":{"valor":14058.93,"vendas":766,"ticket":18.35},"3":{"valor":14155.57,"vendas":789,"ticket":17.94},"4":{"valor":14420.88,"vendas":831,"ticket":17.35},"5":{"valor":14607.46,"vendas":811,"ticket":18.01},"6":{"valor":13938.44,"vendas":789,"ticket":17.67},"7":{"valor":13665.11,"vendas":779,"ticket":17.54},"8":{"valor":15509.47,"vendas":865,"ticket":17.93},"9":{"valor":14953.65,"vendas":798,"ticket":18.74},"10":{"valor":14971.6,"vendas":767,"ticket":19.52},"11":{"valor":16789.44,"vendas":868,"ticket":19.34},"12":{"valor":16379.97,"vendas":870,"ticket":18.83}},"2025":{"1":{"valor":19355.61,"vendas":1031,"ticket":18.77},"2":{"valor":18519.52,"vendas":1014,"ticket":18.26},"3":{"valor":13787.73,"vendas":768,"ticket":17.95},"4":{"valor":21503.48,"vendas":1122,"ticket":19.17},"5":{"valor":20381.04,"vendas":1123,"ticket":18.15},"6":{"valor":19290.41,"vendas":1047,"ticket":18.42},"7":{"valor":20520.55,"vendas":1062,"ticket":19.32},"8":{"valor":21734.96,"vendas":1122,"ticket":19.37},"9":{"valor":21444.26,"vendas":1084,"ticket":19.78},"10":{"valor":23551.56,"vendas":1172,"ticket":20.1},"11":{"valor":22472.07,"vendas":1171,"ticket":19.19},"12":{"valor":23829.03,"vendas":1268,"ticket":18.79}}},"Brancusi":{"2023":{},"2024":{},"2025":{"5":{"valor":931.54,"vendas":58,"ticket":16.06},"6":{"valor":4997.5,"vendas":212,"ticket":23.57},"7":{"valor":5614.53,"vendas":308,"ticket":18.23},"8":{"valor":4475.5,"vendas":260,"ticket":17.21},"9":{"valor":5022.67,"vendas":273,"ticket":18.4},"10":{"valor":6448.15,"vendas":300,"ticket":21.49},"11":{"valor":4789.11,"vendas":227,"ticket":21.1},"12":{"valor":8299.12,"vendas":372,"ticket":22.31}}},"Bruneleschi":{"2023":{"1":{"valor":7628.51,"vendas":null,"ticket":null},"2":{"valor":7540.74,"vendas":null,"ticket":null},"3":{"valor":5968.22,"vendas":null,"ticket":null},"4":{"valor":6905.74,"vendas":null,"ticket":null},"5":{"valor":6568.38,"vendas":null,"ticket":null},"6":{"valor":5367.8,"vendas":null,"ticket":null},"7":{"valor":5732.92,"vendas":null,"ticket":null},"8":{"valor":6695.6,"vendas":null,"ticket":null},"9":{"valor":5198.16,"vendas":null,"ticket":null},"10":{"valor":4522.27,"vendas":null,"ticket":null},"11":{"valor":6624.83,"vendas":null,"ticket":null},"12":{"valor":6954.28,"vendas":null,"ticket":null}},"2024":{"1":{"valor":6537.39,"vendas":359,"ticket":18.21},"2":{"valor":6177.69,"vendas":342,"ticket":18.06},"3":{"valor":5839.89,"vendas":283,"ticket":20.64},"4":{"valor":3916.39,"vendas":199,"ticket":19.68},"5":{"valor":5190.02,"vendas":252,"ticket":20.6},"6":{"valor":5278.21,"vendas":253,"ticket":20.86},"7":{"valor":4716.66,"vendas":254,"ticket":18.57},"8":{"valor":5845.24,"vendas":273,"ticket":21.41},"9":{"valor":6452.28,"vendas":308,"ticket":20.95},"10":{"valor":5164.15,"vendas":294,"ticket":17.57},"11":{"valor":6575.0,"vendas":289,"ticket":22.75},"12":{"valor":7294.65,"vendas":343,"ticket":21.27}},"2025":{"1":{"valor":7648.85,"vendas":366,"ticket":20.9},"2":{"valor":6839.66,"vendas":340,"ticket":20.12},"3":{"valor":8190.56,"vendas":360,"ticket":22.75},"4":{"valor":6330.13,"vendas":274,"ticket":23.1},"5":{"valor":8106.05,"vendas":340,"ticket":23.84},"6":{"valor":5719.62,"vendas":279,"ticket":20.5},"7":{"valor":7163.17,"vendas":380,"ticket":18.85},"8":{"valor":5729.33,"vendas":319,"ticket":17.96},"9":{"valor":6346.44,"vendas":346,"ticket":18.34},"10":{"valor":8078.02,"vendas":345,"ticket":23.41},"11":{"valor":7709.02,"vendas":365,"ticket":21.12},"12":{"valor":9310.18,"vendas":429,"ticket":21.7}}},"CD Sancashop":{"2023":{},"2024":{},"2025":{"11":{"valor":45.85,"vendas":5,"ticket":9.17},"12":{"valor":226.66,"vendas":17,"ticket":13.33}}},"Canoas":{"2023":{"1":{"valor":6477.94,"vendas":null,"ticket":null},"2":{"valor":6755.05,"vendas":null,"ticket":null},"3":{"valor":5048.79,"vendas":null,"ticket":null},"4":{"valor":4459.52,"vendas":null,"ticket":null},"5":{"valor":4797.41,"vendas":null,"ticket":null},"6":{"valor":4648.92,"vendas":null,"ticket":null},"7":{"valor":4835.38,"vendas":null,"ticket":null},"8":{"valor":3803.9,"vendas":null,"ticket":null},"9":{"valor":4395.6,"vendas":null,"ticket":null},"10":{"valor":5159.67,"vendas":null,"ticket":null},"11":{"valor":5828.18,"vendas":null,"ticket":null},"12":{"valor":5783.28,"vendas":null,"ticket":null}},"2024":{"1":{"valor":6688.24,"vendas":408,"ticket":16.39},"2":{"valor":6532.35,"vendas":382,"ticket":17.1},"3":{"valor":6503.24,"vendas":387,"ticket":16.8},"4":{"valor":7040.1,"vendas":386,"ticket":18.24},"5":{"valor":6963.77,"vendas":440,"ticket":15.83},"6":{"valor":6674.17,"vendas":425,"ticket":15.7},"7":{"valor":6951.07,"vendas":391,"ticket":17.78},"8":{"valor":7013.02,"vendas":392,"ticket":17.89},"9":{"valor":5655.0,"vendas":322,"ticket":17.56},"10":{"valor":8393.63,"vendas":436,"ticket":19.25},"11":{"valor":7328.54,"vendas":395,"ticket":18.55},"12":{"valor":6424.81,"vendas":359,"ticket":17.9}},"2025":{"1":{"valor":9538.97,"vendas":556,"ticket":17.16},"2":{"valor":9497.76,"vendas":527,"ticket":18.02},"3":{"valor":9281.4,"vendas":518,"ticket":17.92},"4":{"valor":7923.46,"vendas":433,"ticket":18.3},"5":{"valor":6701.92,"vendas":375,"ticket":17.87},"6":{"valor":7151.25,"vendas":432,"ticket":16.55},"7":{"valor":7843.94,"vendas":493,"ticket":15.91},"8":{"valor":7355.26,"vendas":454,"ticket":16.2},"9":{"valor":7228.98,"vendas":405,"ticket":17.85},"10":{"valor":6828.58,"vendas":415,"ticket":16.45},"11":{"valor":8031.44,"vendas":470,"ticket":17.09},"12":{"valor":9418.94,"vendas":544,"ticket":17.31}}},"Chácara Sacopã":{"2023":{"1":{"valor":11102.9,"vendas":null,"ticket":null},"2":{"valor":11066.73,"vendas":null,"ticket":null},"3":{"valor":9632.1,"vendas":null,"ticket":null},"4":{"valor":10773.73,"vendas":null,"ticket":null},"5":{"valor":11139.17,"vendas":null,"ticket":null},"6":{"valor":9340.49,"vendas":null,"ticket":null},"7":{"valor":9664.41,"vendas":null,"ticket":null},"8":{"valor":8401.63,"vendas":null,"ticket":null},"9":{"valor":9472.36,"vendas":null,"ticket":null},"10":{"valor":9171.93,"vendas":null,"ticket":null},"11":{"valor":10899.98,"vendas":null,"ticket":null},"12":{"valor":12992.31,"vendas":null,"ticket":null}},"2024":{"1":{"valor":9876.89,"vendas":577,"ticket":17.12},"2":{"valor":8310.77,"vendas":465,"ticket":17.87},"3":{"valor":11479.66,"vendas":691,"ticket":16.61},"4":{"valor":8630.71,"vendas":562,"ticket":15.36},"5":{"valor":11338.37,"vendas":656,"ticket":17.28},"6":{"valor":9673.71,"vendas":603,"ticket":16.04},"7":{"valor":8036.48,"vendas":430,"ticket":18.69},"8":{"valor":11828.27,"vendas":629,"ticket":18.8},"9":{"valor":11066.55,"vendas":539,"ticket":20.53},"10":{"valor":12083.14,"vendas":596,"ticket":20.27},"11":{"valor":12263.13,"vendas":564,"ticket":21.74},"12":{"valor":13824.51,"vendas":694,"ticket":19.92}},"2025":{"1":{"valor":15097.25,"vendas":697,"ticket":21.66},"2":{"valor":11314.06,"vendas":592,"ticket":19.11},"3":{"valor":14231.24,"vendas":672,"ticket":21.18},"4":{"valor":12266.98,"vendas":596,"ticket":20.58},"5":{"valor":11983.18,"vendas":591,"ticket":20.28},"6":{"valor":12329.72,"vendas":558,"ticket":22.1},"7":{"valor":12091.0,"vendas":597,"ticket":20.25},"8":{"valor":10656.22,"vendas":517,"ticket":20.61},"9":{"valor":11398.5,"vendas":567,"ticket":20.1},"10":{"valor":13452.8,"vendas":650,"ticket":20.7},"11":{"valor":13666.93,"vendas":610,"ticket":22.4},"12":{"valor":13606.36,"vendas":595,"ticket":22.87}}},"Completo Guanabara":{"2023":{},"2024":{"5":{"valor":4331.93,"vendas":283,"ticket":15.31},"6":{"valor":21486.74,"vendas":1280,"ticket":16.79},"7":{"valor":19950.61,"vendas":1126,"ticket":17.72},"8":{"valor":18455.53,"vendas":1136,"ticket":16.25},"9":{"valor":20425.37,"vendas":1221,"ticket":16.73},"10":{"valor":20085.07,"vendas":1201,"ticket":16.72},"11":{"valor":22062.31,"vendas":1276,"ticket":17.29},"12":{"valor":27305.9,"vendas":1555,"ticket":17.56}},"2025":{"1":{"valor":26571.3,"vendas":1538,"ticket":17.28},"2":{"valor":23323.43,"vendas":1358,"ticket":17.17},"3":{"valor":24854.47,"vendas":1423,"ticket":17.47},"4":{"valor":22618.08,"vendas":1290,"ticket":17.53},"5":{"valor":22562.14,"vendas":1263,"ticket":17.86},"6":{"valor":23661.68,"vendas":1270,"ticket":18.63},"7":{"valor":23253.13,"vendas":1297,"ticket":17.93},"8":{"valor":24761.4,"vendas":1384,"ticket":17.89},"9":{"valor":22845.88,"vendas":1258,"ticket":18.16},"10":{"valor":25838.26,"vendas":1395,"ticket":18.52},"11":{"valor":26052.83,"vendas":1308,"ticket":19.92},"12":{"valor":30351.61,"vendas":1607,"ticket":18.89}}},"Costa Verde":{"2023":{"1":{"valor":9623.08,"vendas":null,"ticket":null},"2":{"valor":9932.05,"vendas":null,"ticket":null},"3":{"valor":9640.16,"vendas":null,"ticket":null},"4":{"valor":6096.29,"vendas":null,"ticket":null},"5":{"valor":6962.3,"vendas":null,"ticket":null},"6":{"valor":6389.1,"vendas":null,"ticket":null},"7":{"valor":7848.38,"vendas":null,"ticket":null},"8":{"valor":6876.72,"vendas":null,"ticket":null},"9":{"valor":7086.97,"vendas":null,"ticket":null},"10":{"valor":6061.07,"vendas":null,"ticket":null},"11":{"valor":8520.68,"vendas":null,"ticket":null},"12":{"valor":9605.83,"vendas":null,"ticket":null}},"2024":{"1":{"valor":8704.81,"vendas":470,"ticket":18.52},"2":{"valor":8354.72,"vendas":459,"ticket":18.2},"3":{"valor":8616.97,"vendas":453,"ticket":19.02},"4":{"valor":8613.78,"vendas":458,"ticket":18.81},"5":{"valor":8523.84,"vendas":471,"ticket":18.1},"6":{"valor":7365.55,"vendas":419,"ticket":17.58},"7":{"valor":7108.49,"vendas":381,"ticket":18.66},"8":{"valor":6631.39,"vendas":313,"ticket":21.19},"9":{"valor":9017.23,"vendas":436,"ticket":20.68},"10":{"valor":8360.06,"vendas":419,"ticket":19.95},"11":{"valor":10002.89,"vendas":494,"ticket":20.25},"12":{"valor":10200.5,"vendas":500,"ticket":20.4}},"2025":{"1":{"valor":9638.82,"vendas":509,"ticket":18.94},"2":{"valor":11488.58,"vendas":562,"ticket":20.44},"3":{"valor":12237.88,"vendas":571,"ticket":21.43},"4":{"valor":10342.86,"vendas":488,"ticket":21.19},"5":{"valor":9161.49,"vendas":475,"ticket":19.29},"6":{"valor":9104.63,"vendas":405,"ticket":22.48},"7":{"valor":10998.99,"vendas":521,"ticket":21.11},"8":{"valor":10416.52,"vendas":501,"ticket":20.79},"9":{"valor":9973.0,"vendas":488,"ticket":20.44},"10":{"valor":10338.78,"vendas":532,"ticket":19.43},"11":{"valor":10908.43,"vendas":517,"ticket":21.1},"12":{"valor":13533.22,"vendas":662,"ticket":20.44}}},"Deauville":{"2023":{"1":{"valor":7766.01,"vendas":null,"ticket":null},"2":{"valor":7220.07,"vendas":null,"ticket":null},"3":{"valor":7865.11,"vendas":null,"ticket":null},"4":{"valor":6842.16,"vendas":null,"ticket":null},"5":{"valor":6871.08,"vendas":null,"ticket":null},"6":{"valor":6438.03,"vendas":null,"ticket":null},"7":{"valor":8111.35,"vendas":null,"ticket":null},"8":{"valor":8068.46,"vendas":null,"ticket":null},"9":{"valor":7607.84,"vendas":null,"ticket":null},"10":{"valor":8880.57,"vendas":null,"ticket":null},"11":{"valor":8392.14,"vendas":null,"ticket":null},"12":{"valor":10192.8,"vendas":null,"ticket":null}},"2024":{"1":{"valor":9607.66,"vendas":531,"ticket":18.09},"2":{"valor":10088.22,"vendas":520,"ticket":19.4},"3":{"valor":9707.18,"vendas":538,"ticket":18.04},"4":{"valor":7188.53,"vendas":440,"ticket":16.34},"5":{"valor":9421.4,"vendas":516,"ticket":18.26},"6":{"valor":9422.19,"vendas":505,"ticket":18.66},"7":{"valor":10923.62,"vendas":577,"ticket":18.93},"8":{"valor":12182.94,"vendas":643,"ticket":18.95},"9":{"valor":11894.19,"vendas":585,"ticket":20.33},"10":{"valor":11800.34,"vendas":622,"ticket":18.97},"11":{"valor":10869.92,"vendas":599,"ticket":18.15},"12":{"valor":13832.51,"vendas":635,"ticket":21.78}},"2025":{"1":{"valor":13821.35,"vendas":688,"ticket":20.09},"2":{"valor":14027.5,"vendas":619,"ticket":22.66},"3":{"valor":13996.18,"vendas":610,"ticket":22.94},"4":{"valor":12849.62,"vendas":575,"ticket":22.35},"5":{"valor":13939.9,"vendas":570,"ticket":24.46},"6":{"valor":13295.09,"vendas":622,"ticket":21.37},"7":{"valor":15116.35,"vendas":730,"ticket":20.71},"8":{"valor":15308.44,"vendas":783,"ticket":19.55},"9":{"valor":14726.2,"vendas":730,"ticket":20.17},"10":{"valor":14535.83,"vendas":750,"ticket":19.38},"11":{"valor":15595.09,"vendas":784,"ticket":19.89},"12":{"valor":17300.56,"vendas":835,"ticket":20.72}}},"East Side Meier 1":{"2023":{"1":{"valor":13376.9,"vendas":null,"ticket":null},"2":{"valor":12943.08,"vendas":null,"ticket":null},"3":{"valor":13685.09,"vendas":null,"ticket":null},"4":{"valor":11303.22,"vendas":null,"ticket":null},"5":{"valor":11184.78,"vendas":null,"ticket":null},"6":{"valor":12076.52,"vendas":null,"ticket":null},"7":{"valor":12076.06,"vendas":null,"ticket":null},"8":{"valor":12514.38,"vendas":null,"ticket":null},"9":{"valor":12868.2,"vendas":null,"ticket":null},"10":{"valor":9865.4,"vendas":null,"ticket":null},"11":{"valor":13870.78,"vendas":null,"ticket":null},"12":{"valor":15240.78,"vendas":null,"ticket":null}},"2024":{"1":{"valor":16878.57,"vendas":1054,"ticket":16.01},"2":{"valor":14535.66,"vendas":937,"ticket":15.51},"3":{"valor":14871.56,"vendas":965,"ticket":15.41},"4":{"valor":13790.74,"vendas":912,"ticket":15.12},"5":{"valor":15922.1,"vendas":1030,"ticket":15.46},"6":{"valor":15084.11,"vendas":947,"ticket":15.93},"7":{"valor":15802.71,"vendas":1014,"ticket":15.58},"8":{"valor":18443.42,"vendas":1127,"ticket":16.37},"9":{"valor":17338.95,"vendas":1125,"ticket":15.41},"10":{"valor":18837.03,"vendas":1089,"ticket":17.3},"11":{"valor":18043.07,"vendas":1144,"ticket":15.77},"12":{"valor":22034.73,"vendas":1356,"ticket":16.25}},"2025":{"1":{"valor":21236.13,"vendas":1414,"ticket":15.02},"2":{"valor":20726.94,"vendas":1320,"ticket":15.7},"3":{"valor":24716.91,"vendas":1550,"ticket":15.95},"4":{"valor":24371.56,"vendas":1480,"ticket":16.47},"5":{"valor":25271.42,"vendas":1533,"ticket":16.48},"6":{"valor":24705.76,"vendas":1534,"ticket":16.11},"7":{"valor":28021.07,"vendas":1778,"ticket":15.76},"8":{"valor":28702.12,"vendas":1756,"ticket":16.35},"9":{"valor":27044.02,"vendas":1768,"ticket":15.3},"10":{"valor":28072.75,"vendas":1700,"ticket":16.51},"11":{"valor":26526.28,"vendas":1578,"ticket":16.81},"12":{"valor":22965.7,"vendas":1433,"ticket":16.03}}},"East Side Meier 2":{"2023":{"1":{"valor":23513.94,"vendas":null,"ticket":null},"2":{"valor":22710.22,"vendas":null,"ticket":null},"3":{"valor":21334.3,"vendas":null,"ticket":null},"4":{"valor":19692.91,"vendas":null,"ticket":null},"5":{"valor":18373.18,"vendas":null,"ticket":null},"6":{"valor":10789.48,"vendas":null,"ticket":null},"7":{"valor":18282.82,"vendas":null,"ticket":null},"8":{"valor":19467.0,"vendas":null,"ticket":null},"9":{"valor":19339.96,"vendas":null,"ticket":null},"10":{"valor":19436.89,"vendas":null,"ticket":null},"11":{"valor":19962.64,"vendas":null,"ticket":null},"12":{"valor":20876.01,"vendas":null,"ticket":null}},"2024":{"1":{"valor":18205.09,"vendas":1273,"ticket":14.3},"2":{"valor":20194.56,"vendas":1387,"ticket":14.56},"3":{"valor":20462.78,"vendas":1463,"ticket":13.99},"4":{"valor":21662.59,"vendas":1414,"ticket":15.32},"5":{"valor":24113.21,"vendas":1590,"ticket":15.17},"6":{"valor":23366.39,"vendas":1597,"ticket":14.63},"7":{"valor":23165.5,"vendas":1608,"ticket":14.41},"8":{"valor":25569.8,"vendas":1733,"ticket":14.75},"9":{"valor":26405.49,"vendas":1739,"ticket":15.18},"10":{"valor":26011.6,"vendas":1684,"ticket":15.45},"11":{"valor":29580.63,"vendas":1907,"ticket":15.51},"12":{"valor":29214.26,"vendas":1942,"ticket":15.04}},"2025":{"1":{"valor":29873.93,"vendas":2008,"ticket":14.88},"2":{"valor":25085.33,"vendas":1736,"ticket":14.45},"3":{"valor":32011.26,"vendas":2119,"ticket":15.11},"4":{"valor":33673.52,"vendas":2202,"ticket":15.29},"5":{"valor":34610.89,"vendas":2272,"ticket":15.23},"6":{"valor":35354.77,"vendas":2295,"ticket":15.41},"7":{"valor":36497.74,"vendas":2454,"ticket":14.87},"8":{"valor":39431.66,"vendas":2523,"ticket":15.63},"9":{"valor":38122.78,"vendas":2429,"ticket":15.69},"10":{"valor":35457.73,"vendas":2289,"ticket":15.49},"11":{"valor":27909.76,"vendas":1814,"ticket":15.39},"12":{"valor":45091.05,"vendas":2852,"ticket":15.81}}},"East Side Meier 3":{"2023":{},"2024":{},"2025":{"10":{"valor":28712.95,"vendas":1485,"ticket":19.34},"11":{"valor":31225.76,"vendas":1760,"ticket":17.74},"12":{"valor":33625.18,"vendas":1792,"ticket":18.76}}},"Ferrara":{"2023":{"1":{"valor":9518.32,"vendas":null,"ticket":null},"2":{"valor":9896.17,"vendas":null,"ticket":null},"3":{"valor":9986.34,"vendas":null,"ticket":null},"4":{"valor":8267.29,"vendas":null,"ticket":null},"5":{"valor":9169.39,"vendas":null,"ticket":null},"6":{"valor":6964.1,"vendas":null,"ticket":null},"7":{"valor":9403.11,"vendas":null,"ticket":null},"8":{"valor":9836.09,"vendas":null,"ticket":null},"9":{"valor":9460.95,"vendas":null,"ticket":null},"10":{"valor":9915.7,"vendas":null,"ticket":null},"11":{"valor":10909.94,"vendas":null,"ticket":null},"12":{"valor":11199.11,"vendas":null,"ticket":null}},"2024":{"1":{"valor":9724.04,"vendas":611,"ticket":15.91},"2":{"valor":9572.5,"vendas":575,"ticket":16.65},"3":{"valor":10367.09,"vendas":618,"ticket":16.78},"4":{"valor":10019.6,"vendas":632,"ticket":15.85},"5":{"valor":11013.13,"vendas":667,"ticket":16.51},"6":{"valor":10627.67,"vendas":630,"ticket":16.87},"7":{"valor":10713.0,"vendas":571,"ticket":18.76},"8":{"valor":11051.45,"vendas":617,"ticket":17.91},"9":{"valor":11250.48,"vendas":625,"ticket":18.0},"10":{"valor":11721.51,"vendas":652,"ticket":17.98},"11":{"valor":12801.08,"vendas":700,"ticket":18.29},"12":{"valor":12532.21,"vendas":756,"ticket":16.58}},"2025":{"1":{"valor":13068.09,"vendas":695,"ticket":18.8},"2":{"valor":11989.16,"vendas":694,"ticket":17.28},"3":{"valor":14287.44,"vendas":798,"ticket":17.9},"4":{"valor":13176.11,"vendas":728,"ticket":18.1},"5":{"valor":13512.79,"vendas":716,"ticket":18.87},"6":{"valor":13707.26,"vendas":752,"ticket":18.23},"7":{"valor":16446.86,"vendas":984,"ticket":16.71},"8":{"valor":16411.08,"vendas":957,"ticket":17.15},"9":{"valor":15372.65,"vendas":901,"ticket":17.06},"10":{"valor":16277.26,"vendas":971,"ticket":16.76},"11":{"valor":14722.8,"vendas":903,"ticket":16.3},"12":{"valor":19077.37,"vendas":1132,"ticket":16.85}}},"Fizzi Contini":{"2023":{"1":{"valor":4623.96,"vendas":null,"ticket":null},"2":{"valor":4107.64,"vendas":null,"ticket":null},"3":{"valor":2916.36,"vendas":null,"ticket":null},"4":{"valor":2657.51,"vendas":null,"ticket":null},"5":{"valor":3781.44,"vendas":null,"ticket":null},"6":{"valor":3730.5,"vendas":null,"ticket":null},"7":{"valor":4621.37,"vendas":null,"ticket":null},"8":{"valor":3467.08,"vendas":null,"ticket":null},"9":{"valor":3153.42,"vendas":null,"ticket":null},"10":{"valor":4181.61,"vendas":null,"ticket":null},"11":{"valor":4012.19,"vendas":null,"ticket":null},"12":{"valor":3905.24,"vendas":null,"ticket":null}},"2024":{"1":{"valor":4707.59,"vendas":264,"ticket":17.83},"2":{"valor":2225.32,"vendas":135,"ticket":16.48},"3":{"valor":580.86,"vendas":39,"ticket":14.89}},"2025":{}},"Gávea IV":{"2023":{"1":{"valor":7955.14,"vendas":null,"ticket":null},"2":{"valor":8549.99,"vendas":null,"ticket":null},"3":{"valor":7901.74,"vendas":null,"ticket":null},"4":{"valor":5786.46,"vendas":null,"ticket":null},"5":{"valor":8581.24,"vendas":null,"ticket":null},"6":{"valor":7952.49,"vendas":null,"ticket":null},"7":{"valor":7990.57,"vendas":null,"ticket":null},"8":{"valor":8135.48,"vendas":null,"ticket":null},"9":{"valor":7808.62,"vendas":null,"ticket":null},"10":{"valor":8139.27,"vendas":null,"ticket":null},"11":{"valor":7658.48,"vendas":null,"ticket":null},"12":{"valor":9534.87,"vendas":null,"ticket":null}},"2024":{"1":{"valor":8772.61,"vendas":476,"ticket":18.43},"2":{"valor":8489.0,"vendas":471,"ticket":18.02},"3":{"valor":8723.98,"vendas":445,"ticket":19.6},"4":{"valor":8786.19,"vendas":447,"ticket":19.66},"5":{"valor":10683.92,"vendas":543,"ticket":19.68},"6":{"valor":8634.11,"vendas":468,"ticket":18.45},"7":{"valor":9125.65,"vendas":476,"ticket":19.17},"8":{"valor":10231.43,"vendas":540,"ticket":18.95},"9":{"valor":10209.73,"vendas":527,"ticket":19.37},"10":{"valor":12452.41,"vendas":637,"ticket":19.55},"11":{"valor":11651.99,"vendas":563,"ticket":20.7},"12":{"valor":11520.11,"vendas":559,"ticket":20.61}},"2025":{"1":{"valor":9609.14,"vendas":473,"ticket":20.32},"2":{"valor":10430.75,"vendas":561,"ticket":18.59},"3":{"valor":10943.42,"vendas":583,"ticket":18.77},"4":{"valor":10079.2,"vendas":547,"ticket":18.43},"5":{"valor":9079.24,"vendas":506,"ticket":17.94},"6":{"valor":11279.45,"vendas":632,"ticket":17.85},"7":{"valor":10709.74,"vendas":607,"ticket":17.64},"8":{"valor":10417.91,"vendas":578,"ticket":18.02},"9":{"valor":10004.18,"vendas":562,"ticket":17.8},"10":{"valor":10325.01,"vendas":567,"ticket":18.21},"11":{"valor":9013.36,"vendas":498,"ticket":18.1},"12":{"valor":251.72,"vendas":19,"ticket":13.25}}},"Ilha das Palmas":{"2023":{"1":{"valor":6187.46,"vendas":null,"ticket":null},"2":{"valor":6680.49,"vendas":null,"ticket":null},"3":{"valor":5848.44,"vendas":null,"ticket":null},"4":{"valor":4615.44,"vendas":null,"ticket":null},"5":{"valor":4649.93,"vendas":null,"ticket":null},"6":{"valor":4699.23,"vendas":null,"ticket":null},"7":{"valor":3766.09,"vendas":null,"ticket":null},"8":{"valor":5476.46,"vendas":null,"ticket":null},"9":{"valor":4025.58,"vendas":null,"ticket":null},"10":{"valor":5363.08,"vendas":null,"ticket":null},"11":{"valor":4232.65,"vendas":null,"ticket":null},"12":{"valor":4995.69,"vendas":null,"ticket":null}},"2024":{"1":{"valor":3733.67,"vendas":278,"ticket":13.43},"2":{"valor":3458.75,"vendas":225,"ticket":15.37},"3":{"valor":4724.37,"vendas":280,"ticket":16.87},"4":{"valor":5272.05,"vendas":272,"ticket":19.38},"5":{"valor":4834.34,"vendas":262,"ticket":18.45},"6":{"valor":3961.16,"vendas":232,"ticket":17.07},"7":{"valor":4179.29,"vendas":259,"ticket":16.14},"8":{"valor":3981.9,"vendas":226,"ticket":17.62},"9":{"valor":4429.0,"vendas":251,"ticket":17.65},"10":{"valor":4403.2,"vendas":273,"ticket":16.13},"11":{"valor":4380.97,"vendas":255,"ticket":17.18},"12":{"valor":5001.03,"vendas":279,"ticket":17.92}},"2025":{"1":{"valor":6258.59,"vendas":374,"ticket":16.73},"2":{"valor":6491.76,"vendas":382,"ticket":16.99},"3":{"valor":6304.07,"vendas":355,"ticket":17.76},"4":{"valor":6220.93,"vendas":312,"ticket":19.94},"5":{"valor":6835.73,"vendas":327,"ticket":20.9},"6":{"valor":5369.7,"vendas":259,"ticket":20.73},"7":{"valor":6473.72,"vendas":364,"ticket":17.78},"8":{"valor":6866.54,"vendas":384,"ticket":17.88},"9":{"valor":6304.12,"vendas":313,"ticket":20.14},"10":{"valor":7661.52,"vendas":381,"ticket":20.11},"11":{"valor":5989.19,"vendas":318,"ticket":18.83},"12":{"valor":10021.47,"vendas":457,"ticket":21.93}}},"Ilha de Cozumel":{"2023":{"1":{"valor":10326.6,"vendas":null,"ticket":null},"2":{"valor":10958.3,"vendas":null,"ticket":null},"3":{"valor":10539.57,"vendas":null,"ticket":null},"4":{"valor":8458.63,"vendas":null,"ticket":null},"5":{"valor":10585.94,"vendas":null,"ticket":null},"6":{"valor":10536.12,"vendas":null,"ticket":null},"7":{"valor":10495.55,"vendas":null,"ticket":null},"8":{"valor":9714.21,"vendas":null,"ticket":null},"9":{"valor":10416.41,"vendas":null,"ticket":null},"10":{"valor":12425.59,"vendas":null,"ticket":null},"11":{"valor":11012.11,"vendas":null,"ticket":null},"12":{"valor":11641.67,"vendas":null,"ticket":null}},"2024":{"1":{"valor":11788.86,"vendas":583,"ticket":20.22},"2":{"valor":11200.47,"vendas":513,"ticket":21.83},"3":{"valor":11472.72,"vendas":579,"ticket":19.81},"4":{"valor":11333.1,"vendas":576,"ticket":19.68},"5":{"valor":12136.58,"vendas":640,"ticket":18.96},"6":{"valor":9702.07,"vendas":538,"ticket":18.03},"7":{"valor":11055.64,"vendas":565,"ticket":19.57},"8":{"valor":10839.95,"vendas":573,"ticket":18.92},"9":{"valor":11102.28,"vendas":562,"ticket":19.75},"10":{"valor":11943.95,"vendas":572,"ticket":20.88},"11":{"valor":14546.91,"vendas":773,"ticket":18.82},"12":{"valor":14961.14,"vendas":771,"ticket":19.4}},"2025":{"1":{"valor":14338.85,"vendas":791,"ticket":18.13},"2":{"valor":14998.68,"vendas":747,"ticket":20.08},"3":{"valor":17969.04,"vendas":875,"ticket":20.54},"4":{"valor":11118.2,"vendas":518,"ticket":21.46},"5":{"valor":19367.34,"vendas":956,"ticket":20.26},"6":{"valor":18490.44,"vendas":988,"ticket":18.72},"7":{"valor":16148.26,"vendas":846,"ticket":19.09},"8":{"valor":18097.01,"vendas":973,"ticket":18.6},"9":{"valor":18901.56,"vendas":967,"ticket":19.55},"10":{"valor":23853.37,"vendas":1106,"ticket":21.57},"11":{"valor":19595.06,"vendas":960,"ticket":20.41},"12":{"valor":23692.05,"vendas":1098,"ticket":21.58}}},"Jean Labasque":{"2023":{"1":{"valor":3318.77,"vendas":null,"ticket":null},"2":{"valor":7579.32,"vendas":null,"ticket":null},"3":{"valor":6266.48,"vendas":null,"ticket":null},"4":{"valor":6047.15,"vendas":null,"ticket":null},"5":{"valor":4319.43,"vendas":null,"ticket":null},"6":{"valor":3877.0,"vendas":null,"ticket":null},"7":{"valor":6807.9,"vendas":null,"ticket":null},"8":{"valor":5112.43,"vendas":null,"ticket":null},"9":{"valor":4664.44,"vendas":null,"ticket":null},"10":{"valor":4803.0,"vendas":null,"ticket":null},"11":{"valor":5686.12,"vendas":null,"ticket":null},"12":{"valor":6048.41,"vendas":null,"ticket":null}},"2024":{"1":{"valor":6351.58,"vendas":351,"ticket":18.1},"2":{"valor":5174.68,"vendas":296,"ticket":17.48},"3":{"valor":7265.6,"vendas":356,"ticket":20.41},"4":{"valor":6569.22,"vendas":374,"ticket":17.56},"5":{"valor":7419.82,"vendas":403,"ticket":18.41},"6":{"valor":8147.1,"vendas":433,"ticket":18.82},"7":{"valor":7778.95,"vendas":371,"ticket":20.97},"8":{"valor":8446.02,"vendas":454,"ticket":18.6},"9":{"valor":9116.54,"vendas":453,"ticket":20.12},"10":{"valor":8086.56,"vendas":446,"ticket":18.13},"11":{"valor":8466.28,"vendas":434,"ticket":19.51},"12":{"valor":11027.36,"vendas":529,"ticket":20.85}},"2025":{"1":{"valor":11066.43,"vendas":571,"ticket":19.38},"2":{"valor":8177.27,"vendas":405,"ticket":20.19},"3":{"valor":10038.81,"vendas":499,"ticket":20.12},"4":{"valor":6568.71,"vendas":345,"ticket":19.04},"5":{"valor":8738.48,"vendas":469,"ticket":18.63},"6":{"valor":6259.53,"vendas":340,"ticket":18.41},"7":{"valor":7317.78,"vendas":375,"ticket":19.51},"8":{"valor":6801.34,"vendas":350,"ticket":19.43},"9":{"valor":6816.6,"vendas":341,"ticket":19.99},"10":{"valor":8469.09,"vendas":465,"ticket":18.21},"11":{"valor":8340.09,"vendas":467,"ticket":17.86},"12":{"valor":9287.85,"vendas":529,"ticket":17.56}}},"John F. Kennedy":{"2023":{"1":{"valor":4698.03,"vendas":null,"ticket":null},"2":{"valor":4275.92,"vendas":null,"ticket":null},"3":{"valor":4785.2,"vendas":null,"ticket":null},"4":{"valor":3943.58,"vendas":null,"ticket":null},"5":{"valor":4621.16,"vendas":null,"ticket":null},"6":{"valor":4495.49,"vendas":null,"ticket":null},"7":{"valor":4614.8,"vendas":null,"ticket":null},"8":{"valor":4857.6,"vendas":null,"ticket":null},"9":{"valor":4739.73,"vendas":null,"ticket":null},"10":{"valor":3970.59,"vendas":null,"ticket":null},"11":{"valor":4496.8,"vendas":null,"ticket":null},"12":{"valor":4860.28,"vendas":null,"ticket":null}},"2024":{"1":{"valor":4833.22,"vendas":288,"ticket":16.78},"2":{"valor":4465.45,"vendas":275,"ticket":16.24},"3":{"valor":4913.41,"vendas":304,"ticket":16.16},"4":{"valor":4901.92,"vendas":316,"ticket":15.51},"5":{"valor":5137.1,"vendas":321,"ticket":16.0},"6":{"valor":5136.02,"vendas":329,"ticket":15.61},"7":{"valor":4671.64,"vendas":300,"ticket":15.57},"8":{"valor":6065.07,"vendas":367,"ticket":16.53},"9":{"valor":6933.91,"vendas":438,"ticket":15.83},"10":{"valor":6679.1,"vendas":365,"ticket":18.3},"11":{"valor":5574.81,"vendas":327,"ticket":17.05},"12":{"valor":7271.27,"vendas":407,"ticket":17.87}},"2025":{"1":{"valor":7309.18,"vendas":406,"ticket":18.0},"2":{"valor":8132.21,"vendas":434,"ticket":18.74},"3":{"valor":10917.37,"vendas":529,"ticket":20.64},"4":{"valor":9753.32,"vendas":523,"ticket":18.65},"5":{"valor":8801.69,"vendas":470,"ticket":18.73},"6":{"valor":9033.53,"vendas":459,"ticket":19.68},"7":{"valor":9191.45,"vendas":482,"ticket":19.07},"8":{"valor":8641.1,"vendas":441,"ticket":19.59},"9":{"valor":7908.27,"vendas":419,"ticket":18.87}}},"Joá - Barra Sul":{"2023":{"11":{"valor":5538.41,"vendas":null,"ticket":null},"12":{"valor":7385.43,"vendas":null,"ticket":null}},"2024":{"1":{"valor":6846.29,"vendas":357,"ticket":19.18},"2":{"valor":5468.78,"vendas":296,"ticket":18.48},"3":{"valor":5092.9,"vendas":284,"ticket":17.93},"4":{"valor":4510.63,"vendas":253,"ticket":17.83},"5":{"valor":3557.6,"vendas":198,"ticket":17.97},"6":{"valor":3306.33,"vendas":182,"ticket":18.17},"7":{"valor":3091.0,"vendas":195,"ticket":15.85},"8":{"valor":2392.15,"vendas":144,"ticket":16.61},"9":{"valor":262.94,"vendas":20,"ticket":13.15}},"2025":{}},"Key Biscayne":{"2023":{"2":{"valor":5178.55,"vendas":null,"ticket":null},"3":{"valor":14134.69,"vendas":null,"ticket":null},"4":{"valor":15690.02,"vendas":null,"ticket":null},"5":{"valor":14639.72,"vendas":null,"ticket":null},"6":{"valor":18139.31,"vendas":null,"ticket":null},"7":{"valor":17601.44,"vendas":null,"ticket":null},"8":{"valor":19715.0,"vendas":null,"ticket":null},"9":{"valor":20493.06,"vendas":null,"ticket":null},"10":{"valor":19761.06,"vendas":null,"ticket":null},"11":{"valor":23117.67,"vendas":null,"ticket":null},"12":{"valor":23502.84,"vendas":null,"ticket":null}},"2024":{"1":{"valor":23738.36,"vendas":1348,"ticket":17.61},"2":{"valor":20822.94,"vendas":1139,"ticket":18.28},"3":{"valor":23904.9,"vendas":1362,"ticket":17.55},"4":{"valor":20560.74,"vendas":1189,"ticket":17.29},"5":{"valor":23910.29,"vendas":1322,"ticket":18.09},"6":{"valor":21673.78,"vendas":1295,"ticket":16.74},"7":{"valor":20767.94,"vendas":1173,"ticket":17.7},"8":{"valor":22524.82,"vendas":1294,"ticket":17.41},"9":{"valor":22093.05,"vendas":1257,"ticket":17.58},"10":{"valor":23440.08,"vendas":1228,"ticket":19.09},"11":{"valor":28042.28,"vendas":1553,"ticket":18.06},"12":{"valor":27888.75,"vendas":1592,"ticket":17.52}},"2025":{"1":{"valor":29916.56,"vendas":1769,"ticket":16.91},"2":{"valor":27528.28,"vendas":1711,"ticket":16.09},"3":{"valor":31261.46,"vendas":1797,"ticket":17.4},"4":{"valor":29320.46,"vendas":1636,"ticket":17.92},"5":{"valor":31585.38,"vendas":1800,"ticket":17.55},"6":{"valor":29538.87,"vendas":1615,"ticket":18.29},"7":{"valor":26754.78,"vendas":1568,"ticket":17.06},"8":{"valor":28472.25,"vendas":1541,"ticket":18.48},"9":{"valor":23641.65,"vendas":1251,"ticket":18.9},"10":{"valor":31424.8,"vendas":1611,"ticket":19.51},"11":{"valor":32338.46,"vendas":1695,"ticket":19.08},"12":{"valor":40172.28,"vendas":2008,"ticket":20.01}}},"Maxime":{"2023":{"1":{"valor":8629.42,"vendas":null,"ticket":null},"2":{"valor":8438.28,"vendas":null,"ticket":null},"3":{"valor":9939.89,"vendas":null,"ticket":null},"4":{"valor":9245.48,"vendas":null,"ticket":null},"5":{"valor":10181.5,"vendas":null,"ticket":null},"6":{"valor":10187.0,"vendas":null,"ticket":null},"7":{"valor":10509.95,"vendas":null,"ticket":null},"8":{"valor":8312.27,"vendas":null,"ticket":null},"9":{"valor":10318.5,"vendas":null,"ticket":null},"10":{"valor":10099.01,"vendas":null,"ticket":null},"11":{"valor":10374.39,"vendas":null,"ticket":null},"12":{"valor":13595.99,"vendas":null,"ticket":null}},"2024":{"1":{"valor":11387.19,"vendas":626,"ticket":18.19},"2":{"valor":10367.14,"vendas":563,"ticket":18.41},"3":{"valor":10802.39,"vendas":623,"ticket":17.34},"4":{"valor":9648.2,"vendas":566,"ticket":17.05},"5":{"valor":11613.4,"vendas":634,"ticket":18.32},"6":{"valor":11554.69,"vendas":659,"ticket":17.53},"7":{"valor":11743.5,"vendas":608,"ticket":19.31},"8":{"valor":12305.17,"vendas":678,"ticket":18.15},"9":{"valor":12345.38,"vendas":697,"ticket":17.71},"10":{"valor":12899.35,"vendas":726,"ticket":17.77},"11":{"valor":12334.54,"vendas":661,"ticket":18.66},"12":{"valor":13898.83,"vendas":817,"ticket":17.01}},"2025":{"1":{"valor":12730.49,"vendas":717,"ticket":17.76},"2":{"valor":12586.04,"vendas":702,"ticket":17.93},"3":{"valor":15847.42,"vendas":921,"ticket":17.21},"4":{"valor":14190.36,"vendas":771,"ticket":18.41},"5":{"valor":14579.58,"vendas":843,"ticket":17.29},"6":{"valor":12796.83,"vendas":768,"ticket":16.66},"7":{"valor":15916.13,"vendas":1005,"ticket":15.84},"8":{"valor":15013.41,"vendas":982,"ticket":15.29},"9":{"valor":14863.7,"vendas":908,"ticket":16.37},"10":{"valor":15491.43,"vendas":968,"ticket":16.0},"11":{"valor":15430.43,"vendas":958,"ticket":16.11},"12":{"valor":18588.97,"vendas":1120,"ticket":16.6}}},"PROJAC - Sanca Lev":{"2023":{},"2024":{},"2025":{"8":{"valor":26163.79,"vendas":1119,"ticket":23.38},"9":{"valor":48283.91,"vendas":2253,"ticket":21.43},"10":{"valor":38778.79,"vendas":1882,"ticket":20.61},"11":{"valor":18623.69,"vendas":959,"ticket":19.42},"12":{"valor":25912.52,"vendas":1271,"ticket":20.39}}},"Palais de Nice":{"2023":{"3":{"valor":8566.21,"vendas":null,"ticket":null},"4":{"valor":14869.45,"vendas":null,"ticket":null},"5":{"valor":14306.43,"vendas":null,"ticket":null},"6":{"valor":14257.09,"vendas":null,"ticket":null},"7":{"valor":16423.37,"vendas":null,"ticket":null},"8":{"valor":17288.55,"vendas":null,"ticket":null},"9":{"valor":17344.01,"vendas":null,"ticket":null},"10":{"valor":16566.33,"vendas":null,"ticket":null},"11":{"valor":17548.37,"vendas":null,"ticket":null},"12":{"valor":17813.04,"vendas":null,"ticket":null}},"2024":{"1":{"valor":19297.36,"vendas":953,"ticket":20.25},"2":{"valor":18036.64,"vendas":858,"ticket":21.02},"3":{"valor":17190.21,"vendas":834,"ticket":20.61},"4":{"valor":17059.7,"vendas":890,"ticket":19.17},"5":{"valor":19149.65,"vendas":935,"ticket":20.48},"6":{"valor":17624.53,"vendas":852,"ticket":20.69},"7":{"valor":18966.96,"vendas":898,"ticket":21.12},"8":{"valor":20911.67,"vendas":906,"ticket":23.08},"9":{"valor":19123.08,"vendas":838,"ticket":22.82},"10":{"valor":21257.54,"vendas":953,"ticket":22.31},"11":{"valor":26750.07,"vendas":1165,"ticket":22.96},"12":{"valor":26805.85,"vendas":1245,"ticket":21.53}},"2025":{"1":{"valor":23048.12,"vendas":1058,"ticket":21.78},"2":{"valor":21817.52,"vendas":927,"ticket":23.54},"3":{"valor":28145.62,"vendas":1239,"ticket":22.72},"4":{"valor":25983.62,"vendas":1231,"ticket":21.11},"5":{"valor":27794.78,"vendas":1292,"ticket":21.51},"6":{"valor":29231.23,"vendas":1252,"ticket":23.35},"7":{"valor":26577.85,"vendas":1147,"ticket":23.17},"8":{"valor":32026.4,"vendas":1457,"ticket":21.98},"9":{"valor":27968.55,"vendas":1294,"ticket":21.61},"10":{"valor":30922.49,"vendas":1363,"ticket":22.69},"11":{"valor":29815.17,"vendas":1362,"ticket":21.89},"12":{"valor":36398.66,"vendas":1514,"ticket":24.04}}},"Paradiso":{"2023":{"1":{"valor":15370.95,"vendas":null,"ticket":null},"2":{"valor":13374.25,"vendas":null,"ticket":null},"3":{"valor":12987.5,"vendas":null,"ticket":null},"4":{"valor":12585.53,"vendas":null,"ticket":null},"5":{"valor":12146.84,"vendas":null,"ticket":null},"6":{"valor":12320.71,"vendas":null,"ticket":null},"7":{"valor":12374.16,"vendas":null,"ticket":null},"8":{"valor":12965.04,"vendas":null,"ticket":null},"9":{"valor":12622.97,"vendas":null,"ticket":null},"10":{"valor":14423.84,"vendas":null,"ticket":null},"11":{"valor":11685.38,"vendas":null,"ticket":null},"12":{"valor":12549.46,"vendas":null,"ticket":null}},"2024":{"1":{"valor":14700.76,"vendas":703,"ticket":20.91},"2":{"valor":15181.3,"vendas":717,"ticket":21.17},"3":{"valor":15123.26,"vendas":740,"ticket":20.44},"4":{"valor":14409.7,"vendas":685,"ticket":21.04},"5":{"valor":16886.66,"vendas":786,"ticket":21.48},"6":{"valor":16683.67,"vendas":778,"ticket":21.44},"7":{"valor":14458.94,"vendas":704,"ticket":20.54},"8":{"valor":13860.45,"vendas":679,"ticket":20.41},"9":{"valor":15046.25,"vendas":737,"ticket":20.42},"10":{"valor":15890.82,"vendas":689,"ticket":23.06},"11":{"valor":14452.94,"vendas":674,"ticket":21.44},"12":{"valor":15536.46,"vendas":714,"ticket":21.76}},"2025":{"1":{"valor":16607.27,"vendas":754,"ticket":22.03},"2":{"valor":14705.54,"vendas":637,"ticket":23.09},"3":{"valor":18598.49,"vendas":886,"ticket":20.99},"4":{"valor":15692.69,"vendas":737,"ticket":21.29},"5":{"valor":16092.19,"vendas":748,"ticket":21.51},"6":{"valor":17298.42,"vendas":731,"ticket":23.66},"7":{"valor":19237.68,"vendas":941,"ticket":20.44},"8":{"valor":18518.68,"vendas":940,"ticket":19.7},"9":{"valor":18116.35,"vendas":890,"ticket":20.36},"10":{"valor":23271.91,"vendas":1049,"ticket":22.18},"11":{"valor":17467.59,"vendas":842,"ticket":20.75},"12":{"valor":22280.14,"vendas":1005,"ticket":22.17}}},"Parque das Mansões":{"2023":{"5":{"valor":1148.62,"vendas":null,"ticket":null},"6":{"valor":4504.48,"vendas":null,"ticket":null},"7":{"valor":4208.31,"vendas":null,"ticket":null},"8":{"valor":4073.57,"vendas":null,"ticket":null},"9":{"valor":4356.38,"vendas":null,"ticket":null},"10":{"valor":4758.64,"vendas":null,"ticket":null},"11":{"valor":4265.05,"vendas":null,"ticket":null},"12":{"valor":4756.76,"vendas":null,"ticket":null}},"2024":{"1":{"valor":3902.85,"vendas":239,"ticket":16.33},"2":{"valor":3057.36,"vendas":194,"ticket":15.76},"3":{"valor":3770.26,"vendas":218,"ticket":17.29},"4":{"valor":4325.16,"vendas":274,"ticket":15.79},"5":{"valor":5526.87,"vendas":274,"ticket":20.17},"6":{"valor":3851.96,"vendas":202,"ticket":19.07},"7":{"valor":4056.9,"vendas":222,"ticket":18.27},"8":{"valor":5535.23,"vendas":282,"ticket":19.63},"9":{"valor":4995.0,"vendas":253,"ticket":19.74},"10":{"valor":4852.48,"vendas":247,"ticket":19.65},"11":{"valor":2234.69,"vendas":109,"ticket":20.5}},"2025":{}},"Pedra Bonita":{"2023":{"1":{"valor":9788.55,"vendas":null,"ticket":null},"2":{"valor":7125.21,"vendas":null,"ticket":null},"3":{"valor":7358.12,"vendas":null,"ticket":null},"4":{"valor":6819.85,"vendas":null,"ticket":null},"5":{"valor":6033.82,"vendas":null,"ticket":null},"6":{"valor":6000.19,"vendas":null,"ticket":null},"7":{"valor":7187.1,"vendas":null,"ticket":null},"8":{"valor":6656.76,"vendas":null,"ticket":null},"9":{"valor":6254.57,"vendas":null,"ticket":null},"10":{"valor":5102.57,"vendas":null,"ticket":null},"11":{"valor":5863.12,"vendas":null,"ticket":null},"12":{"valor":7292.8,"vendas":null,"ticket":null}},"2024":{"1":{"valor":6604.69,"vendas":424,"ticket":15.58},"2":{"valor":5111.6,"vendas":388,"ticket":13.17},"3":{"valor":5735.99,"vendas":392,"ticket":14.63},"4":{"valor":5205.52,"vendas":390,"ticket":13.35},"5":{"valor":5954.71,"vendas":442,"ticket":13.47},"6":{"valor":5408.95,"vendas":405,"ticket":13.36},"7":{"valor":5988.39,"vendas":441,"ticket":13.58},"8":{"valor":6750.92,"vendas":438,"ticket":15.41},"9":{"valor":6647.67,"vendas":471,"ticket":14.11},"10":{"valor":7898.01,"vendas":546,"ticket":14.47},"11":{"valor":7187.09,"vendas":481,"ticket":14.94},"12":{"valor":9733.19,"vendas":618,"ticket":15.75}},"2025":{"1":{"valor":7272.64,"vendas":490,"ticket":14.84},"2":{"valor":8122.33,"vendas":522,"ticket":15.56},"3":{"valor":9853.45,"vendas":630,"ticket":15.64},"4":{"valor":7385.4,"vendas":445,"ticket":16.6},"5":{"valor":7420.39,"vendas":470,"ticket":15.79},"6":{"valor":7851.72,"vendas":463,"ticket":16.96},"7":{"valor":8242.43,"vendas":522,"ticket":15.79},"8":{"valor":9364.57,"vendas":525,"ticket":17.84},"9":{"valor":8126.85,"vendas":496,"ticket":16.38},"10":{"valor":9487.71,"vendas":561,"ticket":16.91},"11":{"valor":9853.99,"vendas":572,"ticket":17.23},"12":{"valor":9814.28,"vendas":586,"ticket":16.75}}},"Portais do Meier":{"2023":{"1":{"valor":898.31,"vendas":null,"ticket":null},"2":{"valor":6686.32,"vendas":null,"ticket":null},"3":{"valor":6264.86,"vendas":null,"ticket":null},"4":{"valor":5073.82,"vendas":null,"ticket":null},"5":{"valor":5722.98,"vendas":null,"ticket":null},"6":{"valor":5932.78,"vendas":null,"ticket":null},"7":{"valor":6846.48,"vendas":null,"ticket":null},"8":{"valor":5467.92,"vendas":null,"ticket":null},"9":{"valor":4947.07,"vendas":null,"ticket":null},"10":{"valor":5278.17,"vendas":null,"ticket":null},"11":{"valor":1115.78,"vendas":null,"ticket":null}},"2024":{},"2025":{}},"Pq. Visconde Albuq.":{"2023":{"1":{"valor":9153.61,"vendas":null,"ticket":null},"2":{"valor":9319.25,"vendas":null,"ticket":null},"3":{"valor":10000.47,"vendas":null,"ticket":null},"4":{"valor":8496.27,"vendas":null,"ticket":null},"5":{"valor":7701.55,"vendas":null,"ticket":null},"6":{"valor":8491.25,"vendas":null,"ticket":null},"7":{"valor":8498.43,"vendas":null,"ticket":null},"8":{"valor":8283.11,"vendas":null,"ticket":null},"9":{"valor":7576.13,"vendas":null,"ticket":null},"10":{"valor":7646.47,"vendas":null,"ticket":null},"11":{"valor":8469.79,"vendas":null,"ticket":null},"12":{"valor":10563.01,"vendas":null,"ticket":null}},"2024":{"1":{"valor":8799.69,"vendas":471,"ticket":18.68},"2":{"valor":7224.05,"vendas":396,"ticket":18.24},"3":{"valor":9582.44,"vendas":528,"ticket":18.15},"4":{"valor":9699.69,"vendas":535,"ticket":18.13},"5":{"valor":9611.92,"vendas":576,"ticket":16.69},"6":{"valor":7833.38,"vendas":483,"ticket":16.22},"7":{"valor":7850.71,"vendas":440,"ticket":17.84},"8":{"valor":9348.72,"vendas":509,"ticket":18.37},"9":{"valor":8903.4,"vendas":473,"ticket":18.82},"10":{"valor":9768.69,"vendas":472,"ticket":20.7},"11":{"valor":8588.9,"vendas":425,"ticket":20.21},"12":{"valor":9899.1,"vendas":474,"ticket":20.88}},"2025":{"1":{"valor":11133.55,"vendas":487,"ticket":22.86},"2":{"valor":9057.07,"vendas":423,"ticket":21.41},"3":{"valor":10115.31,"vendas":474,"ticket":21.34},"4":{"valor":9800.2,"vendas":461,"ticket":21.26},"5":{"valor":8617.9,"vendas":433,"ticket":19.9},"6":{"valor":8146.12,"vendas":449,"ticket":18.14},"7":{"valor":8520.18,"vendas":421,"ticket":20.24},"8":{"valor":8080.93,"vendas":406,"ticket":19.9},"9":{"valor":8839.96,"vendas":408,"ticket":21.67},"10":{"valor":8200.79,"vendas":391,"ticket":20.97},"11":{"valor":9291.53,"vendas":424,"ticket":21.91},"12":{"valor":9748.2,"vendas":449,"ticket":21.71}}},"Presidente Médici":{"2023":{"3":{"valor":35.27,"vendas":null,"ticket":null},"4":{"valor":6152.13,"vendas":null,"ticket":null},"5":{"valor":5704.0,"vendas":null,"ticket":null},"6":{"valor":5265.41,"vendas":null,"ticket":null},"7":{"valor":5191.71,"vendas":null,"ticket":null},"8":{"valor":4641.91,"vendas":null,"ticket":null},"9":{"valor":4459.59,"vendas":null,"ticket":null},"10":{"valor":4180.53,"vendas":null,"ticket":null},"11":{"valor":4198.3,"vendas":null,"ticket":null},"12":{"valor":4830.32,"vendas":null,"ticket":null}},"2024":{"1":{"valor":5522.46,"vendas":381,"ticket":14.49},"2":{"valor":6060.3,"vendas":420,"ticket":14.43},"3":{"valor":6557.15,"vendas":447,"ticket":14.67},"4":{"valor":6091.62,"vendas":406,"ticket":15.0},"5":{"valor":6627.55,"vendas":482,"ticket":13.75},"6":{"valor":7159.25,"vendas":444,"ticket":16.12},"7":{"valor":5809.38,"vendas":413,"ticket":14.07},"8":{"valor":8173.27,"vendas":529,"ticket":15.45},"9":{"valor":6969.62,"vendas":451,"ticket":15.45},"10":{"valor":7117.09,"vendas":485,"ticket":14.67},"11":{"valor":6472.83,"vendas":429,"ticket":15.09},"12":{"valor":7561.32,"vendas":496,"ticket":15.24}},"2025":{"1":{"valor":7480.36,"vendas":497,"ticket":15.05},"2":{"valor":7574.35,"vendas":497,"ticket":15.24},"3":{"valor":8358.74,"vendas":538,"ticket":15.54},"4":{"valor":7877.53,"vendas":483,"ticket":16.31},"5":{"valor":8646.44,"vendas":585,"ticket":14.78},"6":{"valor":7204.21,"vendas":507,"ticket":14.21},"7":{"valor":8058.14,"vendas":528,"ticket":15.26},"8":{"valor":8312.39,"vendas":568,"ticket":14.63},"9":{"valor":8275.8,"vendas":542,"ticket":15.27},"10":{"valor":8074.73,"vendas":498,"ticket":16.21},"11":{"valor":7739.53,"vendas":449,"ticket":17.24},"12":{"valor":9146.19,"vendas":554,"ticket":16.51}}},"Prince":{"2023":{"1":{"valor":13673.77,"vendas":null,"ticket":null},"2":{"valor":13320.41,"vendas":null,"ticket":null},"3":{"valor":11584.42,"vendas":null,"ticket":null},"4":{"valor":10544.61,"vendas":null,"ticket":null},"5":{"valor":13884.35,"vendas":null,"ticket":null},"6":{"valor":13788.27,"vendas":null,"ticket":null},"7":{"valor":13830.75,"vendas":null,"ticket":null},"8":{"valor":14415.75,"vendas":null,"ticket":null},"9":{"valor":14035.44,"vendas":null,"ticket":null},"10":{"valor":12768.15,"vendas":null,"ticket":null},"11":{"valor":13830.18,"vendas":null,"ticket":null},"12":{"valor":15939.86,"vendas":null,"ticket":null}},"2024":{"1":{"valor":15420.77,"vendas":769,"ticket":20.05},"2":{"valor":13306.75,"vendas":699,"ticket":19.04},"3":{"valor":13407.11,"vendas":709,"ticket":18.91},"4":{"valor":13091.71,"vendas":689,"ticket":19.0},"5":{"valor":15023.09,"vendas":798,"ticket":18.83},"6":{"valor":15277.29,"vendas":785,"ticket":19.46},"7":{"valor":15426.44,"vendas":802,"ticket":19.23},"8":{"valor":14614.31,"vendas":736,"ticket":19.86},"9":{"valor":14089.78,"vendas":722,"ticket":19.51},"10":{"valor":15370.56,"vendas":788,"ticket":19.51},"11":{"valor":17381.52,"vendas":812,"ticket":21.41},"12":{"valor":17788.1,"vendas":877,"ticket":20.28}},"2025":{"1":{"valor":17891.26,"vendas":866,"ticket":20.66},"2":{"valor":16503.83,"vendas":794,"ticket":20.79},"3":{"valor":19268.47,"vendas":911,"ticket":21.15},"4":{"valor":15912.67,"vendas":867,"ticket":18.35},"5":{"valor":16969.65,"vendas":896,"ticket":18.94},"6":{"valor":17179.0,"vendas":891,"ticket":19.28},"7":{"valor":19020.16,"vendas":1054,"ticket":18.05},"8":{"valor":18538.87,"vendas":1029,"ticket":18.02},"9":{"valor":18389.62,"vendas":971,"ticket":18.94},"10":{"valor":22474.51,"vendas":1129,"ticket":19.91},"11":{"valor":20515.77,"vendas":1079,"ticket":19.01},"12":{"valor":22816.5,"vendas":1206,"ticket":18.92}}},"Projac":{"2023":{"8":{"valor":5.84,"vendas":null,"ticket":null},"10":{"valor":8222.29,"vendas":null,"ticket":null},"11":{"valor":41057.65,"vendas":null,"ticket":null},"12":{"valor":51924.7,"vendas":null,"ticket":null}},"2024":{"1":{"valor":54662.11,"vendas":4308,"ticket":12.69},"2":{"valor":51408.99,"vendas":4102,"ticket":12.53},"3":{"valor":52461.73,"vendas":4246,"ticket":12.36},"4":{"valor":49787.2,"vendas":4092,"ticket":12.17},"5":{"valor":51623.58,"vendas":4371,"ticket":11.81},"6":{"valor":50134.86,"vendas":4280,"ticket":11.71},"7":{"valor":52922.46,"vendas":4531,"ticket":11.68},"8":{"valor":68315.08,"vendas":5754,"ticket":11.87},"9":{"valor":65080.34,"vendas":5517,"ticket":11.8},"10":{"valor":61189.21,"vendas":5075,"ticket":12.06},"11":{"valor":55599.14,"vendas":4565,"ticket":12.18},"12":{"valor":64054.63,"vendas":5016,"ticket":12.77}},"2025":{"1":{"valor":81474.55,"vendas":6489,"ticket":12.56},"2":{"valor":94394.59,"vendas":7387,"ticket":12.78},"3":{"valor":102713.34,"vendas":7718,"ticket":13.31},"4":{"valor":100263.85,"vendas":7756,"ticket":12.93},"5":{"valor":95575.21,"vendas":7666,"ticket":12.47},"6":{"valor":89078.14,"vendas":7260,"ticket":12.27},"7":{"valor":89367.87,"vendas":7391,"ticket":12.09},"8":{"valor":99040.67,"vendas":7888,"ticket":12.56},"9":{"valor":106923.86,"vendas":8602,"ticket":12.43},"10":{"valor":111911.53,"vendas":8957,"ticket":12.49},"11":{"valor":108185.12,"vendas":8569,"ticket":12.63},"12":{"valor":121378.67,"vendas":9621,"ticket":12.62}}},"Reserva das Arvores":{"2023":{},"2024":{"2":{"valor":5933.74,"vendas":341,"ticket":17.4},"3":{"valor":11905.01,"vendas":654,"ticket":18.2},"4":{"valor":10785.62,"vendas":654,"ticket":16.49},"5":{"valor":10480.53,"vendas":669,"ticket":15.67},"6":{"valor":10118.82,"vendas":635,"ticket":15.94},"7":{"valor":8904.59,"vendas":522,"ticket":17.06},"8":{"valor":10363.86,"vendas":571,"ticket":18.15},"9":{"valor":12009.46,"vendas":686,"ticket":17.51},"10":{"valor":12004.21,"vendas":693,"ticket":17.32},"11":{"valor":11268.56,"vendas":656,"ticket":17.18},"12":{"valor":13295.16,"vendas":749,"ticket":17.75}},"2025":{"1":{"valor":12874.96,"vendas":736,"ticket":17.49},"2":{"valor":214.55,"vendas":10,"ticket":21.46}}},"Reserva Árvores 2":{"2023":{},"2024":{"8":{"valor":681.74,"vendas":41,"ticket":16.63},"9":{"valor":5526.86,"vendas":370,"ticket":14.94},"10":{"valor":5059.03,"vendas":306,"ticket":16.53},"11":{"valor":5430.19,"vendas":351,"ticket":15.47},"12":{"valor":4530.94,"vendas":285,"ticket":15.9}},"2025":{"1":{"valor":1178.74,"vendas":60,"ticket":19.65}}},"Rotondo":{"2023":{"1":{"valor":12340.78,"vendas":null,"ticket":null},"2":{"valor":12157.47,"vendas":null,"ticket":null},"3":{"valor":11709.07,"vendas":null,"ticket":null},"4":{"valor":8959.0,"vendas":null,"ticket":null},"5":{"valor":8815.66,"vendas":null,"ticket":null},"6":{"valor":10253.35,"vendas":null,"ticket":null},"7":{"valor":10757.96,"vendas":null,"ticket":null},"8":{"valor":9115.35,"vendas":null,"ticket":null},"9":{"valor":9103.7,"vendas":null,"ticket":null},"10":{"valor":8593.23,"vendas":null,"ticket":null},"11":{"valor":10717.47,"vendas":null,"ticket":null},"12":{"valor":11435.77,"vendas":null,"ticket":null}},"2024":{"1":{"valor":8513.96,"vendas":414,"ticket":20.57},"2":{"valor":8539.03,"vendas":459,"ticket":18.6},"3":{"valor":9396.08,"vendas":521,"ticket":18.03},"4":{"valor":9476.86,"vendas":474,"ticket":19.99},"5":{"valor":9679.12,"vendas":471,"ticket":20.55},"6":{"valor":10201.5,"vendas":485,"ticket":21.03},"7":{"valor":9498.64,"vendas":525,"ticket":18.09},"8":{"valor":11745.38,"vendas":585,"ticket":20.08},"9":{"valor":10372.13,"vendas":522,"ticket":19.87},"10":{"valor":13120.49,"vendas":637,"ticket":20.6},"11":{"valor":12893.2,"vendas":601,"ticket":21.45},"12":{"valor":14238.95,"vendas":695,"ticket":20.49}},"2025":{"1":{"valor":13328.88,"vendas":662,"ticket":20.13},"2":{"valor":13975.05,"vendas":722,"ticket":19.36},"3":{"valor":13861.8,"vendas":703,"ticket":19.72},"4":{"valor":13237.81,"vendas":657,"ticket":20.15},"5":{"valor":12779.74,"vendas":689,"ticket":18.55},"6":{"valor":12597.99,"vendas":697,"ticket":18.07},"7":{"valor":14885.79,"vendas":819,"ticket":18.18},"8":{"valor":14734.59,"vendas":766,"ticket":19.24},"9":{"valor":12634.48,"vendas":670,"ticket":18.86},"10":{"valor":13582.22,"vendas":750,"ticket":18.11},"11":{"valor":15014.25,"vendas":804,"ticket":18.67},"12":{"valor":17048.82,"vendas":843,"ticket":20.22}}},"Saint Germain":{"2023":{},"2024":{},"2025":{"6":{"valor":16812.5,"vendas":730,"ticket":23.03},"7":{"valor":21079.66,"vendas":1002,"ticket":21.04},"8":{"valor":18119.71,"vendas":877,"ticket":20.66},"9":{"valor":17128.25,"vendas":855,"ticket":20.03},"10":{"valor":19452.72,"vendas":930,"ticket":20.92},"11":{"valor":18166.21,"vendas":886,"ticket":20.5},"12":{"valor":22893.5,"vendas":1125,"ticket":20.35}}},"Saint Tropez":{"2023":{"1":{"valor":5590.73,"vendas":null,"ticket":null},"2":{"valor":5039.08,"vendas":null,"ticket":null},"3":{"valor":6252.35,"vendas":null,"ticket":null},"4":{"valor":5516.87,"vendas":null,"ticket":null},"5":{"valor":5097.55,"vendas":null,"ticket":null},"6":{"valor":5533.69,"vendas":null,"ticket":null},"7":{"valor":6793.57,"vendas":null,"ticket":null},"8":{"valor":5713.07,"vendas":null,"ticket":null},"9":{"valor":5214.77,"vendas":null,"ticket":null},"10":{"valor":4559.47,"vendas":null,"ticket":null},"11":{"valor":6604.57,"vendas":null,"ticket":null},"12":{"valor":7263.83,"vendas":null,"ticket":null}},"2024":{"1":{"valor":6621.13,"vendas":456,"ticket":14.52},"2":{"valor":6635.1,"vendas":429,"ticket":15.47},"3":{"valor":5433.64,"vendas":424,"ticket":12.82},"4":{"valor":6449.68,"vendas":412,"ticket":15.65},"5":{"valor":6561.69,"vendas":454,"ticket":14.45},"6":{"valor":7466.95,"vendas":471,"ticket":15.85},"7":{"valor":7803.11,"vendas":468,"ticket":16.67},"8":{"valor":7031.95,"vendas":481,"ticket":14.62},"9":{"valor":9172.34,"vendas":600,"ticket":15.29},"10":{"valor":7969.01,"vendas":539,"ticket":14.78},"11":{"valor":10090.28,"vendas":667,"ticket":15.13},"12":{"valor":11841.46,"vendas":738,"ticket":16.05}},"2025":{"1":{"valor":11658.49,"vendas":785,"ticket":14.85},"2":{"valor":9639.91,"vendas":635,"ticket":15.18},"3":{"valor":13089.39,"vendas":793,"ticket":16.51},"4":{"valor":10104.9,"vendas":644,"ticket":15.69},"5":{"valor":12401.38,"vendas":798,"ticket":15.54},"6":{"valor":10930.83,"vendas":674,"ticket":16.22},"7":{"valor":12748.42,"vendas":828,"ticket":15.4},"8":{"valor":13434.37,"vendas":815,"ticket":16.48},"9":{"valor":11162.18,"vendas":719,"ticket":15.52},"10":{"valor":9537.07,"vendas":608,"ticket":15.69},"11":{"valor":14388.17,"vendas":876,"ticket":16.42},"12":{"valor":19232.79,"vendas":1069,"ticket":17.99}}},"Samambaia":{"2023":{"1":{"valor":6826.41,"vendas":null,"ticket":null},"2":{"valor":5386.75,"vendas":null,"ticket":null},"3":{"valor":5096.73,"vendas":null,"ticket":null},"4":{"valor":4728.91,"vendas":null,"ticket":null},"5":{"valor":6131.1,"vendas":null,"ticket":null},"6":{"valor":5950.58,"vendas":null,"ticket":null},"7":{"valor":6088.95,"vendas":null,"ticket":null},"8":{"valor":5347.7,"vendas":null,"ticket":null},"9":{"valor":5584.91,"vendas":null,"ticket":null},"10":{"valor":5661.65,"vendas":null,"ticket":null},"11":{"valor":6211.17,"vendas":null,"ticket":null},"12":{"valor":6127.68,"vendas":null,"ticket":null}},"2024":{"1":{"valor":5857.09,"vendas":308,"ticket":19.02},"2":{"valor":5916.35,"vendas":301,"ticket":19.66},"3":{"valor":6610.42,"vendas":300,"ticket":22.03},"4":{"valor":6275.59,"vendas":316,"ticket":19.86},"5":{"valor":5783.76,"vendas":299,"ticket":19.34},"6":{"valor":5811.62,"vendas":299,"ticket":19.44},"7":{"valor":6123.46,"vendas":310,"ticket":19.75},"8":{"valor":7010.44,"vendas":365,"ticket":19.21},"9":{"valor":7375.07,"vendas":393,"ticket":18.77},"10":{"valor":8314.73,"vendas":403,"ticket":20.63},"11":{"valor":9183.75,"vendas":464,"ticket":19.79},"12":{"valor":8174.5,"vendas":411,"ticket":19.89}},"2025":{"1":{"valor":6653.07,"vendas":356,"ticket":18.69},"2":{"valor":7766.88,"vendas":396,"ticket":19.61},"3":{"valor":8663.7,"vendas":493,"ticket":17.57},"4":{"valor":7753.13,"vendas":413,"ticket":18.77},"5":{"valor":8662.46,"vendas":453,"ticket":19.12},"6":{"valor":6941.03,"vendas":409,"ticket":16.97},"7":{"valor":7606.21,"vendas":459,"ticket":16.57},"8":{"valor":7584.18,"vendas":438,"ticket":17.32},"9":{"valor":9309.71,"vendas":468,"ticket":19.89},"10":{"valor":9560.88,"vendas":480,"ticket":19.92},"11":{"valor":9246.08,"vendas":445,"ticket":20.78},"12":{"valor":10753.9,"vendas":484,"ticket":22.22}}},"Solari":{"2023":{"1":{"valor":8618.16,"vendas":null,"ticket":null},"2":{"valor":8069.07,"vendas":null,"ticket":null},"3":{"valor":7951.59,"vendas":null,"ticket":null},"4":{"valor":5878.01,"vendas":null,"ticket":null},"5":{"valor":7535.06,"vendas":null,"ticket":null},"6":{"valor":6140.8,"vendas":null,"ticket":null},"7":{"valor":6612.94,"vendas":null,"ticket":null},"8":{"valor":6553.05,"vendas":null,"ticket":null},"9":{"valor":7114.78,"vendas":null,"ticket":null},"10":{"valor":6867.06,"vendas":null,"ticket":null},"11":{"valor":7627.02,"vendas":null,"ticket":null},"12":{"valor":7395.23,"vendas":null,"ticket":null}},"2024":{"1":{"valor":8348.23,"vendas":449,"ticket":18.59},"2":{"valor":5370.15,"vendas":319,"ticket":16.83},"3":{"valor":5994.69,"vendas":348,"ticket":17.23},"4":{"valor":5852.88,"vendas":376,"ticket":15.57},"5":{"valor":7137.92,"vendas":414,"ticket":17.24},"6":{"valor":5946.54,"vendas":375,"ticket":15.86},"7":{"valor":7241.27,"vendas":390,"ticket":18.57},"8":{"valor":7080.17,"vendas":406,"ticket":17.44},"9":{"valor":5752.52,"vendas":319,"ticket":18.03},"10":{"valor":6779.03,"vendas":404,"ticket":16.78},"11":{"valor":7036.94,"vendas":358,"ticket":19.66},"12":{"valor":8776.66,"vendas":476,"ticket":18.44}},"2025":{"1":{"valor":10499.73,"vendas":564,"ticket":18.62},"2":{"valor":10609.37,"vendas":536,"ticket":19.79},"3":{"valor":8869.77,"vendas":491,"ticket":18.06},"4":{"valor":7328.86,"vendas":372,"ticket":19.7},"5":{"valor":9366.45,"vendas":457,"ticket":20.5},"6":{"valor":6807.71,"vendas":344,"ticket":19.79},"7":{"valor":7484.7,"vendas":418,"ticket":17.91},"8":{"valor":7937.77,"vendas":418,"ticket":18.99},"9":{"valor":8061.84,"vendas":441,"ticket":18.28},"10":{"valor":9833.61,"vendas":478,"ticket":20.57},"11":{"valor":8350.28,"vendas":394,"ticket":21.19},"12":{"valor":10358.52,"vendas":505,"ticket":20.51}}},"Summer Coast":{"2023":{},"2024":{"12":{"valor":8679.39,"vendas":387,"ticket":22.43}},"2025":{"1":{"valor":25373.16,"vendas":1333,"ticket":19.03},"2":{"valor":24845.27,"vendas":1254,"ticket":19.81},"3":{"valor":25139.97,"vendas":1239,"ticket":20.29},"4":{"valor":22817.13,"vendas":1099,"ticket":20.76},"5":{"valor":21756.54,"vendas":1145,"ticket":19.0},"6":{"valor":22627.23,"vendas":1150,"ticket":19.68},"7":{"valor":22725.62,"vendas":1270,"ticket":17.89},"8":{"valor":22687.77,"vendas":1225,"ticket":18.52},"9":{"valor":22746.61,"vendas":1153,"ticket":19.73},"10":{"valor":27553.04,"vendas":1317,"ticket":20.92},"11":{"valor":25042.78,"vendas":1227,"ticket":20.41},"12":{"valor":31095.21,"vendas":1405,"ticket":22.13}}},"Sundance":{"2023":{"1":{"valor":8599.73,"vendas":null,"ticket":null},"2":{"valor":7491.23,"vendas":null,"ticket":null},"3":{"valor":1044.95,"vendas":null,"ticket":null}},"2024":{},"2025":{}},"Sunrise":{"2023":{"1":{"valor":9594.41,"vendas":null,"ticket":null},"2":{"valor":9121.93,"vendas":null,"ticket":null},"3":{"valor":10443.92,"vendas":null,"ticket":null},"4":{"valor":9106.01,"vendas":null,"ticket":null},"5":{"valor":9844.86,"vendas":null,"ticket":null},"6":{"valor":9827.07,"vendas":null,"ticket":null},"7":{"valor":10427.97,"vendas":null,"ticket":null},"8":{"valor":9931.42,"vendas":null,"ticket":null},"9":{"valor":10692.08,"vendas":null,"ticket":null},"10":{"valor":11996.59,"vendas":null,"ticket":null},"11":{"valor":11999.49,"vendas":null,"ticket":null},"12":{"valor":13984.66,"vendas":null,"ticket":null}},"2024":{"1":{"valor":13646.37,"vendas":726,"ticket":18.8},"2":{"valor":12452.37,"vendas":693,"ticket":17.97},"3":{"valor":13661.31,"vendas":720,"ticket":18.97},"4":{"valor":13122.32,"vendas":764,"ticket":17.18},"5":{"valor":14758.12,"vendas":845,"ticket":17.47},"6":{"valor":13209.12,"vendas":739,"ticket":17.87},"7":{"valor":15011.18,"vendas":836,"ticket":17.96},"8":{"valor":14182.4,"vendas":767,"ticket":18.49},"9":{"valor":14636.59,"vendas":765,"ticket":19.13},"10":{"valor":14138.26,"vendas":753,"ticket":18.78},"11":{"valor":4689.78,"vendas":260,"ticket":18.04}},"2025":{}},"Torrigiani":{"2023":{"1":{"valor":9194.9,"vendas":null,"ticket":null},"2":{"valor":8777.56,"vendas":null,"ticket":null},"3":{"valor":8202.81,"vendas":null,"ticket":null},"4":{"valor":8150.24,"vendas":null,"ticket":null},"5":{"valor":8523.38,"vendas":null,"ticket":null},"6":{"valor":8400.8,"vendas":null,"ticket":null},"7":{"valor":8777.64,"vendas":null,"ticket":null},"8":{"valor":8423.53,"vendas":null,"ticket":null},"9":{"valor":8371.66,"vendas":null,"ticket":null},"10":{"valor":7638.89,"vendas":null,"ticket":null},"11":{"valor":9259.83,"vendas":null,"ticket":null},"12":{"valor":8252.75,"vendas":null,"ticket":null}},"2024":{"1":{"valor":9070.35,"vendas":574,"ticket":15.8},"2":{"valor":7849.78,"vendas":518,"ticket":15.15},"3":{"valor":7069.28,"vendas":469,"ticket":15.07},"4":{"valor":7519.92,"vendas":504,"ticket":14.92},"5":{"valor":8519.96,"vendas":525,"ticket":16.23},"6":{"valor":8641.22,"vendas":513,"ticket":16.84},"7":{"valor":9240.36,"vendas":507,"ticket":18.23},"8":{"valor":7579.14,"vendas":448,"ticket":16.92},"9":{"valor":8005.05,"vendas":447,"ticket":17.91},"10":{"valor":7776.64,"vendas":477,"ticket":16.3},"11":{"valor":8203.02,"vendas":454,"ticket":18.07},"12":{"valor":9951.85,"vendas":559,"ticket":17.8}},"2025":{"1":{"valor":8936.39,"vendas":520,"ticket":17.19},"2":{"valor":8030.52,"vendas":475,"ticket":16.91},"3":{"valor":9116.13,"vendas":497,"ticket":18.34},"4":{"valor":6696.37,"vendas":388,"ticket":17.26},"5":{"valor":6743.17,"vendas":415,"ticket":16.25},"6":{"valor":8627.56,"vendas":522,"ticket":16.53},"7":{"valor":8926.6,"vendas":563,"ticket":15.86},"8":{"valor":9202.96,"vendas":580,"ticket":15.87},"9":{"valor":8907.2,"vendas":552,"ticket":16.14},"10":{"valor":9838.83,"vendas":582,"ticket":16.91},"11":{"valor":11298.4,"vendas":648,"ticket":17.44},"12":{"valor":9934.91,"vendas":598,"ticket":16.61}}},"Trouville":{"2023":{"1":{"valor":9609.7,"vendas":null,"ticket":null},"2":{"valor":10841.03,"vendas":null,"ticket":null},"3":{"valor":10762.92,"vendas":null,"ticket":null},"4":{"valor":11882.55,"vendas":null,"ticket":null},"5":{"valor":11555.62,"vendas":null,"ticket":null},"6":{"valor":10717.79,"vendas":null,"ticket":null},"7":{"valor":10559.18,"vendas":null,"ticket":null},"8":{"valor":12108.02,"vendas":null,"ticket":null},"9":{"valor":10910.91,"vendas":null,"ticket":null},"10":{"valor":12407.07,"vendas":null,"ticket":null},"11":{"valor":12830.56,"vendas":null,"ticket":null},"12":{"valor":14257.1,"vendas":null,"ticket":null}},"2024":{"1":{"valor":11915.11,"vendas":634,"ticket":18.79},"2":{"valor":10649.53,"vendas":589,"ticket":18.08},"3":{"valor":12659.34,"vendas":652,"ticket":19.42},"4":{"valor":10497.63,"vendas":550,"ticket":19.09},"5":{"valor":12407.74,"vendas":649,"ticket":19.12},"6":{"valor":11030.15,"vendas":578,"ticket":19.08},"7":{"valor":11404.33,"vendas":583,"ticket":19.56},"8":{"valor":9612.35,"vendas":519,"ticket":18.52},"9":{"valor":11325.49,"vendas":604,"ticket":18.75},"10":{"valor":12781.67,"vendas":681,"ticket":18.77},"11":{"valor":13363.08,"vendas":669,"ticket":19.97},"12":{"valor":14680.7,"vendas":711,"ticket":20.65}},"2025":{"1":{"valor":13774.76,"vendas":651,"ticket":21.16},"2":{"valor":11673.3,"vendas":624,"ticket":18.71},"3":{"valor":14829.25,"vendas":681,"ticket":21.78},"4":{"valor":13209.21,"vendas":628,"ticket":21.03},"5":{"valor":14038.76,"vendas":632,"ticket":22.21},"6":{"valor":14997.17,"vendas":706,"ticket":21.24},"7":{"valor":16029.94,"vendas":816,"ticket":19.64},"8":{"valor":16984.51,"vendas":831,"ticket":20.44},"9":{"valor":16173.2,"vendas":840,"ticket":19.25},"10":{"valor":18635.49,"vendas":956,"ticket":19.49},"11":{"valor":17943.37,"vendas":880,"ticket":20.39},"12":{"valor":16928.09,"vendas":865,"ticket":19.57}}},"Up Barra Mais":{"2023":{"1":{"valor":25791.7,"vendas":null,"ticket":null},"2":{"valor":22236.67,"vendas":null,"ticket":null},"3":{"valor":24257.64,"vendas":null,"ticket":null},"4":{"valor":22617.02,"vendas":null,"ticket":null},"5":{"valor":22867.95,"vendas":null,"ticket":null},"6":{"valor":24189.08,"vendas":null,"ticket":null},"7":{"valor":28202.46,"vendas":null,"ticket":null},"8":{"valor":26282.75,"vendas":null,"ticket":null},"9":{"valor":29006.36,"vendas":null,"ticket":null},"10":{"valor":27696.86,"vendas":null,"ticket":null},"11":{"valor":30932.8,"vendas":null,"ticket":null},"12":{"valor":19164.25,"vendas":null,"ticket":null}},"2024":{},"2025":{}},"Urban Boutique":{"2023":{"4":{"valor":1755.52,"vendas":null,"ticket":null},"5":{"valor":6273.2,"vendas":null,"ticket":null},"6":{"valor":7091.61,"vendas":null,"ticket":null},"7":{"valor":6531.01,"vendas":null,"ticket":null},"8":{"valor":5694.79,"vendas":null,"ticket":null},"9":{"valor":6221.89,"vendas":null,"ticket":null},"10":{"valor":7150.44,"vendas":null,"ticket":null},"11":{"valor":7179.3,"vendas":null,"ticket":null},"12":{"valor":6560.35,"vendas":null,"ticket":null}},"2024":{"1":{"valor":7054.45,"vendas":466,"ticket":15.14},"2":{"valor":5438.24,"vendas":360,"ticket":15.11},"3":{"valor":5714.07,"vendas":383,"ticket":14.92},"4":{"valor":5728.59,"vendas":360,"ticket":15.91},"5":{"valor":8306.13,"vendas":438,"ticket":18.96},"6":{"valor":9183.2,"vendas":442,"ticket":20.78},"7":{"valor":10541.52,"vendas":593,"ticket":17.78},"8":{"valor":9465.9,"vendas":541,"ticket":17.5},"9":{"valor":1464.87,"vendas":96,"ticket":15.26}},"2025":{}},"Vernissage":{"2023":{"6":{"valor":5775.3,"vendas":null,"ticket":null},"7":{"valor":20825.37,"vendas":null,"ticket":null},"8":{"valor":19222.91,"vendas":null,"ticket":null},"9":{"valor":19191.15,"vendas":null,"ticket":null},"10":{"valor":19029.48,"vendas":null,"ticket":null},"11":{"valor":17754.73,"vendas":null,"ticket":null},"12":{"valor":18748.36,"vendas":null,"ticket":null}},"2024":{"1":{"valor":19386.23,"vendas":989,"ticket":19.6},"2":{"valor":19452.34,"vendas":976,"ticket":19.93},"3":{"valor":23171.26,"vendas":1177,"ticket":19.69},"4":{"valor":18661.89,"vendas":1014,"ticket":18.4},"5":{"valor":21699.11,"vendas":1158,"ticket":18.74},"6":{"valor":21020.02,"vendas":1168,"ticket":18.0},"7":{"valor":21288.65,"vendas":1123,"ticket":18.96},"8":{"valor":21068.17,"vendas":1046,"ticket":20.14},"9":{"valor":24637.26,"vendas":1211,"ticket":20.34},"10":{"valor":23897.18,"vendas":1127,"ticket":21.2},"11":{"valor":26885.21,"vendas":1240,"ticket":21.68},"12":{"valor":28007.52,"vendas":1315,"ticket":21.3}},"2025":{"1":{"valor":29725.23,"vendas":1469,"ticket":20.24},"2":{"valor":16758.14,"vendas":811,"ticket":20.66},"3":{"valor":37886.78,"vendas":1789,"ticket":21.18},"4":{"valor":31617.63,"vendas":1420,"ticket":22.27},"5":{"valor":29125.94,"vendas":1445,"ticket":20.16},"6":{"valor":28859.32,"vendas":1395,"ticket":20.69},"7":{"valor":27497.23,"vendas":1420,"ticket":19.36},"8":{"valor":28607.89,"vendas":1325,"ticket":21.59},"9":{"valor":28227.26,"vendas":1391,"ticket":20.29},"10":{"valor":27752.16,"vendas":1212,"ticket":22.9},"11":{"valor":22234.0,"vendas":904,"ticket":24.6},"12":{"valor":27464.8,"vendas":1133,"ticket":24.24}}},"Verrochio":{"2023":{},"2024":{"12":{"valor":3112.35,"vendas":129,"ticket":24.13}},"2025":{"1":{"valor":5750.64,"vendas":246,"ticket":23.38},"2":{"valor":5780.07,"vendas":240,"ticket":24.08},"3":{"valor":5548.64,"vendas":248,"ticket":22.37},"4":{"valor":4281.1,"vendas":190,"ticket":22.53},"5":{"valor":3842.12,"vendas":166,"ticket":23.15},"6":{"valor":3814.79,"vendas":195,"ticket":19.56},"7":{"valor":5336.04,"vendas":239,"ticket":22.33},"8":{"valor":5730.44,"vendas":298,"ticket":19.23},"9":{"valor":5548.63,"vendas":273,"ticket":20.32},"10":{"valor":6417.28,"vendas":288,"ticket":22.28},"11":{"valor":8094.14,"vendas":320,"ticket":25.29},"12":{"valor":9778.24,"vendas":402,"ticket":24.32}}},"Villeneuve":{"2023":{"1":{"valor":4705.38,"vendas":null,"ticket":null},"2":{"valor":5072.61,"vendas":null,"ticket":null},"3":{"valor":4903.1,"vendas":null,"ticket":null},"4":{"valor":3059.2,"vendas":null,"ticket":null},"5":{"valor":5208.52,"vendas":null,"ticket":null},"6":{"valor":4283.16,"vendas":null,"ticket":null},"7":{"valor":3966.56,"vendas":null,"ticket":null},"8":{"valor":2680.37,"vendas":null,"ticket":null},"9":{"valor":3472.34,"vendas":null,"ticket":null},"10":{"valor":3097.39,"vendas":null,"ticket":null},"11":{"valor":4452.97,"vendas":null,"ticket":null},"12":{"valor":4028.61,"vendas":null,"ticket":null}},"2024":{"1":{"valor":4896.77,"vendas":278,"ticket":17.61},"2":{"valor":4710.73,"vendas":290,"ticket":16.24},"3":{"valor":4526.95,"vendas":259,"ticket":17.48},"4":{"valor":3962.53,"vendas":273,"ticket":14.51},"5":{"valor":3948.88,"vendas":270,"ticket":14.63},"6":{"valor":3840.14,"vendas":203,"ticket":18.92},"7":{"valor":2634.76,"vendas":186,"ticket":14.17},"8":{"valor":3022.09,"vendas":180,"ticket":16.79},"9":{"valor":3365.11,"vendas":190,"ticket":17.71},"10":{"valor":3392.17,"vendas":193,"ticket":17.58},"11":{"valor":3232.81,"vendas":165,"ticket":19.59}},"2025":{}},"Wonderful":{"2023":{"1":{"valor":52551.87,"vendas":null,"ticket":null},"2":{"valor":57884.36,"vendas":null,"ticket":null},"3":{"valor":58233.47,"vendas":null,"ticket":null},"4":{"valor":48915.18,"vendas":null,"ticket":null},"5":{"valor":48677.43,"vendas":null,"ticket":null},"6":{"valor":46525.6,"vendas":null,"ticket":null},"7":{"valor":51692.76,"vendas":null,"ticket":null},"8":{"valor":49095.28,"vendas":null,"ticket":null},"9":{"valor":60457.97,"vendas":null,"ticket":null},"10":{"valor":52202.2,"vendas":null,"ticket":null},"11":{"valor":54584.85,"vendas":null,"ticket":null},"12":{"valor":61411.63,"vendas":null,"ticket":null}},"2024":{"1":{"valor":53404.0,"vendas":2897,"ticket":18.43},"2":{"valor":48075.72,"vendas":2500,"ticket":19.23},"3":{"valor":50910.13,"vendas":2547,"ticket":19.99},"4":{"valor":42145.68,"vendas":2264,"ticket":18.62},"5":{"valor":50025.09,"vendas":2516,"ticket":19.88},"6":{"valor":42824.04,"vendas":2356,"ticket":18.18},"7":{"valor":43765.25,"vendas":2210,"ticket":19.8},"8":{"valor":44863.65,"vendas":2143,"ticket":20.93},"9":{"valor":44367.05,"vendas":2144,"ticket":20.69},"10":{"valor":43632.38,"vendas":2170,"ticket":20.11},"11":{"valor":47239.43,"vendas":2338,"ticket":20.21},"12":{"valor":51924.4,"vendas":2484,"ticket":20.9}},"2025":{"1":{"valor":53835.83,"vendas":2577,"ticket":20.89},"2":{"valor":26648.99,"vendas":1323,"ticket":20.14},"3":{"valor":57313.49,"vendas":2697,"ticket":21.25},"4":{"valor":47662.35,"vendas":2296,"ticket":20.76},"5":{"valor":55667.03,"vendas":2743,"ticket":20.29},"6":{"valor":50491.15,"vendas":2435,"ticket":20.74},"7":{"valor":50932.78,"vendas":2446,"ticket":20.82},"8":{"valor":51410.88,"vendas":2404,"ticket":21.39},"9":{"valor":49928.96,"vendas":2314,"ticket":21.58},"10":{"valor":58507.8,"vendas":2565,"ticket":22.81},"11":{"valor":63179.37,"vendas":2782,"ticket":22.71},"12":{"valor":73273.86,"vendas":3293,"ticket":22.25}}}};
+  </script>
+
+  <script type="text/babel">
+  const { useState, useMemo } = React;
+  const {
+    BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+    Legend, ResponsiveContainer, ComposedChart, Cell, PieChart, Pie
+  } = Recharts;
+
+  const DATA = window.DATA;
+  const HISTORICAL = window.HISTORICAL;
+  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const CORES = {
+    primary: '#6366f1', secondary: '#22c55e', tertiary: '#f59e0b',
+    danger: '#ef4444', neutral: '#64748b', purple: '#8b5cf6',
+    blue: '#3b82f6', pink: '#ec4899', cyan: '#06b6d4', orange: '#f97316'
+  };
+
+  const formatR$ = (v) => `R$ ${Number(v).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  const formatK = (v) => v >= 1000 ? `R$ ${(v/1000).toFixed(0)}k` : formatR$(v);
+  const formatM = (v) => `R$ ${(v/1000000).toFixed(2)}M`;
+
+  // ============================================================================
+  // COMPUTED DATA
+  // ============================================================================
+  function computeData() {
+    const stores = DATA.stores;
+    const storeNames = Object.keys(stores).filter(s => s !== 'CD Sancashop').sort();
+    const months = DATA.monthlyTotals.map(m => m.mes).sort((a,b) => a - b);
+    const maxMonth = Math.max(...months);
+
+    // Per-store aggregates
+    const storeAggregates = {};
+    storeNames.forEach(name => {
+      const yearData = stores[name]?.['2026'] || {};
+      let fatYTD = 0, vendasYTD = 0;
+      const monthlyData = {};
+      Object.entries(yearData).forEach(([m, d]) => {
+        fatYTD += d.valor;
+        vendasYTD += d.vendas;
+        monthlyData[parseInt(m)] = d;
+      });
+      storeAggregates[name] = {
+        fatYTD, vendasYTD,
+        ticketMedio: vendasYTD > 0 ? fatYTD / vendasYTD : 0,
+        monthlyData,
+        fatMesAtual: monthlyData[maxMonth]?.valor || 0,
+        vendasMesAtual: monthlyData[maxMonth]?.vendas || 0,
+      };
+    });
+
+    // Overall KPIs
+    const fatYTD = Object.values(storeAggregates).reduce((s, a) => s + a.fatYTD, 0);
+    const vendasYTD = Object.values(storeAggregates).reduce((s, a) => s + a.vendasYTD, 0);
+    const ticketMedio = vendasYTD > 0 ? fatYTD / vendasYTD : 0;
+    const lojasAtivas = storeNames.length;
+    const fatMesAtual = DATA.monthlyTotals.find(m => m.mes === maxMonth)?.faturamento || 0;
+
+    // Ranking by YTD
+    const rankingYTD = storeNames
+      .map(name => ({ name, ...storeAggregates[name] }))
+      .sort((a, b) => b.fatYTD - a.fatYTD)
+      .map((s, i) => ({ ...s, ranking: i + 1 }));
+
+    // Ranking by current month
+    const rankingMes = storeNames
+      .map(name => ({ name, ...storeAggregates[name] }))
+      .sort((a, b) => b.fatMesAtual - a.fatMesAtual)
+      .map((s, i) => ({ ...s, rankingMes: i + 1 }));
+
+    // Monthly chart data
+    const monthlyChart = [];
+    for (let m = 1; m <= 12; m++) {
+      const entry = DATA.monthlyTotals.find(t => t.mes === m);
+      if (entry) {
+        monthlyChart.push({
+          mes: MESES[m-1],
+          faturamento: entry.faturamento,
+          vendas: entry.vendas,
+          ticket: entry.ticket,
+        });
+      }
+    }
+
+    return { storeNames, storeAggregates, fatYTD, vendasYTD, ticketMedio, lojasAtivas, fatMesAtual, maxMonth, rankingYTD, rankingMes, monthlyChart };
+  }
+
+  // ============================================================================
+  // COMPONENTS
+  // ============================================================================
+  const Card = ({ children, className = "" }) => (
+    <div className={`bg-slate-800/50 backdrop-blur border border-slate-700/50 rounded-xl p-4 ${className}`}>
+      {children}
+    </div>
+  );
+
+  const MetricCard = ({ title, value, subtitle, icon, color = 'indigo' }) => {
+    const colors = { indigo: 'bg-indigo-500/20 text-indigo-400', green: 'bg-green-500/20 text-green-400', amber: 'bg-amber-500/20 text-amber-400', blue: 'bg-blue-500/20 text-blue-400', purple: 'bg-purple-500/20 text-purple-400' };
+    return (
+      <Card>
+        <div className="flex items-start justify-between">
+          <div className="min-w-0">
+            <p className="text-slate-400 text-xs sm:text-sm mb-1 truncate">{title}</p>
+            <p className="text-lg sm:text-2xl font-bold text-white truncate">{value}</p>
+            {subtitle && <p className="text-slate-500 text-xs mt-1 truncate">{subtitle}</p>}
+          </div>
+          <div className={`p-2 rounded-lg flex-shrink-0 ${colors[color] || colors.indigo}`}>
+            <span className="text-lg">{icon}</span>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="bg-slate-800 border border-slate-600 rounded-lg p-3 shadow-xl text-sm">
+        <p className="text-slate-300 font-medium mb-2">{label}</p>
+        {payload.map((entry, i) => (
+          <p key={i} style={{ color: entry.color }}>
+            {entry.name}: {entry.name.includes('Ticket') ? `R$ ${Number(entry.value).toFixed(2)}` : entry.name.includes('aturamento') ? formatR$(entry.value) : entry.value?.toLocaleString('pt-BR')}
+          </p>
+        ))}
+      </div>
+    );
+  };
+
+  // ============================================================================
+  // TAB 1 — VISÃO MENSAL
+  // ============================================================================
+  const VisaoMensal = ({ data }) => {
+    const [sortCol, setSortCol] = useState('fatYTD');
+    const [sortDir, setSortDir] = useState('desc');
+
+    const handleSort = (col) => {
+      if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+      else { setSortCol(col); setSortDir('desc'); }
+    };
+
+    const sortedStores = useMemo(() => {
+      return data.storeNames.map(name => {
+        const agg = data.storeAggregates[name];
+        return { name, ...agg };
+      }).sort((a, b) => {
+        let va, vb;
+        if (sortCol === 'name') { va = a.name; vb = b.name; }
+        else if (sortCol === 'fatYTD') { va = a.fatYTD; vb = b.fatYTD; }
+        else if (sortCol === 'vendasYTD') { va = a.vendasYTD; vb = b.vendasYTD; }
+        else if (sortCol === 'ticketMedio') { va = a.ticketMedio; vb = b.ticketMedio; }
+        else if (sortCol === 'fatMesAtual') { va = a.fatMesAtual; vb = b.fatMesAtual; }
+        else { va = a[sortCol]; vb = b[sortCol]; }
+        if (typeof va === 'string') return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+        return sortDir === 'asc' ? (va||0) - (vb||0) : (vb||0) - (va||0);
+      });
+    }, [data, sortCol, sortDir]);
+
+    const SortHeader = ({ col, label }) => (
+      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400 cursor-pointer hover:text-white select-none whitespace-nowrap" onClick={() => handleSort(col)}>
+        {label} {sortCol === col ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+      </th>
+    );
+
+    return (
+      <div className="space-y-6 fade-in">
+        {/* Monthly bar chart */}
+        <Card>
+          <h3 className="text-lg font-semibold text-white mb-4">Faturamento Mensal 2026</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <ComposedChart data={data.monthlyChart}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+              <XAxis dataKey="mes" stroke="#94a3b8" />
+              <YAxis yAxisId="left" stroke="#94a3b8" tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
+              <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" domain={[0, 'auto']} tickFormatter={v => `R$${v.toFixed(0)}`} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend />
+              <Bar yAxisId="left" dataKey="faturamento" fill={CORES.primary} radius={[4, 4, 0, 0]} name="Faturamento" />
+              <Line yAxisId="right" type="monotone" dataKey="ticket" stroke={CORES.tertiary} strokeWidth={2} name="Ticket Médio" dot={{ fill: CORES.tertiary }} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </Card>
+
+        {/* Store table */}
+        <Card>
+          <h3 className="text-lg font-semibold text-white mb-4">Detalhamento por Loja</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-700">
+                  <SortHeader col="name" label="Loja" />
+                  <SortHeader col="fatMesAtual" label={`Fat. ${MESES[data.maxMonth-1]}`} />
+                  <SortHeader col="fatYTD" label="Fat. YTD" />
+                  <SortHeader col="vendasYTD" label="Vendas YTD" />
+                  <SortHeader col="ticketMedio" label="Ticket Médio" />
+                </tr>
+              </thead>
+              <tbody>
+                {sortedStores.map((s, i) => (
+                  <tr key={s.name} className={`border-b border-slate-700/50 ${i % 2 === 0 ? 'bg-slate-800/30' : ''}`}>
+                    <td className="px-3 py-2 text-white font-medium whitespace-nowrap">{s.name}</td>
+                    <td className="px-3 py-2 text-slate-300 whitespace-nowrap">{formatR$(s.fatMesAtual)}</td>
+                    <td className="px-3 py-2 text-slate-300 whitespace-nowrap">{formatR$(s.fatYTD)}</td>
+                    <td className="px-3 py-2 text-slate-300 whitespace-nowrap">{s.vendasYTD.toLocaleString('pt-BR')}</td>
+                    <td className="px-3 py-2 text-slate-300 whitespace-nowrap">R$ {s.ticketMedio.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
+    );
+  };
+
+  // ============================================================================
+  // TAB 2 — RANKING
+  // ============================================================================
+  const Ranking = ({ data }) => {
+    const [view, setView] = useState('ytd');
+    const ranking = view === 'ytd' ? data.rankingYTD : data.rankingMes.sort((a,b) => b.fatMesAtual - a.fatMesAtual);
+    const maxFat = view === 'ytd' ? Math.max(...ranking.map(r => r.fatYTD)) : Math.max(...ranking.map(r => r.fatMesAtual));
+
+    return (
+      <div className="space-y-6 fade-in">
+        <div className="flex gap-3">
+          <button onClick={() => setView('ytd')} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${view === 'ytd' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'bg-slate-700/50 text-slate-400 border border-slate-600'}`}>
+            Ranking YTD
+          </button>
+          <button onClick={() => setView('mes')} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${view === 'mes' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'bg-slate-700/50 text-slate-400 border border-slate-600'}`}>
+            Ranking {MESES[data.maxMonth-1]}
+          </button>
+        </div>
+
+        <Card>
+          <h3 className="text-lg font-semibold text-white mb-4">
+            {view === 'ytd' ? 'Ranking por Faturamento YTD' : `Ranking — ${MESES[data.maxMonth-1]} 2026`}
+          </h3>
+          <div className="space-y-2">
+            {ranking.map((s, i) => {
+              const fat = view === 'ytd' ? s.fatYTD : s.fatMesAtual;
+              const pct = maxFat > 0 ? (fat / maxFat) * 100 : 0;
+              const isTop5 = i < 5;
+              const isBottom5 = i >= ranking.length - 5;
+              let badge = '';
+              if (isTop5) badge = '🏆';
+              if (isBottom5) badge = '⚠️';
+
+              return (
+                <div key={s.name} className={`flex items-center gap-3 p-2 rounded-lg ${isTop5 ? 'bg-green-500/5 border border-green-500/10' : isBottom5 ? 'bg-red-500/5 border border-red-500/10' : 'bg-slate-800/30'}`}>
+                  <span className={`text-sm font-bold w-8 text-center ${isTop5 ? 'text-green-400' : isBottom5 ? 'text-red-400' : 'text-slate-500'}`}>
+                    #{i+1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-white text-sm font-medium truncate">{s.name}</span>
+                      {badge && <span className="text-xs">{badge}</span>}
+                    </div>
+                    <div className="w-full bg-slate-700/50 rounded-full h-1.5 mt-1">
+                      <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: isTop5 ? '#22c55e' : isBottom5 ? '#ef4444' : '#6366f1' }} />
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-white text-sm font-medium">{formatR$(fat)}</p>
+                    <p className="text-slate-500 text-xs">{(view === 'ytd' ? s.vendasYTD : s.vendasMesAtual || 0).toLocaleString('pt-BR')} vendas</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      </div>
+    );
+  };
+
+  // ============================================================================
+  // TAB 3 — POR LOJA
+  // ============================================================================
+  const PorLoja = ({ data }) => {
+    const [selectedStore, setSelectedStore] = useState(data.storeNames[0]);
+    const agg = data.storeAggregates[selectedStore];
+    const ranking = data.rankingYTD.find(r => r.name === selectedStore);
+
+    const chartData = [];
+    for (let m = 1; m <= 12; m++) {
+      const d = agg?.monthlyData?.[m];
+      if (d) {
+        chartData.push({ mes: MESES[m-1], faturamento: d.valor, vendas: d.vendas, ticket: d.ticket });
+      }
+    }
+
+    return (
+      <div className="space-y-6 fade-in">
+        <div>
+          <label className="text-slate-400 text-sm mb-2 block">Selecione a Loja</label>
+          <select value={selectedStore} onChange={e => setSelectedStore(e.target.value)}
+            className="bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white text-sm w-full max-w-md">
+            {data.storeNames.map(name => <option key={name} value={name}>{name}</option>)}
+          </select>
+        </div>
+
+        {/* Store KPIs */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <MetricCard title="Faturamento YTD" value={formatR$(agg?.fatYTD || 0)} icon="💰" color="indigo" />
+          <MetricCard title="Vendas YTD" value={(agg?.vendasYTD || 0).toLocaleString('pt-BR')} icon="🛒" color="green" />
+          <MetricCard title="Ticket Médio" value={`R$ ${(agg?.ticketMedio || 0).toFixed(2)}`} icon="🎫" color="amber" />
+          <MetricCard title="Ranking YTD" value={`#${ranking?.ranking || '-'}`} subtitle={`de ${data.storeNames.length} lojas`} icon="🏆" color="purple" />
+        </div>
+
+        {/* Monthly evolution chart */}
+        <Card>
+          <h3 className="text-lg font-semibold text-white mb-4">Evolução Mensal — {selectedStore}</h3>
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="mes" stroke="#94a3b8" />
+                <YAxis yAxisId="left" stroke="#94a3b8" tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
+                <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" tickFormatter={v => `R$${v.toFixed(0)}`} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                <Bar yAxisId="left" dataKey="faturamento" fill={CORES.primary} radius={[4, 4, 0, 0]} name="Faturamento" />
+                <Line yAxisId="right" type="monotone" dataKey="ticket" stroke={CORES.tertiary} strokeWidth={2} name="Ticket Médio" dot={{ fill: CORES.tertiary }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-slate-500 text-center py-8">Sem dados para esta loja</p>
+          )}
+        </Card>
+
+        {/* Monthly detail table */}
+        <Card>
+          <h3 className="text-lg font-semibold text-white mb-4">Dados Mensais</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-700">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-400">Mês</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-slate-400">Faturamento</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-slate-400">Vendas</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-slate-400">Ticket</th>
+                </tr>
+              </thead>
+              <tbody>
+                {chartData.map((d, i) => (
+                  <tr key={d.mes} className={`border-b border-slate-700/50 ${i % 2 === 0 ? 'bg-slate-800/30' : ''}`}>
+                    <td className="px-3 py-2 text-white">{d.mes}</td>
+                    <td className="px-3 py-2 text-slate-300 text-right">{formatR$(d.faturamento)}</td>
+                    <td className="px-3 py-2 text-slate-300 text-right">{d.vendas.toLocaleString('pt-BR')}</td>
+                    <td className="px-3 py-2 text-slate-300 text-right">R$ {d.ticket.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
+    );
+  };
+
+  // ============================================================================
+  // TAB 4 — COMPARATIVO YoY
+  // ============================================================================
+  const ComparativoYoY = ({ data }) => {
+    const [sortCol, setSortCol] = useState('fat2026');
+    const [sortDir, setSortDir] = useState('desc');
+    const [selectedStore, setSelectedStore] = useState('');
+
+    const YEAR_COLORS = { 2023: '#64748b', 2024: '#3b82f6', 2025: '#8b5cf6', 2026: '#22c55e' };
+
+    const computed = useMemo(() => {
+      // Include ALL months with data, including partial current month (projected)
+      const lastUpdate = DATA.lastUpdate; // "2026-03-28"
+      const lastUpdateDate = new Date(lastUpdate + 'T12:00:00');
+      const lastUpdateMonth = lastUpdateDate.getMonth() + 1;
+      const lastUpdateDay = lastUpdateDate.getDate();
+      const months2026 = Object.keys(DATA.stores[Object.keys(DATA.stores)[0]]?.['2026'] || {}).map(Number);
+      const maxMonth2026 = Math.max(...months2026);
+
+      // Days in each month of 2026
+      const DAYS_IN_MONTH = { 1: 31, 2: 28, 3: 31, 4: 30, 5: 31, 6: 30, 7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31 };
+
+      // Include ALL months up to maxMonth (including partial)
+      const monthRange = [];
+      for (let m = 1; m <= maxMonth2026; m++) monthRange.push(m);
+
+      // Determine which month is partial and projection factor
+      const partialMonth = (lastUpdateMonth === maxMonth2026) ? maxMonth2026 : null;
+      const daysElapsed = partialMonth ? lastUpdateDay : null;
+      const daysInPartial = partialMonth ? DAYS_IN_MONTH[partialMonth] : null;
+      // Projection factor: linear extrapolation to full month
+      const projectionFactor = partialMonth ? (daysInPartial / daysElapsed) : 1;
+
+      const periodLabel = monthRange.length === 1 ? MESES[monthRange[0]-1] : MESES[monthRange[0]-1] + '-' + MESES[monthRange[monthRange.length-1]-1];
+      const hasProjection = partialMonth !== null;
+
+      // Get active 2026 stores (exclude CD)
+      const stores2026 = Object.keys(DATA.stores).filter(s => s !== 'CD Sancashop');
+
+      // For each 2026 store, compute fat/vendas including projection for partial month
+      const storeRows = stores2026.map(name => {
+        const d2026 = DATA.stores[name]?.['2026'] || {};
+        let fat2026 = 0, vendas2026 = 0;
+        monthRange.forEach(m => {
+          if (d2026[m]) {
+            if (m === partialMonth) {
+              // Project partial month linearly
+              fat2026 += d2026[m].valor * projectionFactor;
+              vendas2026 += Math.round(d2026[m].vendas * projectionFactor);
+            } else {
+              fat2026 += d2026[m].valor;
+              vendas2026 += d2026[m].vendas;
+            }
+          }
+        });
+        const ticket2026 = vendas2026 > 0 ? fat2026 / vendas2026 : 0;
+
+        // Historical years — use full months (no projection needed, they're complete)
+        const yearData = {};
+        [2023, 2024, 2025].forEach(year => {
+          const hStore = HISTORICAL[name];
+          if (!hStore) { yearData[year] = null; return; }
+          const hYear = hStore[String(year)];
+          if (!hYear || Object.keys(hYear).length === 0) { yearData[year] = null; return; }
+
+          // Check store has data for ALL months in range
+          let fat = 0, vendas = 0, hasAll = true;
+          monthRange.forEach(m => {
+            const md = hYear[String(m)];
+            if (!md) { hasAll = false; }
+            else { fat += md.valor; vendas += (md.vendas || 0); }
+          });
+
+          if (!hasAll) { yearData[year] = null; }
+          else { yearData[year] = { fat, vendas, ticket: vendas > 0 ? fat / vendas : null }; }
+        });
+
+        const fat2025 = yearData[2025]?.fat || null;
+        const vendas2025 = yearData[2025]?.vendas || null;
+        const varFatYoY = (fat2025 && fat2026) ? ((fat2026 / fat2025) - 1) * 100 : null;
+        const varTicketYoY = (yearData[2025]?.ticket && ticket2026) ? ((ticket2026 / yearData[2025].ticket) - 1) * 100 : null;
+        const varVendasYoY = (vendas2025 && vendas2026) ? ((vendas2026 / vendas2025) - 1) * 100 : null;
+
+        return {
+          name, fat2026, vendas2026, ticket2026,
+          fat2023: yearData[2023]?.fat || null,
+          fat2024: yearData[2024]?.fat || null,
+          fat2025,
+          vendas2025,
+          ticket2025: yearData[2025]?.ticket || null,
+          varYoY: varFatYoY, varTicketYoY, varVendasYoY,
+          existsIn: {
+            2023: yearData[2023] !== null,
+            2024: yearData[2024] !== null,
+            2025: yearData[2025] !== null,
+          }
+        };
+      });
+
+      // KPIs: compare 2026 vs 2025 on same-store basis (stores in both)
+      const comparableStores = storeRows.filter(s => s.fat2025 !== null && s.fat2026 > 0);
+      const totalFat2026 = comparableStores.reduce((s, r) => s + r.fat2026, 0);
+      const totalFat2025 = comparableStores.reduce((s, r) => s + r.fat2025, 0);
+      const varTotal = totalFat2025 > 0 ? ((totalFat2026 / totalFat2025) - 1) * 100 : 0;
+
+      // Consolidated chart: stores that exist in ALL 4 years
+      const allYearsStores = storeRows.filter(s => s.existsIn[2023] && s.existsIn[2024] && s.existsIn[2025] && s.fat2026 > 0);
+      const consolidatedChart = [2023, 2024, 2025, 2026].map(year => {
+        const total = allYearsStores.reduce((sum, s) => {
+          if (year === 2026) return sum + s.fat2026;
+          return sum + (s['fat' + year] || 0);
+        }, 0);
+        return { ano: String(year), faturamento: total };
+      });
+
+      // Per-store evolution data
+      const storeEvolution = (storeName) => {
+        const row = storeRows.find(s => s.name === storeName);
+        if (!row) return [];
+        const result = [];
+        [2023, 2024, 2025, 2026].forEach(year => {
+          const fat = year === 2026 ? row.fat2026 : row['fat' + year];
+          if (fat !== null && fat > 0) result.push({ ano: String(year), faturamento: fat });
+        });
+        return result;
+      };
+
+      return {
+        storeRows, comparableStores, totalFat2026, totalFat2025, varTotal,
+        consolidatedChart, allYearsStores, storeEvolution,
+        periodLabel, monthRange, hasProjection, partialMonth, daysElapsed, daysInPartial
+      };
+    }, [data]);
+
+    const handleSort = (col) => {
+      if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+      else { setSortCol(col); setSortDir('desc'); }
+    };
+
+    const sortedStores = useMemo(() => {
+      return [...computed.storeRows].sort((a, b) => {
+        let va, vb;
+        if (sortCol === 'name') { va = a.name; vb = b.name; }
+        else { va = a[sortCol]; vb = b[sortCol]; }
+        if (va === null) va = sortDir === 'asc' ? Infinity : -Infinity;
+        if (vb === null) vb = sortDir === 'asc' ? Infinity : -Infinity;
+        if (typeof va === 'string') return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+        return sortDir === 'asc' ? va - vb : vb - va;
+      });
+    }, [computed, sortCol, sortDir]);
+
+    const SortHeader = ({ col, label, align = 'left' }) => (
+      <th className={`px-3 py-2 text-${align} text-xs font-medium text-slate-400 cursor-pointer hover:text-white select-none whitespace-nowrap`} onClick={() => handleSort(col)}>
+        {label} {sortCol === col ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+      </th>
+    );
+
+    const { periodLabel, hasProjection, partialMonth, daysElapsed, daysInPartial } = computed;
+
+    return (
+      <div className="space-y-6 fade-in">
+        {/* Projection banner */}
+        {hasProjection && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 flex items-center gap-3">
+            <span className="text-amber-400 text-lg">⚠️</span>
+            <p className="text-amber-300 text-sm">
+              <strong>{MESES[partialMonth-1]} 2026 projetado:</strong> dados reais de {daysElapsed} dias, projetado linearmente para {daysInPartial} dias.
+              Valores de 2026 incluem projeção para o mês corrente.
+            </p>
+          </div>
+        )}
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <MetricCard
+            title={`Fat. ${periodLabel} 2026${hasProjection ? '*' : ''}`}
+            value={formatK(computed.totalFat2026)}
+            icon="📊"
+            color="green"
+          />
+          <MetricCard
+            title={`Fat. ${periodLabel} 2025`}
+            value={formatK(computed.totalFat2025)}
+            subtitle="(mesmas lojas)"
+            icon="📊"
+            color="purple"
+          />
+          <MetricCard
+            title="Variação YoY"
+            value={`${computed.varTotal >= 0 ? '+' : ''}${computed.varTotal.toFixed(1)}%`}
+            icon={computed.varTotal >= 0 ? "📈" : "📉"}
+            color={computed.varTotal >= 0 ? "green" : "amber"}
+          />
+          <MetricCard
+            title="Lojas comparáveis"
+            value={computed.comparableStores.length}
+            subtitle={`de ${computed.storeRows.length} ativas`}
+            icon="🏬"
+            color="blue"
+          />
+        </div>
+
+        {/* Consolidated bar chart */}
+        <Card>
+          <h3 className="text-lg font-semibold text-white mb-1">Faturamento {periodLabel} por Ano</h3>
+          <p className="text-slate-400 text-xs mb-4">Apenas lojas presentes em todos os 4 anos ({computed.allYearsStores.length} lojas)</p>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={computed.consolidatedChart}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+              <XAxis dataKey="ano" stroke="#94a3b8" />
+              <YAxis stroke="#94a3b8" tickFormatter={v => `R${(v/1000).toFixed(0)}k`} />
+              <Tooltip content={<CustomTooltip />} />
+              <Bar dataKey="faturamento" name="Faturamento" radius={[4, 4, 0, 0]}>
+                {computed.consolidatedChart.map((entry, i) => (
+                  <Cell key={i} fill={YEAR_COLORS[parseInt(entry.ano)]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+
+        {/* Store comparison table */}
+        <Card>
+          <h3 className="text-lg font-semibold text-white mb-4">Comparativo por Loja — {periodLabel}</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-700">
+                  <SortHeader col="name" label="Loja" />
+                  <SortHeader col="fat2023" label={`Fat ${periodLabel} 23`} align="right" />
+                  <SortHeader col="fat2024" label={`Fat ${periodLabel} 24`} align="right" />
+                  <SortHeader col="fat2025" label={`Fat ${periodLabel} 25`} align="right" />
+                  <SortHeader col="fat2026" label={`Fat ${periodLabel} 26${hasProjection ? '*' : ''}`} align="right" />
+                  <SortHeader col="varYoY" label="Var Fat 25→26" align="right" />
+                  <SortHeader col="ticket2026" label="Ticket 26" align="right" />
+                  <SortHeader col="varTicketYoY" label="Var 25→26" align="right" />
+                  <SortHeader col="vendas2026" label="Vendas 26" align="right" />
+                  <SortHeader col="varVendasYoY" label="Var 25→26" align="right" />
+                </tr>
+              </thead>
+              <tbody>
+                {sortedStores.map((s, i) => (
+                  <tr key={s.name} className={`border-b border-slate-700/50 ${i % 2 === 0 ? 'bg-slate-800/30' : ''}`}>
+                    <td className="px-3 py-2 text-white font-medium whitespace-nowrap">{s.name}</td>
+                    <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.fat2023 !== null ? formatR$(s.fat2023) : <span className="text-slate-600">—</span>}</td>
+                    <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.fat2024 !== null ? formatR$(s.fat2024) : <span className="text-slate-600">—</span>}</td>
+                    <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.fat2025 !== null ? formatR$(s.fat2025) : <span className="text-slate-600">—</span>}</td>
+                    <td className="px-3 py-2 text-white font-medium text-right whitespace-nowrap">{formatR$(s.fat2026)}</td>
+                    <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${s.varYoY === null ? 'text-slate-600' : s.varYoY >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {s.varYoY !== null ? `${s.varYoY >= 0 ? '+' : ''}${s.varYoY.toFixed(1)}%` : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">R$ {s.ticket2026.toFixed(2)}</td>
+                    <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${s.varTicketYoY === null ? 'text-slate-600' : s.varTicketYoY >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {s.varTicketYoY !== null ? `${s.varTicketYoY >= 0 ? '+' : ''}${s.varTicketYoY.toFixed(1)}%` : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.vendas2026.toLocaleString('pt-BR')}</td>
+                    <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${s.varVendasYoY === null ? 'text-slate-600' : s.varVendasYoY >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {s.varVendasYoY !== null ? `${s.varVendasYoY >= 0 ? '+' : ''}${s.varVendasYoY.toFixed(1)}%` : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        {/* Per-store evolution */}
+        <Card>
+          <h3 className="text-lg font-semibold text-white mb-4">Evolução por Loja — {periodLabel}</h3>
+          <div className="mb-4">
+            <select value={selectedStore} onChange={e => setSelectedStore(e.target.value)}
+              className="bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white text-sm w-full max-w-md">
+              <option value="">Selecione uma loja...</option>
+              {data.storeNames.map(name => <option key={name} value={name}>{name}</option>)}
+            </select>
+          </div>
+          {selectedStore ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={computed.storeEvolution(selectedStore)}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="ano" stroke="#94a3b8" />
+                <YAxis stroke="#94a3b8" tickFormatter={v => `R${(v/1000).toFixed(0)}k`} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="faturamento" name="Faturamento" radius={[4, 4, 0, 0]}>
+                  {computed.storeEvolution(selectedStore).map((entry, i) => (
+                    <Cell key={i} fill={YEAR_COLORS[parseInt(entry.ano)]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-slate-500 text-center py-8">Selecione uma loja para ver a evolução</p>
+          )}
+        </Card>
+      </div>
+    );
+  };
+
+  // ============================================================================
+  // MAIN APP
+  // ============================================================================
+  const App = () => {
+    const [activeTab, setActiveTab] = useState('mensal');
+    const data = useMemo(() => computeData(), []);
+
+    const tabs = [
+      { id: 'mensal', label: 'Visão Mensal' },
+      { id: 'ranking', label: 'Ranking' },
+      { id: 'loja', label: 'Por Loja' },
+      { id: 'comparativo', label: 'Comparativo YoY' },
+    ];
+
+    return (
+      <div className="min-h-screen bg-slate-900 text-white">
+        {/* Header */}
+        <div className="bg-slate-800/80 backdrop-blur border-b border-slate-700/50 sticky top-0 z-30">
+          <div className="max-w-7xl mx-auto px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-white">🏪 SancaShop 2026</h1>
+                <p className="text-slate-400 text-xs sm:text-sm">Dashboard Operacional • Atualizado: {DATA.lastUpdate}</p>
+              </div>
+              <div className="text-right hidden sm:block">
+                <p className="text-indigo-400 text-lg font-bold">{formatM(data.fatYTD)}</p>
+                <p className="text-slate-400 text-xs">Faturamento YTD</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
+            <MetricCard title="Faturamento YTD" value={formatM(data.fatYTD)} icon="💰" color="indigo" />
+            <MetricCard title="Vendas YTD" value={data.vendasYTD.toLocaleString('pt-BR')} icon="🛒" color="green" />
+            <MetricCard title="Ticket Médio" value={`R$ ${data.ticketMedio.toFixed(2)}`} icon="🎫" color="amber" />
+            <MetricCard title="Lojas Ativas" value={data.lojasAtivas} icon="🏬" color="blue" />
+            <MetricCard title={`Fat. ${MESES[data.maxMonth-1]}`} value={formatK(data.fatMesAtual)} icon="📊" color="purple" />
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-6 border-b border-slate-700/50 overflow-x-auto">
+            {tabs.map(tab => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                className={`pb-3 px-1 text-sm font-medium whitespace-nowrap transition ${activeTab === tab.id ? 'tab-active' : 'tab-inactive'}`}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'mensal' && <VisaoMensal data={data} />}
+          {activeTab === 'ranking' && <Ranking data={data} />}
+          {activeTab === 'loja' && <PorLoja data={data} />}
+          {activeTab === 'comparativo' && <ComparativoYoY data={data} />}
+        </div>
+      </div>
+    );
+  };
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
