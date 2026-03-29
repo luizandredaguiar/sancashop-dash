@@ -206,13 +206,27 @@
         return { ano: String(year), faturamento: total };
       });
 
-      // Consolidated chart: ALL stores (not just same 4 years)
+      // Consolidated chart: ALL stores that existed in EACH period (including closed ones)
       const consolidatedAllChart = [2023, 2024, 2025, 2026].map(year => {
-        const total = storeRows.reduce((sum, s) => {
-          if (year === 2026) return sum + s.fat2026;
-          const fat = s['fat' + year];
-          return sum + (fat || 0);
-        }, 0);
+        let total = 0;
+        if (year === 2026) {
+          // Sum all active 2026 stores
+          total = storeRows.reduce((sum, s) => sum + s.fat2026, 0);
+        } else {
+          // Sum ALL stores from HISTORICAL that had data in this year for these months
+          const allHistStores = Object.keys(HISTORICAL);
+          allHistStores.forEach(name => {
+            const hYear = HISTORICAL[name]?.[String(year)];
+            if (!hYear) return;
+            let hasAll = true, fat = 0;
+            monthRange.forEach(m => {
+              const md = hYear[String(m)];
+              if (!md) { hasAll = false; }
+              else { fat += md.valor; }
+            });
+            if (hasAll) total += fat;
+          });
+        }
         return { ano: String(year), faturamento: total };
       });
 
@@ -356,13 +370,13 @@
         });
       })();
 
-      // MoM consolidated: ALL stores (not just same 4 years)
+      // MoM consolidated: ALL stores that existed in EACH period (including closed ones)
+      const allHistStoreNames = Object.keys(HISTORICAL);
       const momChartConsolidated = momMonths.map(m => {
         const entry = { month: MESES[m - 1] };
         [2023, 2024, 2025].forEach(year => {
-          entry[String(year)] = stores2026.reduce((sum, name) => {
-            const hStore = HISTORICAL[name];
-            return sum + (hStore?.[String(year)]?.[String(m)]?.valor || 0);
+          entry[String(year)] = allHistStoreNames.reduce((sum, name) => {
+            return sum + (HISTORICAL[name]?.[String(year)]?.[String(m)]?.valor || 0);
           }, 0);
         });
         entry['2026'] = stores2026.reduce((sum, name) => {
