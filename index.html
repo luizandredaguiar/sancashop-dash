@@ -206,6 +206,16 @@
         return { ano: String(year), faturamento: total };
       });
 
+      // Consolidated chart: ALL stores (not just same 4 years)
+      const consolidatedAllChart = [2023, 2024, 2025, 2026].map(year => {
+        const total = storeRows.reduce((sum, s) => {
+          if (year === 2026) return sum + s.fat2026;
+          const fat = s['fat' + year];
+          return sum + (fat || 0);
+        }, 0);
+        return { ano: String(year), faturamento: total };
+      });
+
       // Per-store chart data for the dropdown filter
       const storeChartData = (storeName) => {
         const row = storeRows.find(s => s.name === storeName);
@@ -346,6 +356,23 @@
         });
       })();
 
+      // MoM consolidated: ALL stores (not just same 4 years)
+      const momChartConsolidated = momMonths.map(m => {
+        const entry = { month: MESES[m - 1] };
+        [2023, 2024, 2025].forEach(year => {
+          entry[String(year)] = stores2026.reduce((sum, name) => {
+            const hStore = HISTORICAL[name];
+            return sum + (hStore?.[String(year)]?.[String(m)]?.valor || 0);
+          }, 0);
+        });
+        entry['2026'] = stores2026.reduce((sum, name) => {
+          const raw = DATA.stores[name]?.['2026']?.[m];
+          if (!raw) return sum;
+          return sum + (m === partialMonth ? raw.valor * projectionFactor : raw.valor);
+        }, 0);
+        return entry;
+      });
+
       const momChartForStore = (storeName) => {
         const hStore = HISTORICAL[storeName];
         if (!hStore) return [];
@@ -391,10 +418,10 @@
 
       return {
         storeRows, comparableStores, totalFat2026, totalFat2025, varTotal,
-        consolidatedChart, allYearsStores, storeChartData, storeNames2026, fatYTD,
+        consolidatedChart, consolidatedAllChart, allYearsStores, storeChartData, storeNames2026, fatYTD,
         periodLabel, monthRange, hasProjection, partialMonth, daysElapsed, daysInPartial,
         // MoM data
-        momStoreRows, momChartAllStores, momChartForStore, momAllYearsCount,
+        momStoreRows, momChartAllStores, momChartConsolidated, momChartForStore, momAllYearsCount,
         momFatMar26, momFatMar25, momVarMar, momComparableMarStores, lastMonth,
         MESES_REF: MESES
       };
@@ -450,21 +477,25 @@
 
     // Chart data based on store filter
     const chartData = useMemo(() => {
+      if (chartStore === '__consolidated__') return computed.consolidatedAllChart;
       if (!chartStore) return computed.consolidatedChart;
       return computed.storeChartData(chartStore);
     }, [chartStore, computed]);
 
     const chartSubtitle = useMemo(() => {
+      if (chartStore === '__consolidated__') return `Consolidado — todas as ${computed.storeRows.length} lojas ativas`;
       if (!chartStore) return `Todas as lojas presentes nos 4 anos (${computed.allYearsStores.length} lojas)`;
       return chartStore;
     }, [chartStore, computed]);
 
     const momChartData = useMemo(() => {
+      if (momChartStore === '__consolidated__') return computed.momChartConsolidated;
       if (!momChartStore) return computed.momChartAllStores;
       return computed.momChartForStore(momChartStore);
     }, [momChartStore, computed]);
 
     const momChartSubtitle = useMemo(() => {
+      if (momChartStore === '__consolidated__') return `Consolidado — todas as ${computed.storeRows.length} lojas ativas`;
       if (!momChartStore) return `Todas as lojas presentes nos 4 anos (${computed.momAllYearsCount} lojas)`;
       return momChartStore;
     }, [momChartStore, computed]);
@@ -505,13 +536,13 @@
               className={`pb-3 px-1 text-sm transition-colors ${activeTab === 'yoy' ? 'tab-active' : 'tab-inactive'}`}
               onClick={() => setActiveTab('yoy')}
             >
-              Comparativo YoY
+              Comparativo Anual
             </button>
             <button
               className={`pb-3 px-1 text-sm transition-colors ${activeTab === 'mom' ? 'tab-active' : 'tab-inactive'}`}
               onClick={() => setActiveTab('mom')}
             >
-              Comparativo MoM
+              Comparativo Mensal
             </button>
           </div>
 
@@ -557,7 +588,8 @@
                   </div>
                   <select value={chartStore} onChange={e => setChartStore(e.target.value)}
                     className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full sm:w-auto sm:min-w-[260px]">
-                    <option value="">Todas as lojas (presentes em todos os anos)</option>
+                    <option value="">Mesmas lojas (presentes em todos os anos)</option>
+                    <option value="__consolidated__">Consolidado (todas as lojas)</option>
                     {computed.storeNames2026.map(name => <option key={name} value={name}>{name}</option>)}
                   </select>
                 </div>
@@ -669,7 +701,8 @@
                   </div>
                   <select value={momChartStore} onChange={e => setMomChartStore(e.target.value)}
                     className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full sm:w-auto sm:min-w-[260px]">
-                    <option value="">Todas as lojas (presentes em todos os anos)</option>
+                    <option value="">Mesmas lojas (presentes em todos os anos)</option>
+                    <option value="__consolidated__">Consolidado (todas as lojas)</option>
                     {computed.storeNames2026.map(name => <option key={name} value={name}>{name}</option>)}
                   </select>
                 </div>
@@ -717,10 +750,7 @@
                         <MomSortHeader col="varFev" label="Var 25→26" align="right" />
                         <MomSortHeader col="fatMar26" label="Fat Mar 26*" align="right" />
                         <MomSortHeader col="varMar" label="Var 25→26" align="right" />
-                        <MomSortHeader col="ticket26" label="Ticket 26" align="right" />
-                        <MomSortHeader col="varTicket2526" label="Var Ticket" align="right" />
-                        <MomSortHeader col="vendas26" label="Vendas 26" align="right" />
-                        <MomSortHeader col="varVendas2526" label="Var Vendas" align="right" />
+
                       </tr>
                     </thead>
                     <tbody>
@@ -739,14 +769,7 @@
                           <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${s.monthData[3]?.var2526 === null ? 'text-slate-600' : s.monthData[3]?.var2526 >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                             {s.monthData[3]?.var2526 !== null ? `${s.monthData[3].var2526 >= 0 ? '+' : ''}${s.monthData[3].var2526.toFixed(1)}%` : '—'}
                           </td>
-                          <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">R$ {s.ticket26.toFixed(2)}</td>
-                          <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${s.varTicket2526 === null ? 'text-slate-600' : s.varTicket2526 >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {s.varTicket2526 !== null ? `${s.varTicket2526 >= 0 ? '+' : ''}${s.varTicket2526.toFixed(1)}%` : '—'}
-                          </td>
-                          <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.vendas26.toLocaleString('pt-BR')}</td>
-                          <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${s.varVendas2526 === null ? 'text-slate-600' : s.varVendas2526 >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {s.varVendas2526 !== null ? `${s.varVendas2526 >= 0 ? '+' : ''}${s.varVendas2526.toFixed(1)}%` : '—'}
-                          </td>
+
                         </tr>
                       ))}
                     </tbody>
