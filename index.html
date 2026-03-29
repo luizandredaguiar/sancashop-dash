@@ -522,11 +522,17 @@
             const month26 = date26.getMonth();
             const monthNames = ['Jan','Fev','Mar'];
             
+            const weekdays = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+            const pad = n => String(n).padStart(2, '0');
+            const labelDate = pad(dayOfMonth26) + '/' + pad(month26 + 1) + '/' + String(date26.getFullYear()).slice(2);
+            
             chartData.push({
               dayNum: i + 1,
-              label: dayOfMonth26 + '/' + monthNames[month26],
+              label: labelDate,
               date2025: d25,
               date2026: d26,
+              weekday2025: weekdays[date25.getDay()],
+              weekday2026: weekdays[date26.getDay()],
               fat2025: fat25,
               fat2026: fat26,
               isHoliday25: !!allHolidays[d25],
@@ -1145,10 +1151,10 @@ return {
                         if (!item) return null;
                         return (
                           <div className="bg-slate-800 border border-slate-600 rounded-lg p-3 shadow-xl text-sm max-w-xs">
-                            <p className="text-slate-300 font-medium mb-1">Dia {label}</p>
-                            <p className="text-slate-400 text-xs mb-2">2025: {item.date2025} • 2026: {item.date2026}</p>
+                            <p className="text-slate-300 font-medium mb-1">{item.label}</p>
+                            <p className="text-slate-400 text-xs mb-2">2025: {item.weekday2025} • 2026: {item.weekday2026}</p>
                             {item.isHoliday26 && <p className="text-amber-400 text-xs mb-1">🎉 2026: {item.holidayName26}</p>}
-                            {item.isHoliday25 && <p className="text-amber-400 text-xs mb-1">🎉 2025: {item.holidayName25}</p>}
+                            {item.isHoliday25 && <p className="text-orange-400 text-xs mb-1">🎉 2025: {item.holidayName25}</p>}
                             {payload.map((entry, i) => (
                               <p key={i} style={{ color: entry.color }}>
                                 {entry.name}: {entry.value !== null ? formatR$(entry.value) : '—'}
@@ -1159,9 +1165,13 @@ return {
                       }}
                     />
                     <Legend />
-                    {/* Holiday reference lines for 2026 */}
+                    {/* Holiday reference lines for 2026 (amber) */}
                     {computed.dailyComputed.holidayMarkers2026.map((h, i) => (
                       <ReferenceLine key={`h26-${i}`} x={h.dayNum} stroke="#f59e0b" strokeDasharray="4 4" strokeOpacity={0.6} />
+                    ))}
+                    {/* Holiday reference lines for 2025 (orange/red) */}
+                    {computed.dailyComputed.holidayMarkers2025.map((h, i) => (
+                      <ReferenceLine key={`h25-${i}`} x={h.dayNum} stroke="#f97316" strokeDasharray="2 6" strokeOpacity={0.45} />
                     ))}
                     <Line type="monotone" dataKey="fat2025" name="2025" stroke="#64748b" strokeWidth={1.5} dot={false} connectNulls />
                     <Line type="monotone" dataKey="fat2026" name="2026" stroke="#22c55e" strokeWidth={2} dot={false} connectNulls />
