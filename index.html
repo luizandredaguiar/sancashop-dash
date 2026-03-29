@@ -800,8 +800,8 @@ return {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-          {/* Projection banner */}
-          {hasProjection && (
+          {/* Projection banner (hidden on daily tab) */}
+          {hasProjection && activeTab !== 'daily' && (
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 flex items-center gap-3">
               <span className="text-amber-400 text-lg">⚠️</span>
               <p className="text-amber-300 text-sm">
