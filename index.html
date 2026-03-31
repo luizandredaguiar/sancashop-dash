@@ -867,6 +867,18 @@ return {
       return chartStore;
     }, [chartStore, computed]);
 
+    // KPI cards react to filter selection (YoY tab)
+    const yoyKPI = useMemo(() => {
+      const cd = chartData;
+      const fat26 = cd.find(d => d.ano === '2026')?.faturamento || 0;
+      const fat25 = cd.find(d => d.ano === '2025')?.faturamento || 0;
+      const varYoY = fat25 > 0 ? ((fat26 / fat25) - 1) * 100 : 0;
+      const count = chartStore === '__consolidated__' ? computed.storeRows.length
+        : (!chartStore ? computed.allYearsStores.length : 1);
+      const total = computed.storeRows.length;
+      return { fat26, fat25, varYoY, count, total };
+    }, [chartData, chartStore, computed]);
+
     const momChartData = useMemo(() => {
       if (momChartStore === '__consolidated__') return computed.momChartConsolidated;
       if (!momChartStore) return computed.momChartAllStores;
@@ -878,6 +890,17 @@ return {
       if (!momChartStore) return `Todas as lojas presentes nos 4 anos (${computed.momAllYearsCount} lojas)`;
       return momChartStore;
     }, [momChartStore, computed]);
+
+    // KPI cards react to filter selection (MoM tab)
+    const momKPI = useMemo(() => {
+      const cd = momChartData;
+      const lastEntry = cd[cd.length - 1] || {};
+      const fat26 = lastEntry['2026'] || 0;
+      const fat25 = lastEntry['2025'] || 0;
+      const varMoM = fat25 > 0 ? ((fat26 / fat25) - 1) * 100 : 0;
+      const monthName = lastEntry.month || '';
+      return { fat26, fat25, varMoM, monthName };
+    }, [momChartData]);
 
     // Daily tab computed values
     const dailyChartData = useMemo(() => {
@@ -967,27 +990,27 @@ return {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <MetricCard
                   title={`Fat. ${periodLabel} 2026${hasProjection ? '*' : ''}`}
-                  value={formatK(computed.totalFat2026)}
+                  value={formatK(yoyKPI.fat26)}
                   icon="📊"
                   color="green"
                 />
                 <MetricCard
                   title={`Fat. ${periodLabel} 2025`}
-                  value={formatK(computed.totalFat2025)}
-                  subtitle="(mesmas lojas)"
+                  value={formatK(yoyKPI.fat25)}
+                  subtitle={chartSubtitle}
                   icon="📊"
                   color="purple"
                 />
                 <MetricCard
                   title="Variação YoY"
-                  value={`${computed.varTotal >= 0 ? '+' : ''}${computed.varTotal.toFixed(1)}%`}
-                  icon={computed.varTotal >= 0 ? "📈" : "📉"}
-                  color={computed.varTotal >= 0 ? "green" : "amber"}
+                  value={`${yoyKPI.varYoY >= 0 ? '+' : ''}${yoyKPI.varYoY.toFixed(1)}%`}
+                  icon={yoyKPI.varYoY >= 0 ? "📈" : "📉"}
+                  color={yoyKPI.varYoY >= 0 ? "green" : "amber"}
                 />
                 <MetricCard
-                  title="Lojas comparáveis"
-                  value={computed.comparableStores.length}
-                  subtitle={`de ${computed.storeRows.length} ativas`}
+                  title="Lojas"
+                  value={yoyKPI.count}
+                  subtitle={`de ${yoyKPI.total} ativas`}
                   icon="🏬"
                   color="blue"
                 />
@@ -1111,23 +1134,23 @@ return {
               {/* MoM KPI Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <MetricCard
-                  title={`Fat. ${MESES[computed.lastMonth - 1]} 2026${hasProjection ? '*' : ''}`}
-                  value={formatK(computed.momFatMar26)}
+                  title={`Fat. ${momKPI.monthName || MESES[computed.lastMonth - 1]} 2026${hasProjection ? '*' : ''}`}
+                  value={formatK(momKPI.fat26)}
                   icon="📊"
                   color="green"
                 />
                 <MetricCard
-                  title={`Fat. ${MESES[computed.lastMonth - 1]} 2025`}
-                  value={formatK(computed.momFatMar25)}
-                  subtitle="(mesmas lojas)"
+                  title={`Fat. ${momKPI.monthName || MESES[computed.lastMonth - 1]} 2025`}
+                  value={formatK(momKPI.fat25)}
+                  subtitle={momChartSubtitle}
                   icon="📊"
                   color="purple"
                 />
                 <MetricCard
-                  title={`Var ${MESES[computed.lastMonth - 1]} YoY`}
-                  value={`${computed.momVarMar >= 0 ? '+' : ''}${computed.momVarMar.toFixed(1)}%`}
-                  icon={computed.momVarMar >= 0 ? "📈" : "📉"}
-                  color={computed.momVarMar >= 0 ? "green" : "amber"}
+                  title={`Var ${momKPI.monthName || MESES[computed.lastMonth - 1]} YoY`}
+                  value={`${momKPI.varMoM >= 0 ? '+' : ''}${momKPI.varMoM.toFixed(1)}%`}
+                  icon={momKPI.varMoM >= 0 ? "📈" : "📉"}
+                  color={momKPI.varMoM >= 0 ? "green" : "amber"}
                 />
                 <MetricCard
                   title="Lojas comparáveis"
