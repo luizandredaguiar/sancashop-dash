@@ -989,7 +989,7 @@ return {
               {/* KPI Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <MetricCard
-                  title={`Fat. ${periodLabel} 2026${hasProjection ? '*' : ''}`}
+                  title={`Fat. ${periodLabel} 2026`}
                   value={formatK(yoyKPI.fat26)}
                   icon="📊"
                   color="green"
@@ -1134,7 +1134,7 @@ return {
               {/* MoM KPI Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <MetricCard
-                  title={`Fat. ${momKPI.monthName || MESES[computed.lastMonth - 1]} 2026${hasProjection ? '*' : ''}`}
+                  title={`Fat. ${momKPI.monthName || MESES[computed.lastMonth - 1]} 2026`}
                   value={formatK(momKPI.fat26)}
                   icon="📊"
                   color="green"
