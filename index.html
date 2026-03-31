@@ -522,7 +522,7 @@
         };
         const allHolidays = { ...holidays2025, ...holidays2026 };
         
-        // Build date arrays for each year (Jan 1 to Mar 29)
+        // Build date arrays dynamically based on available data
         const makeDateRange = (year, endMonth, endDay) => {
           const dates = [];
           const start = new Date(year, 0, 1);
@@ -533,9 +533,16 @@
           return dates;
         };
         
-        const dates2025 = makeDateRange(2025, 3, 29);
-        const dates2026 = makeDateRange(2026, 3, 29);
-        const maxDays = Math.min(dates2025.length, dates2026.length); // 88 days (Jan 1 to Mar 29)
+        // Find the last date with data in 2026
+        const allDates2026 = Object.keys(days).filter(d => d.startsWith('2026-')).sort();
+        const lastDate2026 = allDates2026[allDates2026.length - 1] || '2026-03-31';
+        const lastParts = lastDate2026.split('-');
+        const lastMonth = parseInt(lastParts[1]);
+        const lastDay = parseInt(lastParts[2]);
+        
+        const dates2025 = makeDateRange(2025, lastMonth, lastDay);
+        const dates2026 = makeDateRange(2026, lastMonth, lastDay);
+        const maxDays = Math.min(dates2025.length, dates2026.length);
         
         // Get all store names present in both years
         const storesInBothYears = new Set();
@@ -1354,4 +1361,3 @@ return {
   </script>
 </body>
 </html>
-<!-- updated 2026-03-31T08:09:52-03:00 -->
