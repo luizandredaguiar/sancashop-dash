@@ -43,7 +43,7 @@
   const { useState, useMemo } = React;
   const {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-    ResponsiveContainer, Cell, LineChart, Line, ReferenceLine, Legend
+    ResponsiveContainer, Cell, LineChart, Line, ReferenceLine, Legend, LabelList
   } = Recharts;
 
   const DATA = window.DATA;
@@ -57,7 +57,7 @@
   };
 
   const formatR$ = (v) => `R$ ${Number(v).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-  const formatK = (v) => v >= 1000 ? `R$ ${(v/1000).toFixed(0)}k` : formatR$(v);
+  const formatK = (v) => v >= 1000000 ? `R$ ${(v/1000000).toFixed(3).replace('.', ',')}M` : v >= 1000 ? `R$ ${(v/1000).toFixed(0)}k` : formatR$(v);
   const formatM = (v) => `R$ ${(v/1000000).toFixed(2)}M`;
 
   // ============================================================================
@@ -720,6 +720,66 @@
         };
       })();
 
+      // ============================================================================
+      // CONSOLIDATED SUMMARY ROWS FOR TABLES
+      // ============================================================================
+      const buildSummaryRow = (label, stores) => {
+        const has23 = stores.some(r => r.fat2023 !== null);
+        const fat2023 = has23 ? stores.reduce((s, r) => s + (r.fat2023 || 0), 0) : null;
+        const has24 = stores.some(r => r.fat2024 !== null);
+        const fat2024 = has24 ? stores.reduce((s, r) => s + (r.fat2024 || 0), 0) : null;
+        const has25 = stores.some(r => r.fat2025 !== null);
+        const fat2025 = has25 ? stores.reduce((s, r) => s + (r.fat2025 || 0), 0) : null;
+        const fat2026 = stores.reduce((s, r) => s + r.fat2026, 0);
+        const vendas2026 = stores.reduce((s, r) => s + r.vendas2026, 0);
+        const ticket2026 = vendas2026 > 0 ? fat2026 / vendas2026 : 0;
+        const varYoY = fat2025 ? ((fat2026 / fat2025) - 1) * 100 : null;
+        const vendas2025 = stores.filter(r => r.fat2025 !== null).reduce((s, r) => s + (r.vendas2025 || 0), 0);
+        const ticket2025 = vendas2025 > 0 && fat2025 ? fat2025 / vendas2025 : null;
+        const varTicketYoY = (ticket2025 && ticket2026) ? ((ticket2026 / ticket2025) - 1) * 100 : null;
+        const varVendasYoY = vendas2025 > 0 && vendas2026 > 0 ? ((vendas2026 / vendas2025) - 1) * 100 : null;
+        return { name: label, fat2023, fat2024, fat2025, fat2026, varYoY, ticket2026, varTicketYoY, vendas2026, varVendasYoY, _isSummary: true };
+      };
+      const yoySummaryAll = buildSummaryRow('Consolidado (todas as lojas)', storeRows);
+      const yoySummarySame = buildSummaryRow('Mesmas lojas (todos os anos)', allYearsStores);
+
+      // MoM summary rows
+      const buildMomSummaryRow = (label, stores) => {
+        const monthData = {};
+        momMonths.forEach(m => {
+          const fat26 = stores.reduce((s, r) => s + (r.monthData[m]?.fat26 || 0), 0);
+          const has25 = stores.some(r => r.monthData[m]?.fat25 !== null && r.monthData[m]?.fat25 !== undefined);
+          const fat25 = has25 ? stores.reduce((s, r) => s + (r.monthData[m]?.fat25 || 0), 0) : null;
+          const var2526 = fat25 ? ((fat26 / fat25) - 1) * 100 : null;
+          monthData[m] = { fat26, fat25, var2526 };
+        });
+        return {
+          name: label,
+          monthData,
+          fatJan26: monthData[1]?.fat26 || 0,
+          fatFev26: monthData[2]?.fat26 || 0,
+          fatMar26: monthData[3]?.fat26 || 0,
+          varJan: monthData[1]?.var2526,
+          varFev: monthData[2]?.var2526,
+          varMar: monthData[3]?.var2526,
+          _isSummary: true,
+        };
+      };
+      const momSummaryAll = buildMomSummaryRow('Consolidado (todas as lojas)', momStoreRows);
+      // Same-stores for MoM: stores present in all 4 years for all months
+      const momSameStoreNames = stores2026.filter(name => {
+        const hStore = HISTORICAL[name];
+        if (!hStore) return false;
+        return momMonths.every(m =>
+          hStore['2023']?.[String(m)]?.valor &&
+          hStore['2024']?.[String(m)]?.valor &&
+          hStore['2025']?.[String(m)]?.valor &&
+          DATA.stores[name]?.['2026']?.[m]
+        );
+      });
+      const momSameStores = momStoreRows.filter(r => momSameStoreNames.includes(r.name));
+      const momSummarySame = buildMomSummaryRow('Mesmas lojas (todos os anos)', momSameStores);
+
 return {
         storeRows, comparableStores, totalFat2026, totalFat2025, varTotal,
         consolidatedChart, consolidatedAllChart, allYearsStores, storeChartData, storeNames2026, fatYTD,
@@ -728,6 +788,8 @@ return {
         momStoreRows, momChartAllStores, momChartConsolidated, momChartForStore, momAllYearsCount,
         momFatMar26, momFatMar25, momVarMar, momComparableMarStores, lastMonth,
         MESES_REF: MESES,
+        // Summary rows
+        yoySummaryAll, yoySummarySame, momSummaryAll, momSummarySame,
         // Daily data
         dailyComputed,
       };
@@ -956,6 +1018,18 @@ return {
                         {chartData.map((entry, i) => (
                           <Cell key={i} fill={YEAR_COLORS[parseInt(entry.ano)]} />
                         ))}
+                        <LabelList content={({ x, y, width, index }) => {
+                          if (index === 0 || !chartData[index - 1]) return null;
+                          const cur = chartData[index].faturamento;
+                          const prev = chartData[index - 1].faturamento;
+                          if (!prev || !cur) return null;
+                          const pct = ((cur - prev) / prev) * 100;
+                          return (
+                            <text x={x + width / 2} y={y - 6} textAnchor="middle" fontSize={11} fill={pct >= 0 ? '#22c55e' : '#ef4444'}>
+                              {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%
+                            </text>
+                          );
+                        }} />
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
@@ -984,6 +1058,26 @@ return {
                       </tr>
                     </thead>
                     <tbody>
+                      {[computed.yoySummaryAll, computed.yoySummarySame].map((s) => (
+                        <tr key={s.name} className="border-b border-slate-600 bg-slate-700/50">
+                          <td className="px-3 py-2 text-white font-semibold whitespace-nowrap">{s.name}</td>
+                          <td className="px-3 py-2 text-slate-200 text-right whitespace-nowrap font-semibold">{s.fat2023 !== null ? formatR$(s.fat2023) : <span className="text-slate-600">—</span>}</td>
+                          <td className="px-3 py-2 text-slate-200 text-right whitespace-nowrap font-semibold">{s.fat2024 !== null ? formatR$(s.fat2024) : <span className="text-slate-600">—</span>}</td>
+                          <td className="px-3 py-2 text-slate-200 text-right whitespace-nowrap font-semibold">{s.fat2025 !== null ? formatR$(s.fat2025) : <span className="text-slate-600">—</span>}</td>
+                          <td className="px-3 py-2 text-white font-bold text-right whitespace-nowrap">{formatR$(s.fat2026)}</td>
+                          <td className={`px-3 py-2 text-right font-bold whitespace-nowrap ${s.varYoY === null ? 'text-slate-600' : s.varYoY >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {s.varYoY !== null ? `${s.varYoY >= 0 ? '+' : ''}${s.varYoY.toFixed(1)}%` : '—'}
+                          </td>
+                          <td className="px-3 py-2 text-slate-200 text-right whitespace-nowrap font-semibold">R$ {s.ticket2026.toFixed(2)}</td>
+                          <td className={`px-3 py-2 text-right font-bold whitespace-nowrap ${s.varTicketYoY === null ? 'text-slate-600' : s.varTicketYoY >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {s.varTicketYoY !== null ? `${s.varTicketYoY >= 0 ? '+' : ''}${s.varTicketYoY.toFixed(1)}%` : '—'}
+                          </td>
+                          <td className="px-3 py-2 text-slate-200 text-right whitespace-nowrap font-semibold">{s.vendas2026.toLocaleString('pt-BR')}</td>
+                          <td className={`px-3 py-2 text-right font-bold whitespace-nowrap ${s.varVendasYoY === null ? 'text-slate-600' : s.varVendasYoY >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {s.varVendasYoY !== null ? `${s.varVendasYoY >= 0 ? '+' : ''}${s.varVendasYoY.toFixed(1)}%` : '—'}
+                          </td>
+                        </tr>
+                      ))}
                       {sortedStores.map((s, i) => (
                         <tr key={s.name} className={`border-b border-slate-700/50 ${i % 2 === 0 ? 'bg-slate-800/30' : ''}`}>
                           <td className="px-3 py-2 text-white font-medium whitespace-nowrap">{s.name}</td>
@@ -1080,7 +1174,21 @@ return {
                       <Bar dataKey="2023" name="2023" fill={YEAR_COLORS[2023]} radius={[4, 4, 0, 0]} />
                       <Bar dataKey="2024" name="2024" fill={YEAR_COLORS[2024]} radius={[4, 4, 0, 0]} />
                       <Bar dataKey="2025" name="2025" fill={YEAR_COLORS[2025]} radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="2026" name="2026" fill={YEAR_COLORS[2026]} radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="2026" name="2026" fill={YEAR_COLORS[2026]} radius={[4, 4, 0, 0]}>
+                        <LabelList content={({ x, y, width, index }) => {
+                          const entry = momChartData[index];
+                          if (!entry) return null;
+                          const val26 = entry['2026'];
+                          const val25 = entry['2025'];
+                          if (!val25 || !val26) return null;
+                          const pct = ((val26 - val25) / val25) * 100;
+                          return (
+                            <text x={x + width / 2} y={y - 6} textAnchor="middle" fontSize={11} fill={pct >= 0 ? '#22c55e' : '#ef4444'}>
+                              {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%
+                            </text>
+                          );
+                        }} />
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
@@ -1106,6 +1214,23 @@ return {
                       </tr>
                     </thead>
                     <tbody>
+                      {[computed.momSummaryAll, computed.momSummarySame].map((s) => (
+                        <tr key={s.name} className="border-b border-slate-600 bg-slate-700/50">
+                          <td className="px-3 py-2 text-white font-semibold whitespace-nowrap">{s.name}</td>
+                          <td className="px-3 py-2 text-slate-200 text-right whitespace-nowrap font-semibold">{formatR$(s.monthData[1]?.fat26 || 0)}</td>
+                          <td className={`px-3 py-2 text-right font-bold whitespace-nowrap ${s.monthData[1]?.var2526 == null ? 'text-slate-600' : s.monthData[1]?.var2526 >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {s.monthData[1]?.var2526 != null ? `${s.monthData[1].var2526 >= 0 ? '+' : ''}${s.monthData[1].var2526.toFixed(1)}%` : '—'}
+                          </td>
+                          <td className="px-3 py-2 text-slate-200 text-right whitespace-nowrap font-semibold">{formatR$(s.monthData[2]?.fat26 || 0)}</td>
+                          <td className={`px-3 py-2 text-right font-bold whitespace-nowrap ${s.monthData[2]?.var2526 == null ? 'text-slate-600' : s.monthData[2]?.var2526 >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {s.monthData[2]?.var2526 != null ? `${s.monthData[2].var2526 >= 0 ? '+' : ''}${s.monthData[2].var2526.toFixed(1)}%` : '—'}
+                          </td>
+                          <td className="px-3 py-2 text-white font-bold text-right whitespace-nowrap">{formatR$(s.monthData[3]?.fat26 || 0)}</td>
+                          <td className={`px-3 py-2 text-right font-bold whitespace-nowrap ${s.monthData[3]?.var2526 == null ? 'text-slate-600' : s.monthData[3]?.var2526 >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {s.monthData[3]?.var2526 != null ? `${s.monthData[3].var2526 >= 0 ? '+' : ''}${s.monthData[3].var2526.toFixed(1)}%` : '—'}
+                          </td>
+                        </tr>
+                      ))}
                       {sortedMomStores.map((s, i) => (
                         <tr key={s.name} className={`border-b border-slate-700/50 ${i % 2 === 0 ? 'bg-slate-800/30' : ''}`}>
                           <td className="px-3 py-2 text-white font-medium whitespace-nowrap">{s.name}</td>
