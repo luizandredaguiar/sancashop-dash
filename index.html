@@ -50,6 +50,7 @@
   const HISTORICAL = window.HISTORICAL;
   const DAILY_DATA = window.DAILY_DATA;
   const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   const CORES = {
     primary: '#6366f1', secondary: '#22c55e', tertiary: '#f59e0b',
     danger: '#ef4444', neutral: '#64748b', purple: '#8b5cf6',
@@ -131,7 +132,9 @@
       const monthRange = [];
       for (let m = 1; m <= maxMonth2026; m++) monthRange.push(m);
 
-      const partialMonth = (lastUpdateMonth === maxMonth2026) ? maxMonth2026 : null;
+      // Month is partial only if last update is in the same month AND not the last day
+      const isPartial = (lastUpdateMonth === maxMonth2026) && (lastUpdateDay < DAYS_IN_MONTH[maxMonth2026]);
+      const partialMonth = isPartial ? maxMonth2026 : null;
       const daysElapsed = partialMonth ? lastUpdateDay : null;
       const daysInPartial = partialMonth ? DAYS_IN_MONTH[partialMonth] : null;
       const linearFactor = partialMonth ? (daysInPartial / daysElapsed) : 1;
@@ -941,10 +944,7 @@ return {
                 <h1 className="text-xl sm:text-2xl font-bold text-white">🏪 Sanca 2026</h1>
                 <p className="text-slate-400 text-xs sm:text-sm">Dashboard Operacional • Atualizado: {DATA.lastUpdate}</p>
               </div>
-              <div className="text-right hidden sm:block">
-                <p className="text-indigo-400 text-lg font-bold">{formatM(computed.fatYTD)}</p>
-                <p className="text-slate-400 text-xs">Faturamento YTD</p>
-              </div>
+              
             </div>
           </div>
         </div>
@@ -955,7 +955,7 @@ return {
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 flex items-center gap-3">
               <span className="text-amber-400 text-lg">⚠️</span>
               <p className="text-amber-300 text-sm">
-                <strong>{MESES[partialMonth-1]} 2026 projetado:</strong> dados reais de {daysElapsed} dias, projeção blend (sazonalidade YoY + linear) para {daysInPartial} dias.
+                <strong>{MESES_FULL[partialMonth-1]} 2026 projetado:</strong> dados reais de {daysElapsed} dias, projeção blend (sazonalidade YoY + linear) para {daysInPartial} dias.
                 Valores de 2026 incluem projeção para o mês corrente.
               </p>
             </div>
