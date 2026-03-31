@@ -1012,7 +1012,7 @@ return {
                     <BarChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                       <XAxis dataKey="ano" stroke="#94a3b8" />
-                      <YAxis stroke="#94a3b8" tickFormatter={v => `R${(v/1000).toFixed(0)}k`} />
+                      <YAxis stroke="#94a3b8" tickFormatter={v => `R${(v/1000).toFixed(0)}k`} domain={[0, dataMax => Math.ceil(dataMax * 1.12)]} />
                       <Tooltip content={<CustomTooltip />} />
                       <Bar dataKey="faturamento" name="Faturamento" radius={[4, 4, 0, 0]}>
                         {chartData.map((entry, i) => (
@@ -1157,7 +1157,7 @@ return {
                     <BarChart data={momChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                       <XAxis dataKey="month" stroke="#94a3b8" />
-                      <YAxis stroke="#94a3b8" tickFormatter={v => `R${(v/1000).toFixed(0)}k`} />
+                      <YAxis stroke="#94a3b8" tickFormatter={v => `R${(v/1000).toFixed(0)}k`} domain={[0, dataMax => Math.ceil(dataMax * 1.15)]} />
                       <Tooltip content={({ active, payload, label }) => {
                         if (!active || !payload?.length) return null;
                         return (
@@ -1172,16 +1172,44 @@ return {
                         );
                       }} />
                       <Bar dataKey="2023" name="2023" fill={YEAR_COLORS[2023]} radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="2024" name="2024" fill={YEAR_COLORS[2024]} radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="2025" name="2025" fill={YEAR_COLORS[2025]} radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="2024" name="2024" fill={YEAR_COLORS[2024]} radius={[4, 4, 0, 0]}>
+                        <LabelList content={({ x, y, width, index }) => {
+                          const entry = momChartData[index];
+                          if (!entry) return null;
+                          const cur = entry['2024'];
+                          const prev = entry['2023'];
+                          if (!prev || !cur) return null;
+                          const pct = ((cur - prev) / prev) * 100;
+                          return (
+                            <text x={x + width / 2} y={y - 6} textAnchor="middle" fontSize={11} fill={pct >= 0 ? '#22c55e' : '#ef4444'}>
+                              {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%
+                            </text>
+                          );
+                        }} />
+                      </Bar>
+                      <Bar dataKey="2025" name="2025" fill={YEAR_COLORS[2025]} radius={[4, 4, 0, 0]}>
+                        <LabelList content={({ x, y, width, index }) => {
+                          const entry = momChartData[index];
+                          if (!entry) return null;
+                          const cur = entry['2025'];
+                          const prev = entry['2024'];
+                          if (!prev || !cur) return null;
+                          const pct = ((cur - prev) / prev) * 100;
+                          return (
+                            <text x={x + width / 2} y={y - 6} textAnchor="middle" fontSize={11} fill={pct >= 0 ? '#22c55e' : '#ef4444'}>
+                              {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%
+                            </text>
+                          );
+                        }} />
+                      </Bar>
                       <Bar dataKey="2026" name="2026" fill={YEAR_COLORS[2026]} radius={[4, 4, 0, 0]}>
                         <LabelList content={({ x, y, width, index }) => {
                           const entry = momChartData[index];
                           if (!entry) return null;
-                          const val26 = entry['2026'];
-                          const val25 = entry['2025'];
-                          if (!val25 || !val26) return null;
-                          const pct = ((val26 - val25) / val25) * 100;
+                          const cur = entry['2026'];
+                          const prev = entry['2025'];
+                          if (!prev || !cur) return null;
+                          const pct = ((cur - prev) / prev) * 100;
                           return (
                             <text x={x + width / 2} y={y - 6} textAnchor="middle" fontSize={11} fill={pct >= 0 ? '#22c55e' : '#ef4444'}>
                               {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%
