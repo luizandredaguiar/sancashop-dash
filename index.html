@@ -89,7 +89,7 @@
   };
 
   const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
+    if (!active || !payload?.length || label === '') return null;
     return (
       <div className="bg-slate-800 border border-slate-600 rounded-lg p-3 shadow-xl text-sm">
         <p className="text-slate-300 font-medium mb-2">{label}</p>
@@ -248,46 +248,41 @@
       const varTotal = totalFat2025 > 0 ? ((totalFat2026 / totalFat2025) - 1) * 100 : 0;
 
       const allYearsStores = storeRows.filter(s => s.existsIn[2023] && s.existsIn[2024] && s.existsIn[2025] && s.fat2026 > 0);
-      const consolidatedChart = [2023, 2024, 2025, 2026].map(year => {
+      const consolidatedChart = [2023, 2024, 2025].map(year => {
+        // Full year: sum ALL months from HISTORICAL for stores present in all 4 years
         const total = allYearsStores.reduce((sum, s) => {
-          if (year === 2026) return sum + s.fat2026;
-          return sum + (s['fat' + year] || 0);
+          const hYear = HISTORICAL[s.name]?.[String(year)];
+          if (!hYear) return sum;
+          let fat = 0;
+          Object.values(hYear).forEach(md => { fat += md.valor || 0; });
+          return sum + fat;
         }, 0);
         return { ano: String(year), faturamento: total };
       });
 
       // Consolidated chart: ALL stores that existed in EACH period (including closed ones)
-      const consolidatedAllChart = [2023, 2024, 2025, 2026].map(year => {
+      const consolidatedAllChart = [2023, 2024, 2025].map(year => {
         let total = 0;
-        if (year === 2026) {
-          // Sum all active 2026 stores
-          total = storeRows.reduce((sum, s) => sum + s.fat2026, 0);
-        } else {
-          // Sum ALL stores from HISTORICAL that had data in this year for these months
-          const allHistStores = Object.keys(HISTORICAL);
-          allHistStores.forEach(name => {
-            const hYear = HISTORICAL[name]?.[String(year)];
-            if (!hYear) return;
-            let hasAll = true, fat = 0;
-            monthRange.forEach(m => {
-              const md = hYear[String(m)];
-              if (!md) { hasAll = false; }
-              else { fat += md.valor; }
-            });
-            if (hasAll) total += fat;
-          });
-        }
+        // Sum ALL months from HISTORICAL for ALL stores that had data in this year
+        const allHistStores = Object.keys(HISTORICAL);
+        allHistStores.forEach(name => {
+          const hYear = HISTORICAL[name]?.[String(year)];
+          if (!hYear || Object.keys(hYear).length === 0) return;
+          Object.values(hYear).forEach(md => { total += md.valor || 0; });
+        });
         return { ano: String(year), faturamento: total };
       });
 
-      // Per-store chart data for the dropdown filter
+      // Per-store chart data for the dropdown filter (full year totals for historical)
       const storeChartData = (storeName) => {
-        const row = storeRows.find(s => s.name === storeName);
-        if (!row) return [];
         const result = [];
-        [2023, 2024, 2025, 2026].forEach(year => {
-          const fat = year === 2026 ? row.fat2026 : row['fat' + year];
-          if (fat !== null && fat > 0) result.push({ ano: String(year), faturamento: fat });
+        [2023, 2024, 2025].forEach(year => {
+          const hYear = HISTORICAL[storeName]?.[String(year)];
+          if (hYear && Object.keys(hYear).length > 0) {
+            let fat = 0;
+            Object.values(hYear).forEach(md => { fat += md.valor || 0; });
+            if (fat > 0) result.push({ ano: String(year), faturamento: fat });
+          }
         });
         return result;
       };
@@ -983,9 +978,12 @@ return {
       else if (!chartStore) base = computed.consolidatedChart;
       else base = computed.storeChartData(chartStore);
 
-      // Append YTD entries
+      // Append spacer + YTD entries
       const ytd = computed.computeYTD.buildYTDChartData(chartStore || '');
       const ytdEntries = [];
+      if (ytd.fat2025ytd > 0 || ytd.fat2026ytd > 0) {
+        ytdEntries.push({ ano: '', faturamento: 0, isSpacer: true });
+      }
       if (ytd.fat2025ytd > 0) ytdEntries.push({ ano: '2025 YTD', faturamento: ytd.fat2025ytd, isYTD: true });
       if (ytd.fat2026ytd > 0) ytdEntries.push({ ano: '2026 YTD', faturamento: ytd.fat2026ytd, isYTD: true });
       return [...base, ...ytdEntries];
@@ -997,16 +995,16 @@ return {
       return chartStore;
     }, [chartStore, computed]);
 
-    // KPI cards react to filter selection (YoY tab)
+    // KPI cards react to filter selection (YoY tab) — use YTD values
     const yoyKPI = useMemo(() => {
       const cd = chartData;
-      const fat26 = cd.find(d => d.ano === '2026')?.faturamento || 0;
-      const fat25 = cd.find(d => d.ano === '2025')?.faturamento || 0;
-      const varYoY = fat25 > 0 ? ((fat26 / fat25) - 1) * 100 : 0;
+      const fat26ytd = cd.find(d => d.ano === '2026 YTD')?.faturamento || 0;
+      const fat25ytd = cd.find(d => d.ano === '2025 YTD')?.faturamento || 0;
+      const varYTD = fat25ytd > 0 ? ((fat26ytd / fat25ytd) - 1) * 100 : 0;
       const count = chartStore === '__consolidated__' ? computed.storeRows.length
         : (!chartStore ? computed.allYearsStores.length : 1);
       const total = computed.storeRows.length;
-      return { fat26, fat25, varYoY, count, total };
+      return { fat26ytd, fat25ytd, varYTD, count, total };
     }, [chartData, chartStore, computed]);
 
     const momChartData = useMemo(() => {
@@ -1015,15 +1013,18 @@ return {
       else if (!momChartStore) base = computed.momChartAllStores;
       else base = computed.momChartForStore(momChartStore);
 
-      // Append MTD bars for April
+      // Append spacer + MTD bars for April
       const mtd = computed.computeMTD.buildMTDChartData(momChartStore || '');
       if (mtd.fatAbr25 > 0 || mtd.fatAbr26 > 0) {
-        base = [...base, {
-          month: 'Abr MTD',
-          '2025': mtd.fatAbr25 || 0,
-          '2026': mtd.fatAbr26 || 0,
-          isMTD: true,
-        }];
+        base = [...base,
+          { month: ' ', '2023': 0, '2024': 0, '2025': 0, '2026': 0, isSpacer: true },
+          {
+            month: 'Abr MTD',
+            '2025': mtd.fatAbr25 || 0,
+            '2026': mtd.fatAbr26 || 0,
+            isMTD: true,
+          }
+        ];
       }
       return base;
     }, [momChartStore, computed]);
@@ -1122,23 +1123,23 @@ return {
               {/* KPI Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <MetricCard
-                  title={`Fat. ${periodLabel} 2026`}
-                  value={formatK(yoyKPI.fat26)}
+                  title="Fat. YTD 2026"
+                  value={formatK(yoyKPI.fat26ytd)}
                   icon="📊"
                   color="green"
                 />
                 <MetricCard
-                  title={`Fat. ${periodLabel} 2025`}
-                  value={formatK(yoyKPI.fat25)}
+                  title="Fat. YTD 2025"
+                  value={formatK(yoyKPI.fat25ytd)}
                   subtitle={chartSubtitle}
                   icon="📊"
                   color="purple"
                 />
                 <MetricCard
-                  title="Variação YoY"
-                  value={`${yoyKPI.varYoY >= 0 ? '+' : ''}${yoyKPI.varYoY.toFixed(1)}%`}
-                  icon={yoyKPI.varYoY >= 0 ? "📈" : "📉"}
-                  color={yoyKPI.varYoY >= 0 ? "green" : "amber"}
+                  title="Variação YTD"
+                  value={`${yoyKPI.varYTD >= 0 ? '+' : ''}${yoyKPI.varYTD.toFixed(1)}%`}
+                  icon={yoyKPI.varYTD >= 0 ? "📈" : "📉"}
+                  color={yoyKPI.varYTD >= 0 ? "green" : "amber"}
                 />
                 <MetricCard
                   title="Lojas"
@@ -1153,7 +1154,7 @@ return {
               <Card>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                   <div>
-                    <h3 className="text-lg font-semibold text-white">Faturamento {periodLabel} por Ano</h3>
+                    <h3 className="text-lg font-semibold text-white">Faturamento Anual + YTD</h3>
                     <p className="text-slate-400 text-xs mt-1">{chartSubtitle}</p>
                   </div>
                   <select value={chartStore} onChange={e => setChartStore(e.target.value)}
@@ -1167,19 +1168,20 @@ return {
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                      <XAxis dataKey="ano" stroke="#94a3b8" />
+                      <XAxis dataKey="ano" stroke="#94a3b8" tickFormatter={v => v === '' ? '' : v} />
                       <YAxis stroke="#94a3b8" tickFormatter={v => `R${(v/1000).toFixed(0)}k`} domain={[0, dataMax => Math.ceil(dataMax * 1.12)]} />
                       <Tooltip content={<CustomTooltip />} />
                       {/* Vertical dashed line separating full-year from YTD */}
-                      {chartData.some(d => d.isYTD) && (
-                        <ReferenceLine x={chartData.find(d => d.isYTD)?.ano} stroke="#94a3b8" strokeDasharray="6 4" strokeWidth={1.5} label={{ value: 'YTD →', position: 'top', fill: '#94a3b8', fontSize: 11 }} />
+                      {chartData.some(d => d.isSpacer) && (
+                        <ReferenceLine x="" stroke="#94a3b8" strokeDasharray="6 4" strokeWidth={1.5} label={{ value: 'YTD →', position: 'top', fill: '#94a3b8', fontSize: 11 }} />
                       )}
                       <Bar dataKey="faturamento" name="Faturamento" radius={[4, 4, 0, 0]}>
                         {chartData.map((entry, i) => (
-                          <Cell key={i} fill={entry.isYTD ? (YTD_COLORS[entry.ano] || '#94a3b8') : (YEAR_COLORS[parseInt(entry.ano)] || '#94a3b8')} />
+                          <Cell key={i} fill={entry.isSpacer ? 'transparent' : entry.isYTD ? (YTD_COLORS[entry.ano] || '#94a3b8') : (YEAR_COLORS[parseInt(entry.ano)] || '#94a3b8')} />
                         ))}
                         <LabelList content={({ x, y, width, index }) => {
                           if (index === 0 || !chartData[index - 1]) return null;
+                          if (chartData[index].isSpacer || chartData[index - 1].isSpacer) return null;
                           const cur = chartData[index].faturamento;
                           const prev = chartData[index - 1].faturamento;
                           if (!prev || !cur) return null;
@@ -1202,15 +1204,12 @@ return {
 
               {/* Store comparison table */}
               <Card>
-                <h3 className="text-lg font-semibold text-white mb-4">Comparativo por Loja — {periodLabel}</h3>
+                <h3 className="text-lg font-semibold text-white mb-4">Comparativo por Loja — YTD</h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-slate-700">
                         <SortHeader col="name" label="Loja" />
-                        <SortHeader col="fat2025" label={`Fat ${periodLabel} 25`} align="right" />
-                        <SortHeader col="fat2026" label={`Fat ${periodLabel} 26`} align="right" />
-                        <SortHeader col="varYoY" label="Var Fat 25→26" align="right" />
                         <SortHeader col="fat2025ytd" label="2025 YTD" align="right" />
                         <SortHeader col="fat2026ytd" label="2026 YTD" align="right" />
                         <SortHeader col="varYTD" label="Var YTD" align="right" />
@@ -1232,11 +1231,6 @@ return {
                         return (
                         <tr key={s.name} className="border-b border-slate-600 bg-slate-700/50">
                           <td className="px-3 py-2 text-white font-semibold whitespace-nowrap">{s.name}</td>
-                          <td className="px-3 py-2 text-slate-200 text-right whitespace-nowrap font-semibold">{s.fat2025 !== null ? formatR$(s.fat2025) : <span className="text-slate-600">—</span>}</td>
-                          <td className="px-3 py-2 text-white font-bold text-right whitespace-nowrap">{formatR$(s.fat2026)}</td>
-                          <td className={`px-3 py-2 text-right font-bold whitespace-nowrap ${s.varYoY === null ? 'text-slate-600' : s.varYoY >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {s.varYoY !== null ? `${s.varYoY >= 0 ? '+' : ''}${s.varYoY.toFixed(1)}%` : '—'}
-                          </td>
                           <td className="px-3 py-2 text-slate-200 text-right whitespace-nowrap font-semibold">{ytd25 > 0 ? formatR$(ytd25) : <span className="text-slate-600">—</span>}</td>
                           <td className="px-3 py-2 text-white font-bold text-right whitespace-nowrap">{ytd26 > 0 ? formatR$(ytd26) : '—'}</td>
                           <td className={`px-3 py-2 text-right font-bold whitespace-nowrap ${varYTD === null ? 'text-slate-600' : varYTD >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -1258,11 +1252,6 @@ return {
                         return (
                         <tr key={s.name} className={`border-b border-slate-700/50 ${i % 2 === 0 ? 'bg-slate-800/30' : ''}`}>
                           <td className="px-3 py-2 text-white font-medium whitespace-nowrap">{s.name}</td>
-                          <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.fat2025 !== null ? formatR$(s.fat2025) : <span className="text-slate-600">—</span>}</td>
-                          <td className="px-3 py-2 text-white font-medium text-right whitespace-nowrap">{formatR$(s.fat2026)}</td>
-                          <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${s.varYoY === null ? 'text-slate-600' : s.varYoY >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {s.varYoY !== null ? `${s.varYoY >= 0 ? '+' : ''}${s.varYoY.toFixed(1)}%` : '—'}
-                          </td>
                           <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{ytdRow?.fat2025ytd ? formatR$(ytdRow.fat2025ytd) : <span className="text-slate-600">—</span>}</td>
                           <td className="px-3 py-2 text-white font-medium text-right whitespace-nowrap">{ytdRow?.fat2026ytd ? formatR$(ytdRow.fat2026ytd) : '—'}</td>
                           <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${!ytdRow?.varYTD ? 'text-slate-600' : ytdRow.varYTD >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -1337,10 +1326,10 @@ return {
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={momChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                      <XAxis dataKey="month" stroke="#94a3b8" />
+                      <XAxis dataKey="month" stroke="#94a3b8" tickFormatter={v => v === ' ' ? '' : v} />
                       <YAxis stroke="#94a3b8" tickFormatter={v => `R${(v/1000).toFixed(0)}k`} domain={[0, dataMax => Math.ceil(dataMax * 1.15)]} />
                       <Tooltip content={({ active, payload, label }) => {
-                        if (!active || !payload?.length) return null;
+                        if (!active || !payload?.length || label === ' ') return null;
                         return (
                           <div className="bg-slate-800 border border-slate-600 rounded-lg p-3 shadow-xl text-sm">
                             <p className="text-slate-300 font-medium mb-2">{label}</p>
@@ -1353,8 +1342,8 @@ return {
                         );
                       }} />
                       {/* Vertical dashed line separating full months from MTD */}
-                      {momChartData.some(d => d.isMTD) && (
-                        <ReferenceLine x="Abr MTD" stroke="#94a3b8" strokeDasharray="6 4" strokeWidth={1.5} label={{ value: 'MTD →', position: 'top', fill: '#94a3b8', fontSize: 11 }} />
+                      {momChartData.some(d => d.isSpacer) && (
+                        <ReferenceLine x=" " stroke="#94a3b8" strokeDasharray="6 4" strokeWidth={1.5} label={{ value: 'MTD →', position: 'top', fill: '#94a3b8', fontSize: 11 }} />
                       )}
                       <Bar dataKey="2023" name="2023" fill={YEAR_COLORS[2023]} radius={[4, 4, 0, 0]} />
                       <Bar dataKey="2024" name="2024" fill={YEAR_COLORS[2024]} radius={[4, 4, 0, 0]}>
