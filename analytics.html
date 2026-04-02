@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sanca Analytics — Q1 2026 vs Q1 2025</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  body { font-family: 'Inter', system-ui, sans-serif; background: #f0fdf4; }
+  .tab-btn { transition: all 0.2s; }
+  .tab-btn.active { background: #0d9488; color: white; box-shadow: 0 2px 8px rgba(13,148,136,0.3); }
+  .tab-btn:not(.active) { background: #e2e8f0; color: #475569; }
+  .tab-btn:not(.active):hover { background: #cbd5e1; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .kpi-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .kpi-up { color: #059669; }
+  .kpi-down { color: #dc2626; }
+  table { border-collapse: collapse; }
+  table thead { position: sticky; top: 0; z-index: 1; }
+  table tbody tr:nth-child(even) { background: rgba(240,253,244,0.5); }
+  table tbody tr:hover { background: rgba(204,251,241,0.5); }
+  canvas { max-height: 400px; }
+  .heatmap-cell { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; border-radius: 4px; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- Header -->
+<div class="bg-gradient-to-r from-teal-700 to-emerald-600 text-white py-6 px-4 md:px-8 shadow-lg">
+  <div class="max-w-7xl mx-auto flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-bold">🏪 Sanca Analytics</h1>
+      <p class="text-teal-100 mt-1">Q1 2026 vs Q1 2025 — Dados Unificados</p>
+    </div>
+    <div class="text-right text-sm text-teal-200">
+      <div>Gerado em: 01/04/2026</div>
+      <div>36 lojas ativas</div>
+    </div>
+  </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="max-w-7xl mx-auto px-4 md:px-8 -mt-6">
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
+    
+    <div class="kpi-card p-4">
+      <div class="text-xs text-gray-500 uppercase tracking-wide">Receita Q1</div>
+      <div class="text-xl md:text-2xl font-bold text-gray-900 mt-1">R$ 2.437.044,18</div>
+      <div class="text-sm mt-1 kpi-up">
+        +23.8% YoY
+      </div>
+      <div class="text-xs text-gray-400 mt-1">2025: R$ 1.967.914,76</div>
+    </div>
+
+    <div class="kpi-card p-4">
+      <div class="text-xs text-gray-500 uppercase tracking-wide">Transações Q1</div>
+      <div class="text-xl md:text-2xl font-bold text-gray-900 mt-1">133.113</div>
+      <div class="text-sm mt-1 kpi-up">
+        +19.2% YoY
+      </div>
+      <div class="text-xs text-gray-400 mt-1">2025: 111.637</div>
+    </div>
+
+    <div class="kpi-card p-4">
+      <div class="text-xs text-gray-500 uppercase tracking-wide">Ticket Médio</div>
+      <div class="text-xl md:text-2xl font-bold text-gray-900 mt-1">R$ 18,31</div>
+      <div class="text-sm mt-1 kpi-up">
+        +3.9% YoY
+      </div>
+      <div class="text-xs text-gray-400 mt-1">2025: R$ 17,63</div>
+    </div>
+
+    <div class="kpi-card p-4">
+      <div class="text-xs text-gray-500 uppercase tracking-wide">Clientes Únicos</div>
+      <div class="text-xl md:text-2xl font-bold text-gray-900 mt-1">23.239</div>
+      <div class="text-sm mt-1 kpi-up">
+        +10.7% YoY
+      </div>
+      <div class="text-xs text-gray-400 mt-1">2025: 20.997</div>
+    </div>
+
+    <div class="kpi-card p-4 col-span-2 md:col-span-1">
+      <div class="text-xs text-gray-500 uppercase tracking-wide">Lojas Ativas</div>
+      <div class="text-xl md:text-2xl font-bold text-gray-900 mt-1">36</div>
+      <div class="text-sm mt-1">
+        <span class="text-emerald-600">3 novas</span> · 
+        <span class="text-red-500">5 fechadas</span>
+      </div>
+      <div class="text-xs text-gray-400 mt-1">2025: 38 lojas</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="max-w-7xl mx-auto px-4 md:px-8 mt-6">
+  <div class="flex flex-wrap gap-2 mb-4">
+    <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium" data-tab="receita">📊 Receita por Loja</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium" data-tab="tendencias">📈 Tendências</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium" data-tab="horario">🕐 Vendas por Hora</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium" data-tab="clientes">👥 Clientes</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium" data-tab="alertas">🚨 Alertas</button>
+  </div>
+
+  <!-- Tab 1: Receita por Loja -->
+  <div class="tab-panel active" id="tab-receita">
+    <div class="bg-white rounded-xl shadow-sm p-4 md:p-6 mb-6">
+      <h2 class="text-lg font-semibold text-gray-800 mb-4">Top 20 Lojas por Receita Q1 2026</h2>
+      <canvas id="chartStoreRevenue" height="300"></canvas>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-4 md:p-6 overflow-x-auto">
+      <h2 class="text-lg font-semibold text-gray-800 mb-4">Todas as Lojas — Comparativo Q1</h2>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-teal-50 text-teal-800">
+            <th class="px-3 py-2 text-left">Loja</th>
+            <th class="px-3 py-2 text-right">Receita 2025</th>
+            <th class="px-3 py-2 text-right">Receita 2026</th>
+            <th class="px-3 py-2 text-right">YoY</th>
+            <th class="px-3 py-2 text-right">TM 2025</th>
+            <th class="px-3 py-2 text-right">TM 2026</th>
+            <th class="px-3 py-2 text-right">Itens/Tx</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Projac</td>
+      <td class="px-3 py-2 text-right">R$ 278.582,48</td>
+      <td class="px-3 py-2 text-right">R$ 362.435,14</td>
+      <td class="px-3 py-2 text-right font-medium">+30.1%</td>
+      <td class="px-3 py-2 text-right">R$ 12,90</td>
+      <td class="px-3 py-2 text-right">R$ 13,09</td>
+      <td class="px-3 py-2 text-right">1.51</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. Wonderful</td>
+      <td class="px-3 py-2 text-right">R$ 137.798,31</td>
+      <td class="px-3 py-2 text-right">R$ 217.686,46</td>
+      <td class="px-3 py-2 text-right font-medium">+58.0%</td>
+      <td class="px-3 py-2 text-right">R$ 20,89</td>
+      <td class="px-3 py-2 text-right">R$ 22,24</td>
+      <td class="px-3 py-2 text-right">2.12</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. East Side Meier 2</td>
+      <td class="px-3 py-2 text-right">R$ 86.970,52</td>
+      <td class="px-3 py-2 text-right">R$ 132.568,30</td>
+      <td class="px-3 py-2 text-right font-medium">+52.4%</td>
+      <td class="px-3 py-2 text-right">R$ 14,83</td>
+      <td class="px-3 py-2 text-right">R$ 15,62</td>
+      <td class="px-3 py-2 text-right">1.64</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. Key Biscayne</td>
+      <td class="px-3 py-2 text-right">R$ 88.706,30</td>
+      <td class="px-3 py-2 text-right">R$ 109.570,72</td>
+      <td class="px-3 py-2 text-right font-medium">+23.5%</td>
+      <td class="px-3 py-2 text-right">R$ 16,81</td>
+      <td class="px-3 py-2 text-right">R$ 19,07</td>
+      <td class="px-3 py-2 text-right">1.92</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. Palais de Nice</td>
+      <td class="px-3 py-2 text-right">R$ 73.011,26</td>
+      <td class="px-3 py-2 text-right">R$ 104.769,59</td>
+      <td class="px-3 py-2 text-right font-medium">+43.5%</td>
+      <td class="px-3 py-2 text-right">R$ 22,65</td>
+      <td class="px-3 py-2 text-right">R$ 22,58</td>
+      <td class="px-3 py-2 text-right">2.08</td>
+    </tr>
+<tr class="bg-emerald-50 font-bold">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. East Side Meier 3 <span class="text-xs bg-emerald-500 text-white px-1 rounded">NOVA</span></td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right">R$ 101.769,52</td>
+      <td class="px-3 py-2 text-right font-medium">Nova</td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right">R$ 18,87</td>
+      <td class="px-3 py-2 text-right">1.90</td>
+    </tr>
+<tr class="">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. Vernissage</td>
+      <td class="px-3 py-2 text-right">R$ 84.370,15</td>
+      <td class="px-3 py-2 text-right">R$ 89.400,87</td>
+      <td class="px-3 py-2 text-right font-medium">+6.0%</td>
+      <td class="px-3 py-2 text-right">R$ 20,73</td>
+      <td class="px-3 py-2 text-right">R$ 25,10</td>
+      <td class="px-3 py-2 text-right">2.32</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. Summer Coast</td>
+      <td class="px-3 py-2 text-right">R$ 75.358,40</td>
+      <td class="px-3 py-2 text-right">R$ 86.211,03</td>
+      <td class="px-3 py-2 text-right font-medium">+14.4%</td>
+      <td class="px-3 py-2 text-right">R$ 19,70</td>
+      <td class="px-3 py-2 text-right">R$ 21,59</td>
+      <td class="px-3 py-2 text-right">2.16</td>
+    </tr>
+<tr class="">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. Completo Guanabara</td>
+      <td class="px-3 py-2 text-right">R$ 74.749,20</td>
+      <td class="px-3 py-2 text-right">R$ 81.082,99</td>
+      <td class="px-3 py-2 text-right font-medium">+8.5%</td>
+      <td class="px-3 py-2 text-right">R$ 17,31</td>
+      <td class="px-3 py-2 text-right">R$ 18,73</td>
+      <td class="px-3 py-2 text-right">1.92</td>
+    </tr>
+<tr class="">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed.Bosque Freguesia</td>
+      <td class="px-3 py-2 text-right">R$ 77.029,98</td>
+      <td class="px-3 py-2 text-right">R$ 79.644,36</td>
+      <td class="px-3 py-2 text-right font-medium">+3.4%</td>
+      <td class="px-3 py-2 text-right">R$ 18,33</td>
+      <td class="px-3 py-2 text-right">R$ 20,44</td>
+      <td class="px-3 py-2 text-right">2.09</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed.Bosque Freguesia 2</td>
+      <td class="px-3 py-2 text-right">R$ 51.662,86</td>
+      <td class="px-3 py-2 text-right">R$ 74.608,22</td>
+      <td class="px-3 py-2 text-right font-medium">+44.4%</td>
+      <td class="px-3 py-2 text-right">R$ 18,37</td>
+      <td class="px-3 py-2 text-right">R$ 19,77</td>
+      <td class="px-3 py-2 text-right">1.97</td>
+    </tr>
+<tr class="bg-emerald-50 font-bold">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. Saint Germain <span class="text-xs bg-emerald-500 text-white px-1 rounded">NOVA</span></td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right">R$ 70.440,87</td>
+      <td class="px-3 py-2 text-right font-medium">Nova</td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right">R$ 21,04</td>
+      <td class="px-3 py-2 text-right">2.17</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed. Paradiso</td>
+      <td class="px-3 py-2 text-right">R$ 49.911,30</td>
+      <td class="px-3 py-2 text-right">R$ 67.262,78</td>
+      <td class="px-3 py-2 text-right font-medium">+34.8%</td>
+      <td class="px-3 py-2 text-right">R$ 21,92</td>
+      <td class="px-3 py-2 text-right">R$ 21,23</td>
+      <td class="px-3 py-2 text-right">2.02</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed. Prince</td>
+      <td class="px-3 py-2 text-right">R$ 53.663,56</td>
+      <td class="px-3 py-2 text-right">R$ 61.970,06</td>
+      <td class="px-3 py-2 text-right font-medium">+15.5%</td>
+      <td class="px-3 py-2 text-right">R$ 20,87</td>
+      <td class="px-3 py-2 text-right">R$ 18,98</td>
+      <td class="px-3 py-2 text-right">1.94</td>
+    </tr>
+<tr class="text-red-600">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. East Side Meier 1</td>
+      <td class="px-3 py-2 text-right">R$ 66.679,98</td>
+      <td class="px-3 py-2 text-right">R$ 60.640,44</td>
+      <td class="px-3 py-2 text-right font-medium">-9.1%</td>
+      <td class="px-3 py-2 text-right">R$ 15,56</td>
+      <td class="px-3 py-2 text-right">R$ 15,84</td>
+      <td class="px-3 py-2 text-right">1.66</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed. Ilha de Cozumel</td>
+      <td class="px-3 py-2 text-right">R$ 47.306,57</td>
+      <td class="px-3 py-2 text-right">R$ 60.123,91</td>
+      <td class="px-3 py-2 text-right font-medium">+27.1%</td>
+      <td class="px-3 py-2 text-right">R$ 19,60</td>
+      <td class="px-3 py-2 text-right">R$ 20,07</td>
+      <td class="px-3 py-2 text-right">2.00</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed. Maxime</td>
+      <td class="px-3 py-2 text-right">R$ 41.163,95</td>
+      <td class="px-3 py-2 text-right">R$ 51.817,21</td>
+      <td class="px-3 py-2 text-right font-medium">+25.9%</td>
+      <td class="px-3 py-2 text-right">R$ 17,59</td>
+      <td class="px-3 py-2 text-right">R$ 16,35</td>
+      <td class="px-3 py-2 text-right">1.76</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed. Ferrara</td>
+      <td class="px-3 py-2 text-right">R$ 39.344,69</td>
+      <td class="px-3 py-2 text-right">R$ 49.681,91</td>
+      <td class="px-3 py-2 text-right font-medium">+26.3%</td>
+      <td class="px-3 py-2 text-right">R$ 17,99</td>
+      <td class="px-3 py-2 text-right">R$ 17,37</td>
+      <td class="px-3 py-2 text-right">1.77</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed. Trouville</td>
+      <td class="px-3 py-2 text-right">R$ 40.277,31</td>
+      <td class="px-3 py-2 text-right">R$ 49.275,07</td>
+      <td class="px-3 py-2 text-right font-medium">+22.3%</td>
+      <td class="px-3 py-2 text-right">R$ 20,59</td>
+      <td class="px-3 py-2 text-right">R$ 20,57</td>
+      <td class="px-3 py-2 text-right">2.14</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed. Rotondo</td>
+      <td class="px-3 py-2 text-right">R$ 41.165,73</td>
+      <td class="px-3 py-2 text-right">R$ 48.134,98</td>
+      <td class="px-3 py-2 text-right font-medium">+16.9%</td>
+      <td class="px-3 py-2 text-right">R$ 19,72</td>
+      <td class="px-3 py-2 text-right">R$ 19,38</td>
+      <td class="px-3 py-2 text-right">1.97</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed. Deauville</td>
+      <td class="px-3 py-2 text-right">R$ 41.845,03</td>
+      <td class="px-3 py-2 text-right">R$ 47.873,68</td>
+      <td class="px-3 py-2 text-right font-medium">+14.4%</td>
+      <td class="px-3 py-2 text-right">R$ 21,83</td>
+      <td class="px-3 py-2 text-right">R$ 21,37</td>
+      <td class="px-3 py-2 text-right">2.10</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. Saint Tropez</td>
+      <td class="px-3 py-2 text-right">R$ 34.387,79</td>
+      <td class="px-3 py-2 text-right">R$ 46.890,63</td>
+      <td class="px-3 py-2 text-right font-medium">+36.4%</td>
+      <td class="px-3 py-2 text-right">R$ 15,54</td>
+      <td class="px-3 py-2 text-right">R$ 18,32</td>
+      <td class="px-3 py-2 text-right">1.78</td>
+    </tr>
+<tr class="">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed. Chácara Sacopã</td>
+      <td class="px-3 py-2 text-right">R$ 40.642,55</td>
+      <td class="px-3 py-2 text-right">R$ 43.674,51</td>
+      <td class="px-3 py-2 text-right font-medium">+7.5%</td>
+      <td class="px-3 py-2 text-right">R$ 20,73</td>
+      <td class="px-3 py-2 text-right">R$ 22,75</td>
+      <td class="px-3 py-2 text-right">2.19</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. Costa Verde</td>
+      <td class="px-3 py-2 text-right">R$ 33.365,28</td>
+      <td class="px-3 py-2 text-right">R$ 37.720,95</td>
+      <td class="px-3 py-2 text-right font-medium">+13.1%</td>
+      <td class="px-3 py-2 text-right">R$ 20,32</td>
+      <td class="px-3 py-2 text-right">R$ 20,19</td>
+      <td class="px-3 py-2 text-right">2.03</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed. Pedra Bonita</td>
+      <td class="px-3 py-2 text-right">R$ 25.248,42</td>
+      <td class="px-3 py-2 text-right">R$ 29.056,97</td>
+      <td class="px-3 py-2 text-right font-medium">+15.1%</td>
+      <td class="px-3 py-2 text-right">R$ 15,38</td>
+      <td class="px-3 py-2 text-right">R$ 16,93</td>
+      <td class="px-3 py-2 text-right">1.73</td>
+    </tr>
+<tr class="">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed. Torrigiani</td>
+      <td class="px-3 py-2 text-right">R$ 26.083,04</td>
+      <td class="px-3 py-2 text-right">R$ 28.138,91</td>
+      <td class="px-3 py-2 text-right font-medium">+7.9%</td>
+      <td class="px-3 py-2 text-right">R$ 17,48</td>
+      <td class="px-3 py-2 text-right">R$ 17,14</td>
+      <td class="px-3 py-2 text-right">1.71</td>
+    </tr>
+<tr class="text-red-600">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed. Solari</td>
+      <td class="px-3 py-2 text-right">R$ 29.978,87</td>
+      <td class="px-3 py-2 text-right">R$ 27.924,04</td>
+      <td class="px-3 py-2 text-right font-medium">-6.8%</td>
+      <td class="px-3 py-2 text-right">R$ 18,84</td>
+      <td class="px-3 py-2 text-right">R$ 20,05</td>
+      <td class="px-3 py-2 text-right">2.04</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed. Samambaia</td>
+      <td class="px-3 py-2 text-right">R$ 23.083,65</td>
+      <td class="px-3 py-2 text-right">R$ 27.549,13</td>
+      <td class="px-3 py-2 text-right font-medium">+19.3%</td>
+      <td class="px-3 py-2 text-right">R$ 18,54</td>
+      <td class="px-3 py-2 text-right">R$ 20,15</td>
+      <td class="px-3 py-2 text-right">2.11</td>
+    </tr>
+<tr class="text-red-600">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. Pq. Visconde Albuq.</td>
+      <td class="px-3 py-2 text-right">R$ 30.305,93</td>
+      <td class="px-3 py-2 text-right">R$ 27.125,44</td>
+      <td class="px-3 py-2 text-right font-medium">-10.5%</td>
+      <td class="px-3 py-2 text-right">R$ 21,90</td>
+      <td class="px-3 py-2 text-right">R$ 21,77</td>
+      <td class="px-3 py-2 text-right">2.07</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. Verrochio</td>
+      <td class="px-3 py-2 text-right">R$ 17.079,35</td>
+      <td class="px-3 py-2 text-right">R$ 26.830,24</td>
+      <td class="px-3 py-2 text-right font-medium">+57.1%</td>
+      <td class="px-3 py-2 text-right">R$ 23,27</td>
+      <td class="px-3 py-2 text-right">R$ 25,36</td>
+      <td class="px-3 py-2 text-right">2.49</td>
+    </tr>
+<tr class="text-red-600">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Canoas</td>
+      <td class="px-3 py-2 text-right">R$ 28.318,13</td>
+      <td class="px-3 py-2 text-right">R$ 23.973,04</td>
+      <td class="px-3 py-2 text-right font-medium">-15.3%</td>
+      <td class="px-3 py-2 text-right">R$ 17,69</td>
+      <td class="px-3 py-2 text-right">R$ 17,37</td>
+      <td class="px-3 py-2 text-right">1.73</td>
+    </tr>
+<tr class="text-red-600">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. Presidente Médici</td>
+      <td class="px-3 py-2 text-right">R$ 23.413,45</td>
+      <td class="px-3 py-2 text-right">R$ 23.207,62</td>
+      <td class="px-3 py-2 text-right font-medium">-0.9%</td>
+      <td class="px-3 py-2 text-right">R$ 15,28</td>
+      <td class="px-3 py-2 text-right">R$ 15,27</td>
+      <td class="px-3 py-2 text-right">1.55</td>
+    </tr>
+<tr class="text-red-600">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. Jean Labasque</td>
+      <td class="px-3 py-2 text-right">R$ 29.282,51</td>
+      <td class="px-3 py-2 text-right">R$ 22.810,47</td>
+      <td class="px-3 py-2 text-right font-medium">-22.1%</td>
+      <td class="px-3 py-2 text-right">R$ 19,85</td>
+      <td class="px-3 py-2 text-right">R$ 18,44</td>
+      <td class="px-3 py-2 text-right">1.86</td>
+    </tr>
+<tr class="text-red-600">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed. Bruneleschi</td>
+      <td class="px-3 py-2 text-right">R$ 22.679,07</td>
+      <td class="px-3 py-2 text-right">R$ 22.433,60</td>
+      <td class="px-3 py-2 text-right font-medium">-1.1%</td>
+      <td class="px-3 py-2 text-right">R$ 21,27</td>
+      <td class="px-3 py-2 text-right">R$ 22,21</td>
+      <td class="px-3 py-2 text-right">1.98</td>
+    </tr>
+<tr class="text-emerald-700">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed. Ilha das Palmas</td>
+      <td class="px-3 py-2 text-right">R$ 19.054,42</td>
+      <td class="px-3 py-2 text-right">R$ 22.238,79</td>
+      <td class="px-3 py-2 text-right font-medium">+16.7%</td>
+      <td class="px-3 py-2 text-right">R$ 17,15</td>
+      <td class="px-3 py-2 text-right">R$ 19,89</td>
+      <td class="px-3 py-2 text-right">2.10</td>
+    </tr>
+<tr class="bg-emerald-50 font-bold">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed. Brancusi <span class="text-xs bg-emerald-500 text-white px-1 rounded">NOVA</span></td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right">R$ 20.501,73</td>
+      <td class="px-3 py-2 text-right font-medium">Nova</td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right">R$ 19,94</td>
+      <td class="px-3 py-2 text-right">2.06</td>
+    </tr>
+<tr class="bg-gray-100 text-gray-500 line-through">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. Adorabile Tijuca <span class="text-xs bg-gray-400 text-white px-1 rounded">FECHADA</span></td>
+      <td class="px-3 py-2 text-right">R$ 63.784,40</td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right font-medium">—</td>
+      <td class="px-3 py-2 text-right">R$ 19,10</td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right">—</td>
+    </tr>
+<tr class="bg-gray-100 text-gray-500 line-through">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. John F. Kennedy <span class="text-xs bg-gray-400 text-white px-1 rounded">FECHADA</span></td>
+      <td class="px-3 py-2 text-right">R$ 26.358,76</td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right font-medium">—</td>
+      <td class="px-3 py-2 text-right">R$ 19,25</td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right">—</td>
+    </tr>
+<tr class="bg-gray-100 text-gray-500 line-through">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. Reserva das Arvores <span class="text-xs bg-gray-400 text-white px-1 rounded">FECHADA</span></td>
+      <td class="px-3 py-2 text-right">R$ 13.089,51</td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right font-medium">—</td>
+      <td class="px-3 py-2 text-right">R$ 17,55</td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right">—</td>
+    </tr>
+<tr class="bg-gray-100 text-gray-500 line-through">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Cond. Reserva Árvores 2 <span class="text-xs bg-gray-400 text-white px-1 rounded">FECHADA</span></td>
+      <td class="px-3 py-2 text-right">R$ 1.178,74</td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right font-medium">—</td>
+      <td class="px-3 py-2 text-right">R$ 19,65</td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right">—</td>
+    </tr>
+<tr class="bg-gray-100 text-gray-500 line-through">
+      <td class="px-3 py-2 text-left whitespace-nowrap">Ed. Gávea IV <span class="text-xs bg-gray-400 text-white px-1 rounded">FECHADA</span></td>
+      <td class="px-3 py-2 text-right">R$ 30.983,31</td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right font-medium">—</td>
+      <td class="px-3 py-2 text-right">R$ 19,16</td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right">—</td>
+    </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab 2: Tendências -->
+  <div class="tab-panel" id="tab-tendencias">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-white rounded-xl shadow-sm p-4 md:p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Receita Diária (MA 7 dias)</h2>
+        <canvas id="chartTrendRevenue" height="250"></canvas>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm p-4 md:p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Ticket Médio (MA 7 dias)</h2>
+        <canvas id="chartTrendTicket" height="250"></canvas>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm p-4 md:p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Transações Diárias (MA 7 dias)</h2>
+        <canvas id="chartTrendTx" height="250"></canvas>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm p-4 md:p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Itens por Transação (MA 7 dias)</h2>
+        <canvas id="chartTrendItems" height="250"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 3: Vendas por Hora -->
+  <div class="tab-panel" id="tab-horario">
+    <div class="bg-white rounded-xl shadow-sm p-4 md:p-6 mb-6">
+      <h2 class="text-lg font-semibold text-gray-800 mb-4">Transações por Hora — Q1 2025 vs Q1 2026</h2>
+      <canvas id="chartHourly" height="300"></canvas>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-4 md:p-6">
+      <h2 class="text-lg font-semibold text-gray-800 mb-4">Heatmap: Transações por Hora × Dia da Semana (Q1 2026)</h2>
+      <div id="heatmapContainer" class="overflow-x-auto"></div>
+    </div>
+  </div>
+
+  <!-- Tab 4: Clientes -->
+  <div class="tab-panel" id="tab-clientes">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div class="bg-white rounded-xl shadow-sm p-4 md:p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Distribuição de Frequência</h2>
+        <canvas id="chartFreq" height="250"></canvas>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm p-4 md:p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Top 20 Clientes por Gasto (Q1 2026)</h2>
+        <canvas id="chartTopClients" height="250"></canvas>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-4 md:p-6 overflow-x-auto">
+      <h2 class="text-lg font-semibold text-gray-800 mb-4">Concentração por Loja (Q1 2026)</h2>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-teal-50 text-teal-800">
+            <th class="px-3 py-2 text-left">Loja</th>
+            <th class="px-3 py-2 text-right">Clientes 2026</th>
+            <th class="px-3 py-2 text-right">Clientes 2025</th>
+            <th class="px-3 py-2 text-right">Tx/Cliente</th>
+            <th class="px-3 py-2 text-right">Pareto (Top 20%)</th>
+            <th class="px-3 py-2 text-right">Receita 2026</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+      <td class="px-3 py-2 text-left">Projac</td>
+      <td class="px-3 py-2 text-right">6.156</td>
+      <td class="px-3 py-2 text-right">5.014</td>
+      <td class="px-3 py-2 text-right">3.7</td>
+      <td class="px-3 py-2 text-right">63.4%</td>
+      <td class="px-3 py-2 text-right">R$ 302.210,29</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Cond. Wonderful</td>
+      <td class="px-3 py-2 text-right">1.823</td>
+      <td class="px-3 py-2 text-right">1.462</td>
+      <td class="px-3 py-2 text-right">4.4</td>
+      <td class="px-3 py-2 text-right">68.5%</td>
+      <td class="px-3 py-2 text-right">R$ 185.214,93</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Cond. East Side Meier 2</td>
+      <td class="px-3 py-2 text-right">1.477</td>
+      <td class="px-3 py-2 text-right">1.013</td>
+      <td class="px-3 py-2 text-right">4.6</td>
+      <td class="px-3 py-2 text-right">70.1%</td>
+      <td class="px-3 py-2 text-right">R$ 107.037,96</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Cond. Palais de Nice</td>
+      <td class="px-3 py-2 text-right">641</td>
+      <td class="px-3 py-2 text-right">576</td>
+      <td class="px-3 py-2 text-right">6.4</td>
+      <td class="px-3 py-2 text-right">75.8%</td>
+      <td class="px-3 py-2 text-right">R$ 96.466,40</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Cond. Key Biscayne</td>
+      <td class="px-3 py-2 text-right">777</td>
+      <td class="px-3 py-2 text-right">768</td>
+      <td class="px-3 py-2 text-right">6.2</td>
+      <td class="px-3 py-2 text-right">70.3%</td>
+      <td class="px-3 py-2 text-right">R$ 92.781,07</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Cond. East Side Meier 3</td>
+      <td class="px-3 py-2 text-right">1.045</td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right">4.2</td>
+      <td class="px-3 py-2 text-right">66.3%</td>
+      <td class="px-3 py-2 text-right">R$ 82.677,69</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Cond. Summer Coast</td>
+      <td class="px-3 py-2 text-right">602</td>
+      <td class="px-3 py-2 text-right">546</td>
+      <td class="px-3 py-2 text-right">5.9</td>
+      <td class="px-3 py-2 text-right">72.4%</td>
+      <td class="px-3 py-2 text-right">R$ 77.270,25</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Cond. Vernissage</td>
+      <td class="px-3 py-2 text-right">788</td>
+      <td class="px-3 py-2 text-right">995</td>
+      <td class="px-3 py-2 text-right">3.5</td>
+      <td class="px-3 py-2 text-right">65.1%</td>
+      <td class="px-3 py-2 text-right">R$ 72.386,59</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Ed.Bosque Freguesia 2</td>
+      <td class="px-3 py-2 text-right">620</td>
+      <td class="px-3 py-2 text-right">527</td>
+      <td class="px-3 py-2 text-right">5.1</td>
+      <td class="px-3 py-2 text-right">66.6%</td>
+      <td class="px-3 py-2 text-right">R$ 63.197,25</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Cond. Completo Guanabara</td>
+      <td class="px-3 py-2 text-right">866</td>
+      <td class="px-3 py-2 text-right">870</td>
+      <td class="px-3 py-2 text-right">3.7</td>
+      <td class="px-3 py-2 text-right">65.1%</td>
+      <td class="px-3 py-2 text-right">R$ 60.623,28</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Cond. Saint Germain</td>
+      <td class="px-3 py-2 text-right">589</td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right">4.8</td>
+      <td class="px-3 py-2 text-right">68.7%</td>
+      <td class="px-3 py-2 text-right">R$ 59.614,55</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Ed. Paradiso</td>
+      <td class="px-3 py-2 text-right">480</td>
+      <td class="px-3 py-2 text-right">414</td>
+      <td class="px-3 py-2 text-right">5.7</td>
+      <td class="px-3 py-2 text-right">73.4%</td>
+      <td class="px-3 py-2 text-right">R$ 59.239,17</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Ed.Bosque Freguesia</td>
+      <td class="px-3 py-2 text-right">579</td>
+      <td class="px-3 py-2 text-right">646</td>
+      <td class="px-3 py-2 text-right">4.8</td>
+      <td class="px-3 py-2 text-right">70.6%</td>
+      <td class="px-3 py-2 text-right">R$ 56.683,59</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Ed. Prince</td>
+      <td class="px-3 py-2 text-right">574</td>
+      <td class="px-3 py-2 text-right">534</td>
+      <td class="px-3 py-2 text-right">5.0</td>
+      <td class="px-3 py-2 text-right">72.1%</td>
+      <td class="px-3 py-2 text-right">R$ 55.780,05</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Ed. Ilha de Cozumel</td>
+      <td class="px-3 py-2 text-right">535</td>
+      <td class="px-3 py-2 text-right">504</td>
+      <td class="px-3 py-2 text-right">4.9</td>
+      <td class="px-3 py-2 text-right">66.9%</td>
+      <td class="px-3 py-2 text-right">R$ 52.648,98</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Cond. East Side Meier 1</td>
+      <td class="px-3 py-2 text-right">723</td>
+      <td class="px-3 py-2 text-right">765</td>
+      <td class="px-3 py-2 text-right">4.2</td>
+      <td class="px-3 py-2 text-right">65.1%</td>
+      <td class="px-3 py-2 text-right">R$ 49.097,56</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Ed. Maxime</td>
+      <td class="px-3 py-2 text-right">585</td>
+      <td class="px-3 py-2 text-right">567</td>
+      <td class="px-3 py-2 text-right">4.7</td>
+      <td class="px-3 py-2 text-right">72.9%</td>
+      <td class="px-3 py-2 text-right">R$ 45.727,09</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Ed. Trouville</td>
+      <td class="px-3 py-2 text-right">426</td>
+      <td class="px-3 py-2 text-right">405</td>
+      <td class="px-3 py-2 text-right">4.9</td>
+      <td class="px-3 py-2 text-right">72.6%</td>
+      <td class="px-3 py-2 text-right">R$ 44.291,99</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Ed. Deauville</td>
+      <td class="px-3 py-2 text-right">438</td>
+      <td class="px-3 py-2 text-right">398</td>
+      <td class="px-3 py-2 text-right">4.5</td>
+      <td class="px-3 py-2 text-right">70.1%</td>
+      <td class="px-3 py-2 text-right">R$ 42.743,27</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Ed. Ferrara</td>
+      <td class="px-3 py-2 text-right">524</td>
+      <td class="px-3 py-2 text-right">443</td>
+      <td class="px-3 py-2 text-right">4.5</td>
+      <td class="px-3 py-2 text-right">71.2%</td>
+      <td class="px-3 py-2 text-right">R$ 41.545,40</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Ed. Rotondo</td>
+      <td class="px-3 py-2 text-right">615</td>
+      <td class="px-3 py-2 text-right">616</td>
+      <td class="px-3 py-2 text-right">3.3</td>
+      <td class="px-3 py-2 text-right">67.8%</td>
+      <td class="px-3 py-2 text-right">R$ 41.227,62</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Ed. Chácara Sacopã</td>
+      <td class="px-3 py-2 text-right">329</td>
+      <td class="px-3 py-2 text-right">340</td>
+      <td class="px-3 py-2 text-right">4.7</td>
+      <td class="px-3 py-2 text-right">72.7%</td>
+      <td class="px-3 py-2 text-right">R$ 36.251,00</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Cond. Saint Tropez</td>
+      <td class="px-3 py-2 text-right">595</td>
+      <td class="px-3 py-2 text-right">529</td>
+      <td class="px-3 py-2 text-right">2.9</td>
+      <td class="px-3 py-2 text-right">61.6%</td>
+      <td class="px-3 py-2 text-right">R$ 34.052,84</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Cond. Costa Verde</td>
+      <td class="px-3 py-2 text-right">344</td>
+      <td class="px-3 py-2 text-right">330</td>
+      <td class="px-3 py-2 text-right">4.5</td>
+      <td class="px-3 py-2 text-right">67.0%</td>
+      <td class="px-3 py-2 text-right">R$ 31.886,80</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Ed. Solari</td>
+      <td class="px-3 py-2 text-right">301</td>
+      <td class="px-3 py-2 text-right">286</td>
+      <td class="px-3 py-2 text-right">4.3</td>
+      <td class="px-3 py-2 text-right">68.0%</td>
+      <td class="px-3 py-2 text-right">R$ 26.537,70</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Ed. Pedra Bonita</td>
+      <td class="px-3 py-2 text-right">310</td>
+      <td class="px-3 py-2 text-right">302</td>
+      <td class="px-3 py-2 text-right">4.7</td>
+      <td class="px-3 py-2 text-right">73.2%</td>
+      <td class="px-3 py-2 text-right">R$ 25.443,68</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Cond. Pq. Visconde Albuq.</td>
+      <td class="px-3 py-2 text-right">249</td>
+      <td class="px-3 py-2 text-right">280</td>
+      <td class="px-3 py-2 text-right">4.6</td>
+      <td class="px-3 py-2 text-right">68.2%</td>
+      <td class="px-3 py-2 text-right">R$ 25.225,58</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Ed. Torrigiani</td>
+      <td class="px-3 py-2 text-right">312</td>
+      <td class="px-3 py-2 text-right">313</td>
+      <td class="px-3 py-2 text-right">4.8</td>
+      <td class="px-3 py-2 text-right">65.9%</td>
+      <td class="px-3 py-2 text-right">R$ 25.216,16</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Ed. Samambaia</td>
+      <td class="px-3 py-2 text-right">211</td>
+      <td class="px-3 py-2 text-right">175</td>
+      <td class="px-3 py-2 text-right">5.7</td>
+      <td class="px-3 py-2 text-right">72.2%</td>
+      <td class="px-3 py-2 text-right">R$ 24.770,37</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Cond. Verrochio</td>
+      <td class="px-3 py-2 text-right">222</td>
+      <td class="px-3 py-2 text-right">167</td>
+      <td class="px-3 py-2 text-right">3.8</td>
+      <td class="px-3 py-2 text-right">68.9%</td>
+      <td class="px-3 py-2 text-right">R$ 21.589,89</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Cond. Presidente Médici</td>
+      <td class="px-3 py-2 text-right">363</td>
+      <td class="px-3 py-2 text-right">215</td>
+      <td class="px-3 py-2 text-right">3.7</td>
+      <td class="px-3 py-2 text-right">62.9%</td>
+      <td class="px-3 py-2 text-right">R$ 21.046,62</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Canoas</td>
+      <td class="px-3 py-2 text-right">262</td>
+      <td class="px-3 py-2 text-right">260</td>
+      <td class="px-3 py-2 text-right">4.4</td>
+      <td class="px-3 py-2 text-right">66.5%</td>
+      <td class="px-3 py-2 text-right">R$ 20.645,33</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Ed. Bruneleschi</td>
+      <td class="px-3 py-2 text-right">216</td>
+      <td class="px-3 py-2 text-right">233</td>
+      <td class="px-3 py-2 text-right">4.1</td>
+      <td class="px-3 py-2 text-right">67.9%</td>
+      <td class="px-3 py-2 text-right">R$ 20.077,69</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Ed. Ilha das Palmas</td>
+      <td class="px-3 py-2 text-right">230</td>
+      <td class="px-3 py-2 text-right">242</td>
+      <td class="px-3 py-2 text-right">4.3</td>
+      <td class="px-3 py-2 text-right">72.8%</td>
+      <td class="px-3 py-2 text-right">R$ 19.029,11</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Ed. Brancusi</td>
+      <td class="px-3 py-2 text-right">220</td>
+      <td class="px-3 py-2 text-right">—</td>
+      <td class="px-3 py-2 text-right">3.9</td>
+      <td class="px-3 py-2 text-right">67.5%</td>
+      <td class="px-3 py-2 text-right">R$ 17.757,81</td>
+    </tr>
+<tr>
+      <td class="px-3 py-2 text-left">Cond. Jean Labasque</td>
+      <td class="px-3 py-2 text-right">211</td>
+      <td class="px-3 py-2 text-right">265</td>
+      <td class="px-3 py-2 text-right">4.4</td>
+      <td class="px-3 py-2 text-right">66.7%</td>
+      <td class="px-3 py-2 text-right">R$ 17.181,57</td>
+    </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab 5: Alertas -->
+  <div class="tab-panel" id="tab-alertas">
+    <div class="bg-white rounded-xl shadow-sm p-4 md:p-6">
+      <div class="mb-6">
+      <h3 class="text-lg font-semibold text-red-700 mb-2">⚠️ Queda de Receita > 15% YoY</h3>
+      <div class="overflow-x-auto"><table class="w-full text-sm">
+        <thead><tr class="bg-red-50">
+          <th class="px-3 py-2 text-left">Loja</th>
+          <th class="px-3 py-2 text-right">Receita 2025</th>
+          <th class="px-3 py-2 text-right">Receita 2026</th>
+          <th class="px-3 py-2 text-right">YoY</th>
+          <th class="px-3 py-2 text-right">Tx 2025</th>
+          <th class="px-3 py-2 text-right">Tx 2026</th>
+        </tr></thead>
+        <tbody><tr class="text-red-600">
+        <td class="px-3 py-2">Cond. Jean Labasque</td>
+        <td class="px-3 py-2 text-right">R$ 29.282,51</td>
+        <td class="px-3 py-2 text-right">R$ 22.810,47</td>
+        <td class="px-3 py-2 text-right font-bold">-22.1%</td>
+        <td class="px-3 py-2 text-right">1.475</td>
+        <td class="px-3 py-2 text-right">1.237</td>
+      </tr><tr class="text-red-600">
+        <td class="px-3 py-2">Canoas</td>
+        <td class="px-3 py-2 text-right">R$ 28.318,13</td>
+        <td class="px-3 py-2 text-right">R$ 23.973,04</td>
+        <td class="px-3 py-2 text-right font-bold">-15.3%</td>
+        <td class="px-3 py-2 text-right">1.601</td>
+        <td class="px-3 py-2 text-right">1.380</td>
+      </tr></tbody></table></div></div><div class="mb-6 p-4 bg-emerald-50 rounded-lg text-emerald-700">✅ Nenhuma loja com queda de ticket médio superior a 10%</div><div class="mb-6">
+      <h3 class="text-lg font-semibold text-gray-700 mb-2">🚫 Lojas Fechadas (presentes em 2025, ausentes em 2026)</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3"><div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
+        <div class="font-medium">Cond. Adorabile Tijuca</div>
+        <div class="text-sm text-gray-600">Receita Q1 2025: R$ 63.784,40 | 3.340 transações</div>
+      </div><div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
+        <div class="font-medium">Cond. John F. Kennedy</div>
+        <div class="text-sm text-gray-600">Receita Q1 2025: R$ 26.358,76 | 1.369 transações</div>
+      </div><div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
+        <div class="font-medium">Cond. Reserva das Arvores</div>
+        <div class="text-sm text-gray-600">Receita Q1 2025: R$ 13.089,51 | 746 transações</div>
+      </div><div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
+        <div class="font-medium">Cond. Reserva Árvores 2</div>
+        <div class="text-sm text-gray-600">Receita Q1 2025: R$ 1.178,74 | 60 transações</div>
+      </div><div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
+        <div class="font-medium">Ed. Gávea IV</div>
+        <div class="text-sm text-gray-600">Receita Q1 2025: R$ 30.983,31 | 1.617 transações</div>
+      </div></div></div><div class="mb-6">
+      <h3 class="text-lg font-semibold text-emerald-700 mb-2">🆕 Lojas Verdadeiramente Novas (não existiam em nenhum operador em 2025)</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3"><div class="p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+        <div class="font-medium">Cond. East Side Meier 3</div>
+        <div class="text-sm text-emerald-600">Receita Q1 2026: R$ 101.769,52 | 5.393 transações | TM: R$ 18,87</div>
+      </div><div class="p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+        <div class="font-medium">Cond. Saint Germain</div>
+        <div class="text-sm text-emerald-600">Receita Q1 2026: R$ 70.440,87 | 3.348 transações | TM: R$ 21,04</div>
+      </div><div class="p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+        <div class="font-medium">Ed. Brancusi</div>
+        <div class="text-sm text-emerald-600">Receita Q1 2026: R$ 20.501,73 | 1.028 transações | TM: R$ 19,94</div>
+      </div></div></div><div class="mb-6 p-4 bg-emerald-50 rounded-lg text-emerald-700">✅ Nenhuma queda diária anômala detectada em 2026</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Footer -->
+<div class="max-w-7xl mx-auto px-4 md:px-8 mt-8 mb-6">
+  <div class="text-center text-xs text-gray-400 border-t border-gray-200 pt-4">
+    <p>Dados unificados: <strong>FOOD SERV SC</strong> + <strong>Sanca Shop</strong> (Q1 2025) | <strong>FOOD SERV SC</strong> (Q1 2026)</p>
+    <p class="mt-1">Ed. Paradiso (Piscina + Playground) consolidados em uma única loja para comparação justa.</p>
+    <p class="mt-1">Sanca Analytics · Gerado automaticamente · 2026-04-02</p>
+  </div>
+</div>
+
+<script>
+// ============ DATA ============
+const DATA = {"kpis":{"receita2025":1967914.759998009,"receita2026":2437044.180001734,"tx2025":111637,"tx2026":133113,"ticket2025":17.627800460402995,"ticket2026":18.3080854612377,"clientes2025":20997,"clientes2026":23239,"lojas2025":38,"lojas2026":36,"newStores":["Cond. Saint Germain","Cond. East Side Meier 3","Ed. Brancusi"],"closedStores":["Cond. John F. Kennedy","Ed. Gávea IV","Cond. Reserva Árvores 2","Cond. Adorabile Tijuca","Cond. Reserva das Arvores"]},"storeTable":[{"store":"Canoas","r25":28318.13,"r26":23973.04,"yoy":-15.34,"tm25":17.69,"tm26":17.37,"tmYoy":-1.79,"tx25":1601,"tx26":1380,"items25":2945,"items26":2382,"itemsTx25":1.84,"itemsTx26":1.73,"isNew":false,"isClosed":false},{"store":"Cond. Adorabile Tijuca","r25":63784.4,"r26":0,"yoy":-100,"tm25":19.1,"tm26":0,"tmYoy":-100,"tx25":3340,"tx26":0,"items25":6394,"items26":0,"itemsTx25":1.91,"itemsTx26":0,"isNew":false,"isClosed":true},{"store":"Cond. Completo Guanabara","r25":74749.2,"r26":81082.99,"yoy":8.47,"tm25":17.31,"tm26":18.73,"tmYoy":8.2,"tx25":4319,"tx26":4330,"items25":8489,"items26":8298,"itemsTx25":1.97,"itemsTx26":1.92,"isNew":false,"isClosed":false},{"store":"Cond. Costa Verde","r25":33365.28,"r26":37720.95,"yoy":13.05,"tm25":20.32,"tm26":20.19,"tmYoy":-0.62,"tx25":1642,"tx26":1868,"items25":3206,"items26":3798,"itemsTx25":1.95,"itemsTx26":2.03,"isNew":false,"isClosed":false},{"store":"Cond. East Side Meier 1","r25":66679.98,"r26":60640.44,"yoy":-9.06,"tm25":15.56,"tm26":15.84,"tmYoy":1.78,"tx25":4284,"tx26":3828,"items25":7600,"items26":6372,"itemsTx25":1.77,"itemsTx26":1.66,"isNew":false,"isClosed":false},{"store":"Cond. East Side Meier 2","r25":86970.52,"r26":132568.3,"yoy":52.43,"tm25":14.83,"tm26":15.62,"tmYoy":5.3,"tx25":5863,"tx26":8487,"items25":9386,"items26":13906,"itemsTx25":1.6,"itemsTx26":1.64,"isNew":false,"isClosed":false},{"store":"Cond. East Side Meier 3","r25":0,"r26":101769.52,"yoy":999,"tm25":0,"tm26":18.87,"tmYoy":0,"tx25":0,"tx26":5393,"items25":0,"items26":10243,"itemsTx25":0,"itemsTx26":1.9,"isNew":true,"isClosed":false},{"store":"Cond. Jean Labasque","r25":29282.51,"r26":22810.47,"yoy":-22.1,"tm25":19.85,"tm26":18.44,"tmYoy":-7.11,"tx25":1475,"tx26":1237,"items25":2853,"items26":2306,"itemsTx25":1.93,"itemsTx26":1.86,"isNew":false,"isClosed":false},{"store":"Cond. John F. Kennedy","r25":26358.76,"r26":0,"yoy":-100,"tm25":19.25,"tm26":0,"tmYoy":-100,"tx25":1369,"tx26":0,"items25":2620,"items26":0,"itemsTx25":1.91,"itemsTx26":0,"isNew":false,"isClosed":true},{"store":"Cond. Key Biscayne","r25":88706.3,"r26":109570.72,"yoy":23.52,"tm25":16.81,"tm26":19.07,"tmYoy":13.44,"tx25":5277,"tx26":5746,"items25":9175,"items26":11027,"itemsTx25":1.74,"itemsTx26":1.92,"isNew":false,"isClosed":false},{"store":"Cond. Palais de Nice","r25":73011.26,"r26":104769.59,"yoy":43.5,"tm25":22.65,"tm26":22.58,"tmYoy":-0.27,"tx25":3224,"tx26":4639,"items25":6888,"items26":9630,"itemsTx25":2.14,"itemsTx26":2.08,"isNew":false,"isClosed":false},{"store":"Cond. Pq. Visconde Albuq.","r25":30305.93,"r26":27125.44,"yoy":-10.49,"tm25":21.9,"tm26":21.77,"tmYoy":-0.58,"tx25":1384,"tx26":1246,"items25":2772,"items26":2583,"itemsTx25":2,"itemsTx26":2.07,"isNew":false,"isClosed":false},{"store":"Cond. Presidente Médici","r25":23413.45,"r26":23207.62,"yoy":-0.88,"tm25":15.28,"tm26":15.27,"tmYoy":-0.1,"tx25":1532,"tx26":1520,"items25":2491,"items26":2361,"itemsTx25":1.63,"itemsTx26":1.55,"isNew":false,"isClosed":false},{"store":"Cond. Reserva das Arvores","r25":13089.51,"r26":0,"yoy":-100,"tm25":17.55,"tm26":0,"tmYoy":-100,"tx25":746,"tx26":0,"items25":1446,"items26":0,"itemsTx25":1.94,"itemsTx26":0,"isNew":false,"isClosed":true},{"store":"Cond. Reserva Árvores 2","r25":1178.74,"r26":0,"yoy":-100,"tm25":19.65,"tm26":0,"tmYoy":-100,"tx25":60,"tx26":0,"items25":133,"items26":0,"itemsTx25":2.22,"itemsTx26":0,"isNew":false,"isClosed":true},{"store":"Cond. Saint Germain","r25":0,"r26":70440.87,"yoy":999,"tm25":0,"tm26":21.04,"tmYoy":0,"tx25":0,"tx26":3348,"items25":0,"items26":7264,"itemsTx25":0,"itemsTx26":2.17,"isNew":true,"isClosed":false},{"store":"Cond. Saint Tropez","r25":34387.79,"r26":46890.63,"yoy":36.36,"tm25":15.54,"tm26":18.32,"tmYoy":17.88,"tx25":2213,"tx26":2560,"items25":3702,"items26":4568,"itemsTx25":1.67,"itemsTx26":1.78,"isNew":false,"isClosed":false},{"store":"Cond. Summer Coast","r25":75358.4,"r26":86211.03,"yoy":14.4,"tm25":19.7,"tm26":21.59,"tmYoy":9.62,"tx25":3826,"tx26":3993,"items25":7572,"items26":8619,"itemsTx25":1.98,"itemsTx26":2.16,"isNew":false,"isClosed":false},{"store":"Cond. Vernissage","r25":84370.15,"r26":89400.87,"yoy":5.96,"tm25":20.73,"tm26":25.1,"tmYoy":21.04,"tx25":4069,"tx26":3562,"items25":8496,"items26":8268,"itemsTx25":2.09,"itemsTx26":2.32,"isNew":false,"isClosed":false},{"store":"Cond. Verrochio","r25":17079.35,"r26":26830.24,"yoy":57.09,"tm25":23.27,"tm26":25.36,"tmYoy":8.98,"tx25":734,"tx26":1058,"items25":1722,"items26":2635,"itemsTx25":2.35,"itemsTx26":2.49,"isNew":false,"isClosed":false},{"store":"Cond. Wonderful","r25":137798.31,"r26":217686.46,"yoy":57.97,"tm25":20.89,"tm26":22.24,"tmYoy":6.45,"tx25":6597,"tx26":9790,"items25":13319,"items26":20779,"itemsTx25":2.02,"itemsTx26":2.12,"isNew":false,"isClosed":false},{"store":"Ed. Brancusi","r25":0,"r26":20501.73,"yoy":999,"tm25":0,"tm26":19.94,"tmYoy":0,"tx25":0,"tx26":1028,"items25":0,"items26":2116,"itemsTx25":0,"itemsTx26":2.06,"isNew":true,"isClosed":false},{"store":"Ed. Bruneleschi","r25":22679.07,"r26":22433.6,"yoy":-1.08,"tm25":21.27,"tm26":22.21,"tmYoy":4.4,"tx25":1066,"tx26":1010,"items25":2112,"items26":2002,"itemsTx25":1.98,"itemsTx26":1.98,"isNew":false,"isClosed":false},{"store":"Ed. Chácara Sacopã","r25":40642.55,"r26":43674.51,"yoy":7.46,"tm25":20.73,"tm26":22.75,"tmYoy":9.75,"tx25":1961,"tx26":1920,"items25":3818,"items26":4206,"itemsTx25":1.95,"itemsTx26":2.19,"isNew":false,"isClosed":false},{"store":"Ed. Deauville","r25":41845.03,"r26":47873.68,"yoy":14.41,"tm25":21.83,"tm26":21.37,"tmYoy":-2.09,"tx25":1917,"tx26":2240,"items25":4101,"items26":4714,"itemsTx25":2.14,"itemsTx26":2.1,"isNew":false,"isClosed":false},{"store":"Ed. Ferrara","r25":39344.69,"r26":49681.91,"yoy":26.27,"tm25":17.99,"tm26":17.37,"tmYoy":-3.44,"tx25":2187,"tx26":2860,"items25":3904,"items26":5073,"itemsTx25":1.79,"itemsTx26":1.77,"isNew":false,"isClosed":false},{"store":"Ed. Gávea IV","r25":30983.31,"r26":0,"yoy":-100,"tm25":19.16,"tm26":0,"tmYoy":-100,"tx25":1617,"tx26":0,"items25":3221,"items26":0,"itemsTx25":1.99,"itemsTx26":0,"isNew":false,"isClosed":true},{"store":"Ed. Ilha das Palmas","r25":19054.42,"r26":22238.79,"yoy":16.71,"tm25":17.15,"tm26":19.89,"tmYoy":15.98,"tx25":1111,"tx26":1118,"items25":2007,"items26":2343,"itemsTx25":1.81,"itemsTx26":2.1,"isNew":false,"isClosed":false},{"store":"Ed. Ilha de Cozumel","r25":47306.57,"r26":60123.91,"yoy":27.09,"tm25":19.6,"tm26":20.07,"tmYoy":2.36,"tx25":2413,"tx26":2996,"items25":4716,"items26":5978,"itemsTx25":1.95,"itemsTx26":2,"isNew":false,"isClosed":false},{"store":"Ed. Maxime","r25":41163.95,"r26":51817.21,"yoy":25.88,"tm25":17.59,"tm26":16.35,"tmYoy":-7.05,"tx25":2340,"tx26":3169,"items25":4203,"items26":5592,"itemsTx25":1.8,"itemsTx26":1.76,"isNew":false,"isClosed":false},{"store":"Ed. Paradiso","r25":49911.3,"r26":67262.78,"yoy":34.76,"tm25":21.92,"tm26":21.23,"tmYoy":-3.17,"tx25":2277,"tx26":3169,"items25":4708,"items26":6406,"itemsTx25":2.07,"itemsTx26":2.02,"isNew":false,"isClosed":false},{"store":"Ed. Pedra Bonita","r25":25248.42,"r26":29056.97,"yoy":15.08,"tm25":15.38,"tm26":16.93,"tmYoy":10.12,"tx25":1642,"tx26":1716,"items25":2733,"items26":2973,"itemsTx25":1.66,"itemsTx26":1.73,"isNew":false,"isClosed":false},{"store":"Ed. Prince","r25":53663.56,"r26":61970.06,"yoy":15.48,"tm25":20.87,"tm26":18.98,"tmYoy":-9.07,"tx25":2571,"tx26":3265,"items25":5001,"items26":6336,"itemsTx25":1.95,"itemsTx26":1.94,"isNew":false,"isClosed":false},{"store":"Ed. Rotondo","r25":41165.73,"r26":48134.98,"yoy":16.93,"tm25":19.72,"tm26":19.38,"tmYoy":-1.76,"tx25":2087,"tx26":2484,"items25":4127,"items26":4891,"itemsTx25":1.98,"itemsTx26":1.97,"isNew":false,"isClosed":false},{"store":"Ed. Samambaia","r25":23083.65,"r26":27549.13,"yoy":19.34,"tm25":18.54,"tm26":20.15,"tmYoy":8.69,"tx25":1245,"tx26":1367,"items25":2536,"items26":2886,"itemsTx25":2.04,"itemsTx26":2.11,"isNew":false,"isClosed":false},{"store":"Ed. Solari","r25":29978.87,"r26":27924.04,"yoy":-6.85,"tm25":18.84,"tm26":20.05,"tmYoy":6.39,"tx25":1591,"tx26":1393,"items25":3162,"items26":2836,"itemsTx25":1.99,"itemsTx26":2.04,"isNew":false,"isClosed":false},{"store":"Ed. Torrigiani","r25":26083.04,"r26":28138.91,"yoy":7.88,"tm25":17.48,"tm26":17.14,"tmYoy":-1.97,"tx25":1492,"tx26":1642,"items25":2641,"items26":2816,"itemsTx25":1.77,"itemsTx26":1.71,"isNew":false,"isClosed":false},{"store":"Ed. Trouville","r25":40277.31,"r26":49275.07,"yoy":22.34,"tm25":20.59,"tm26":20.57,"tmYoy":-0.13,"tx25":1956,"tx26":2396,"items25":3969,"items26":5137,"itemsTx25":2.03,"itemsTx26":2.14,"isNew":false,"isClosed":false},{"store":"Ed.Bosque Freguesia","r25":77029.98,"r26":79644.36,"yoy":3.39,"tm25":18.33,"tm26":20.44,"tmYoy":11.51,"tx25":4202,"tx26":3896,"items25":8133,"items26":8160,"itemsTx25":1.94,"itemsTx26":2.09,"isNew":false,"isClosed":false},{"store":"Ed.Bosque Freguesia 2","r25":51662.86,"r26":74608.22,"yoy":44.41,"tm25":18.37,"tm26":19.77,"tmYoy":7.67,"tx25":2813,"tx26":3773,"items25":5302,"items26":7433,"itemsTx25":1.88,"itemsTx26":1.97,"isNew":false,"isClosed":false},{"store":"Projac","r25":278582.48,"r26":362435.14,"yoy":30.1,"tm25":12.9,"tm26":13.09,"tmYoy":1.47,"tx25":21594,"tx26":27686,"items25":32642,"items26":41691,"itemsTx25":1.51,"itemsTx26":1.51,"isNew":false,"isClosed":false}],"trends2025":[{"date":"2025-01-01","receita":23971.45,"tx":1088,"items":2348,"ticket":22.03,"itemsTx":2.16,"doy":1},{"date":"2025-01-02","receita":18891.06,"tx":1134,"items":1941,"ticket":16.66,"itemsTx":1.71,"doy":2},{"date":"2025-01-03","receita":23003.85,"tx":1261,"items":2376,"ticket":18.24,"itemsTx":1.88,"doy":3},{"date":"2025-01-04","receita":23782.6,"tx":1281,"items":2417,"ticket":18.57,"itemsTx":1.89,"doy":4},{"date":"2025-01-05","receita":22270.07,"tx":1167,"items":2223,"ticket":19.08,"itemsTx":1.9,"doy":5},{"date":"2025-01-06","receita":18569.6,"tx":1109,"items":1946,"ticket":16.74,"itemsTx":1.75,"doy":6},{"date":"2025-01-07","receita":19719.54,"tx":1195,"items":2065,"ticket":16.5,"itemsTx":1.73,"doy":7},{"date":"2025-01-08","receita":20472.93,"tx":1166,"items":2117,"ticket":17.56,"itemsTx":1.82,"doy":8},{"date":"2025-01-09","receita":18537.02,"tx":1157,"items":1971,"ticket":16.02,"itemsTx":1.7,"doy":9},{"date":"2025-01-10","receita":20101.31,"tx":1157,"items":2099,"ticket":17.37,"itemsTx":1.81,"doy":10},{"date":"2025-01-11","receita":21641.75,"tx":1173,"items":2184,"ticket":18.45,"itemsTx":1.86,"doy":11},{"date":"2025-01-12","receita":21573.87,"tx":1090,"items":2180,"ticket":19.79,"itemsTx":2,"doy":12},{"date":"2025-01-13","receita":17246.87,"tx":1070,"items":1831,"ticket":16.12,"itemsTx":1.71,"doy":13},{"date":"2025-01-14","receita":16915.14,"tx":1031,"items":1816,"ticket":16.41,"itemsTx":1.76,"doy":14},{"date":"2025-01-15","receita":20251.18,"tx":1177,"items":2117,"ticket":17.21,"itemsTx":1.8,"doy":15},{"date":"2025-01-16","receita":20178.56,"tx":1194,"items":2113,"ticket":16.9,"itemsTx":1.77,"doy":16},{"date":"2025-01-17","receita":22995.13,"tx":1315,"items":2376,"ticket":17.49,"itemsTx":1.81,"doy":17},{"date":"2025-01-18","receita":23325.16,"tx":1275,"items":2367,"ticket":18.29,"itemsTx":1.86,"doy":18},{"date":"2025-01-19","receita":25268.55,"tx":1340,"items":2551,"ticket":18.86,"itemsTx":1.9,"doy":19},{"date":"2025-01-20","receita":25325.69,"tx":1327,"items":2477,"ticket":19.08,"itemsTx":1.87,"doy":20},{"date":"2025-01-21","receita":21853.39,"tx":1344,"items":2345,"ticket":16.26,"itemsTx":1.74,"doy":21},{"date":"2025-01-22","receita":23147.49,"tx":1374,"items":2420,"ticket":16.85,"itemsTx":1.76,"doy":22},{"date":"2025-01-23","receita":22155.67,"tx":1357,"items":2347,"ticket":16.33,"itemsTx":1.73,"doy":23},{"date":"2025-01-24","receita":22824.34,"tx":1291,"items":2321,"ticket":17.68,"itemsTx":1.8,"doy":24},{"date":"2025-01-25","receita":24171.67,"tx":1327,"items":2523,"ticket":18.22,"itemsTx":1.9,"doy":25},{"date":"2025-01-26","receita":24742.67,"tx":1319,"items":2504,"ticket":18.76,"itemsTx":1.9,"doy":26},{"date":"2025-01-27","receita":17726.03,"tx":1110,"items":1894,"ticket":15.97,"itemsTx":1.71,"doy":27},{"date":"2025-01-28","receita":18405.67,"tx":1167,"items":2008,"ticket":15.77,"itemsTx":1.72,"doy":28},{"date":"2025-01-29","receita":19376.66,"tx":1170,"items":2088,"ticket":16.56,"itemsTx":1.78,"doy":29},{"date":"2025-01-30","receita":20650.39,"tx":1221,"items":2182,"ticket":16.91,"itemsTx":1.79,"doy":30},{"date":"2025-01-31","receita":24503.76,"tx":1374,"items":2560,"ticket":17.83,"itemsTx":1.86,"doy":31},{"date":"2025-02-01","receita":21791.67,"tx":1189,"items":2261,"ticket":18.33,"itemsTx":1.9,"doy":32},{"date":"2025-02-02","receita":23029.47,"tx":1159,"items":2373,"ticket":19.87,"itemsTx":2.05,"doy":33},{"date":"2025-02-03","receita":18864.83,"tx":1182,"items":2007,"ticket":15.96,"itemsTx":1.7,"doy":34},{"date":"2025-02-04","receita":19280.06,"tx":1185,"items":2097,"ticket":16.27,"itemsTx":1.77,"doy":35},{"date":"2025-02-05","receita":19792.46,"tx":1194,"items":2123,"ticket":16.58,"itemsTx":1.78,"doy":36},{"date":"2025-02-06","receita":19009.37,"tx":1156,"items":2006,"ticket":16.44,"itemsTx":1.74,"doy":37},{"date":"2025-02-07","receita":21257.16,"tx":1276,"items":2279,"ticket":16.66,"itemsTx":1.79,"doy":38},{"date":"2025-02-08","receita":24691.61,"tx":1322,"items":2549,"ticket":18.68,"itemsTx":1.93,"doy":39},{"date":"2025-02-09","receita":24265.24,"tx":1222,"items":2442,"ticket":19.86,"itemsTx":2,"doy":40},{"date":"2025-02-10","receita":15178.02,"tx":942,"items":1638,"ticket":16.11,"itemsTx":1.74,"doy":41},{"date":"2025-02-11","receita":17794.01,"tx":1070,"items":1827,"ticket":16.63,"itemsTx":1.71,"doy":42},{"date":"2025-02-12","receita":17837.61,"tx":1113,"items":1894,"ticket":16.03,"itemsTx":1.7,"doy":43},{"date":"2025-02-13","receita":19106.79,"tx":1183,"items":2046,"ticket":16.15,"itemsTx":1.73,"doy":44},{"date":"2025-02-14","receita":21157.53,"tx":1185,"items":2231,"ticket":17.85,"itemsTx":1.88,"doy":45},{"date":"2025-02-15","receita":27457.66,"tx":1472,"items":2850,"ticket":18.65,"itemsTx":1.94,"doy":46},{"date":"2025-02-16","receita":27475.95,"tx":1431,"items":2746,"ticket":19.2,"itemsTx":1.92,"doy":47},{"date":"2025-02-17","receita":18941.33,"tx":1157,"items":1965,"ticket":16.37,"itemsTx":1.7,"doy":48},{"date":"2025-02-18","receita":19609.46,"tx":1258,"items":2067,"ticket":15.59,"itemsTx":1.64,"doy":49},{"date":"2025-02-19","receita":19784.58,"tx":1192,"items":2096,"ticket":16.6,"itemsTx":1.76,"doy":50},{"date":"2025-02-20","receita":20295.17,"tx":1231,"items":2108,"ticket":16.49,"itemsTx":1.71,"doy":51},{"date":"2025-02-21","receita":23375.2,"tx":1360,"items":2474,"ticket":17.19,"itemsTx":1.82,"doy":52},{"date":"2025-02-22","receita":24362.01,"tx":1353,"items":2547,"ticket":18.01,"itemsTx":1.88,"doy":53},{"date":"2025-02-23","receita":25436.01,"tx":1342,"items":2583,"ticket":18.95,"itemsTx":1.92,"doy":54},{"date":"2025-02-24","receita":17409.36,"tx":1080,"items":1856,"ticket":16.12,"itemsTx":1.72,"doy":55},{"date":"2025-02-25","receita":19507.26,"tx":1206,"items":2097,"ticket":16.18,"itemsTx":1.74,"doy":56},{"date":"2025-02-26","receita":19153.1,"tx":1182,"items":2050,"ticket":16.2,"itemsTx":1.73,"doy":57},{"date":"2025-02-27","receita":22558.3,"tx":1308,"items":2320,"ticket":17.25,"itemsTx":1.77,"doy":58},{"date":"2025-02-28","receita":25405.69,"tx":1358,"items":2563,"ticket":18.71,"itemsTx":1.89,"doy":59},{"date":"2025-03-01","receita":26018.84,"tx":1343,"items":2590,"ticket":19.37,"itemsTx":1.93,"doy":60},{"date":"2025-03-02","receita":25386.3,"tx":1225,"items":2502,"ticket":20.72,"itemsTx":2.04,"doy":61},{"date":"2025-03-03","receita":24676.65,"tx":1238,"items":2444,"ticket":19.93,"itemsTx":1.97,"doy":62},{"date":"2025-03-04","receita":25085.07,"tx":1282,"items":2505,"ticket":19.57,"itemsTx":1.95,"doy":63},{"date":"2025-03-05","receita":24855.47,"tx":1371,"items":2543,"ticket":18.13,"itemsTx":1.85,"doy":64},{"date":"2025-03-06","receita":22863.26,"tx":1298,"items":2356,"ticket":17.61,"itemsTx":1.82,"doy":65},{"date":"2025-03-07","receita":25115.3,"tx":1462,"items":2673,"ticket":17.18,"itemsTx":1.83,"doy":66},{"date":"2025-03-08","receita":29920.13,"tx":1540,"items":3080,"ticket":19.43,"itemsTx":2,"doy":67},{"date":"2025-03-09","receita":26139.98,"tx":1361,"items":2636,"ticket":19.21,"itemsTx":1.94,"doy":68},{"date":"2025-03-10","receita":17218.09,"tx":1119,"items":1852,"ticket":15.39,"itemsTx":1.66,"doy":69},{"date":"2025-03-11","receita":19710.16,"tx":1193,"items":2105,"ticket":16.52,"itemsTx":1.76,"doy":70},{"date":"2025-03-12","receita":20665.99,"tx":1214,"items":2194,"ticket":17.02,"itemsTx":1.81,"doy":71},{"date":"2025-03-13","receita":21506.41,"tx":1257,"items":2248,"ticket":17.11,"itemsTx":1.79,"doy":72},{"date":"2025-03-14","receita":23642.88,"tx":1371,"items":2525,"ticket":17.24,"itemsTx":1.84,"doy":73},{"date":"2025-03-15","receita":24993.48,"tx":1327,"items":2530,"ticket":18.83,"itemsTx":1.91,"doy":74},{"date":"2025-03-16","receita":24500.27,"tx":1224,"items":2473,"ticket":20.02,"itemsTx":2.02,"doy":75},{"date":"2025-03-17","receita":17009.58,"tx":1022,"items":1767,"ticket":16.64,"itemsTx":1.73,"doy":76},{"date":"2025-03-18","receita":19925.32,"tx":1221,"items":2152,"ticket":16.32,"itemsTx":1.76,"doy":77},{"date":"2025-03-19","receita":19116.18,"tx":1143,"items":2036,"ticket":16.72,"itemsTx":1.78,"doy":78},{"date":"2025-03-20","receita":18611.61,"tx":1096,"items":1966,"ticket":16.98,"itemsTx":1.79,"doy":79},{"date":"2025-03-21","receita":25130.44,"tx":1340,"items":2540,"ticket":18.75,"itemsTx":1.9,"doy":80},{"date":"2025-03-22","receita":23802.16,"tx":1278,"items":2456,"ticket":18.62,"itemsTx":1.92,"doy":81},{"date":"2025-03-23","receita":25595.65,"tx":1286,"items":2573,"ticket":19.9,"itemsTx":2,"doy":82},{"date":"2025-03-24","receita":18757.17,"tx":1149,"items":2048,"ticket":16.32,"itemsTx":1.78,"doy":83},{"date":"2025-03-25","receita":20063.75,"tx":1200,"items":2076,"ticket":16.72,"itemsTx":1.73,"doy":84},{"date":"2025-03-26","receita":19307.04,"tx":1176,"items":2070,"ticket":16.42,"itemsTx":1.76,"doy":85},{"date":"2025-03-27","receita":20504.12,"tx":1271,"items":2198,"ticket":16.13,"itemsTx":1.73,"doy":86},{"date":"2025-03-28","receita":27215.68,"tx":1535,"items":2826,"ticket":17.73,"itemsTx":1.84,"doy":87},{"date":"2025-03-29","receita":26178.28,"tx":1407,"items":2632,"ticket":18.61,"itemsTx":1.87,"doy":88},{"date":"2025-03-30","receita":27830.51,"tx":1405,"items":2820,"ticket":19.81,"itemsTx":2.01,"doy":89},{"date":"2025-03-31","receita":19143.01,"tx":1214,"items":2027,"ticket":15.77,"itemsTx":1.67,"doy":90}],"trends2026":[{"date":"2026-01-01","receita":31386.61,"tx":1382,"items":2980,"ticket":22.71,"itemsTx":2.16,"doy":1},{"date":"2026-01-02","receita":24538.36,"tx":1335,"items":2546,"ticket":18.38,"itemsTx":1.91,"doy":2},{"date":"2026-01-03","receita":28527.42,"tx":1506,"items":2898,"ticket":18.94,"itemsTx":1.92,"doy":3},{"date":"2026-01-04","receita":25681.95,"tx":1244,"items":2473,"ticket":20.64,"itemsTx":1.99,"doy":4},{"date":"2026-01-05","receita":23302.06,"tx":1355,"items":2455,"ticket":17.2,"itemsTx":1.81,"doy":5},{"date":"2026-01-06","receita":24171.57,"tx":1514,"items":2615,"ticket":15.97,"itemsTx":1.73,"doy":6},{"date":"2026-01-07","receita":23953.04,"tx":1386,"items":2497,"ticket":17.28,"itemsTx":1.8,"doy":7},{"date":"2026-01-08","receita":26989.42,"tx":1586,"items":2820,"ticket":17.02,"itemsTx":1.78,"doy":8},{"date":"2026-01-09","receita":29750.73,"tx":1688,"items":3128,"ticket":17.62,"itemsTx":1.85,"doy":9},{"date":"2026-01-10","receita":32376.39,"tx":1745,"items":3331,"ticket":18.55,"itemsTx":1.91,"doy":10},{"date":"2026-01-11","receita":32165.7,"tx":1577,"items":3171,"ticket":20.4,"itemsTx":2.01,"doy":11},{"date":"2026-01-12","receita":26798.68,"tx":1621,"items":2830,"ticket":16.53,"itemsTx":1.75,"doy":12},{"date":"2026-01-13","receita":26428.69,"tx":1593,"items":2741,"ticket":16.59,"itemsTx":1.72,"doy":13},{"date":"2026-01-14","receita":26006.14,"tx":1525,"items":2754,"ticket":17.05,"itemsTx":1.81,"doy":14},{"date":"2026-01-15","receita":28350.91,"tx":1597,"items":2924,"ticket":17.75,"itemsTx":1.83,"doy":15},{"date":"2026-01-16","receita":30850.14,"tx":1671,"items":3161,"ticket":18.46,"itemsTx":1.89,"doy":16},{"date":"2026-01-17","receita":31295.88,"tx":1607,"items":3129,"ticket":19.47,"itemsTx":1.95,"doy":17},{"date":"2026-01-18","receita":28635.11,"tx":1510,"items":2870,"ticket":18.96,"itemsTx":1.9,"doy":18},{"date":"2026-01-19","receita":26141.41,"tx":1452,"items":2725,"ticket":18,"itemsTx":1.88,"doy":19},{"date":"2026-01-20","receita":26993.71,"tx":1397,"items":2675,"ticket":19.32,"itemsTx":1.91,"doy":20},{"date":"2026-01-21","receita":22490.03,"tx":1314,"items":2382,"ticket":17.12,"itemsTx":1.81,"doy":21},{"date":"2026-01-22","receita":23758.57,"tx":1404,"items":2471,"ticket":16.92,"itemsTx":1.76,"doy":22},{"date":"2026-01-23","receita":26940.34,"tx":1477,"items":2789,"ticket":18.24,"itemsTx":1.89,"doy":23},{"date":"2026-01-24","receita":27545.99,"tx":1418,"items":2793,"ticket":19.43,"itemsTx":1.97,"doy":24},{"date":"2026-01-25","receita":27906.75,"tx":1342,"items":2690,"ticket":20.79,"itemsTx":2,"doy":25},{"date":"2026-01-26","receita":22563.71,"tx":1322,"items":2385,"ticket":17.07,"itemsTx":1.8,"doy":26},{"date":"2026-01-27","receita":24237.24,"tx":1397,"items":2473,"ticket":17.35,"itemsTx":1.77,"doy":27},{"date":"2026-01-28","receita":27039.59,"tx":1577,"items":2813,"ticket":17.15,"itemsTx":1.78,"doy":28},{"date":"2026-01-29","receita":26266.41,"tx":1510,"items":2660,"ticket":17.39,"itemsTx":1.76,"doy":29},{"date":"2026-01-30","receita":31092.43,"tx":1668,"items":3129,"ticket":18.64,"itemsTx":1.88,"doy":30},{"date":"2026-01-31","receita":32260.27,"tx":1659,"items":3271,"ticket":19.45,"itemsTx":1.97,"doy":31},{"date":"2026-02-01","receita":31574.42,"tx":1539,"items":3148,"ticket":20.52,"itemsTx":2.05,"doy":32},{"date":"2026-02-02","receita":23705.88,"tx":1345,"items":2474,"ticket":17.63,"itemsTx":1.84,"doy":33},{"date":"2026-02-03","receita":28026.78,"tx":1571,"items":2938,"ticket":17.84,"itemsTx":1.87,"doy":34},{"date":"2026-02-04","receita":25105.85,"tx":1467,"items":2614,"ticket":17.11,"itemsTx":1.78,"doy":35},{"date":"2026-02-05","receita":26296.26,"tx":1473,"items":2742,"ticket":17.85,"itemsTx":1.86,"doy":36},{"date":"2026-02-06","receita":26977.52,"tx":1531,"items":2802,"ticket":17.62,"itemsTx":1.83,"doy":37},{"date":"2026-02-07","receita":31918.36,"tx":1576,"items":3209,"ticket":20.25,"itemsTx":2.04,"doy":38},{"date":"2026-02-08","receita":28535.84,"tx":1415,"items":2872,"ticket":20.17,"itemsTx":2.03,"doy":39},{"date":"2026-02-09","receita":24460.48,"tx":1405,"items":2530,"ticket":17.41,"itemsTx":1.8,"doy":40},{"date":"2026-02-10","receita":26634.7,"tx":1499,"items":2729,"ticket":17.77,"itemsTx":1.82,"doy":41},{"date":"2026-02-11","receita":26832.82,"tx":1577,"items":2859,"ticket":17.02,"itemsTx":1.81,"doy":42},{"date":"2026-02-12","receita":27406.82,"tx":1565,"items":2869,"ticket":17.51,"itemsTx":1.83,"doy":43},{"date":"2026-02-13","receita":35410.29,"tx":1834,"items":3546,"ticket":19.31,"itemsTx":1.93,"doy":44},{"date":"2026-02-14","receita":31226.67,"tx":1539,"items":3135,"ticket":20.29,"itemsTx":2.04,"doy":45},{"date":"2026-02-15","receita":30800.16,"tx":1474,"items":3112,"ticket":20.9,"itemsTx":2.11,"doy":46},{"date":"2026-02-16","receita":29604.29,"tx":1487,"items":2945,"ticket":19.91,"itemsTx":1.98,"doy":47},{"date":"2026-02-17","receita":35372.61,"tx":1629,"items":3426,"ticket":21.71,"itemsTx":2.1,"doy":48},{"date":"2026-02-18","receita":29978.52,"tx":1601,"items":3014,"ticket":18.72,"itemsTx":1.88,"doy":49},{"date":"2026-02-19","receita":28124.25,"tx":1531,"items":2885,"ticket":18.37,"itemsTx":1.88,"doy":50},{"date":"2026-02-20","receita":30619.29,"tx":1686,"items":3175,"ticket":18.16,"itemsTx":1.88,"doy":51},{"date":"2026-02-21","receita":33291.57,"tx":1719,"items":3382,"ticket":19.37,"itemsTx":1.97,"doy":52},{"date":"2026-02-22","receita":27480.63,"tx":1382,"items":2740,"ticket":19.88,"itemsTx":1.98,"doy":53},{"date":"2026-02-23","receita":22076.24,"tx":1348,"items":2381,"ticket":16.38,"itemsTx":1.77,"doy":54},{"date":"2026-02-24","receita":24084.54,"tx":1468,"items":2571,"ticket":16.41,"itemsTx":1.75,"doy":55},{"date":"2026-02-25","receita":25371.08,"tx":1520,"items":2672,"ticket":16.69,"itemsTx":1.76,"doy":56},{"date":"2026-02-26","receita":26786.24,"tx":1519,"items":2826,"ticket":17.63,"itemsTx":1.86,"doy":57},{"date":"2026-02-27","receita":30973.7,"tx":1718,"items":3179,"ticket":18.03,"itemsTx":1.85,"doy":58},{"date":"2026-02-28","receita":30224.48,"tx":1569,"items":3076,"ticket":19.26,"itemsTx":1.96,"doy":59},{"date":"2026-03-01","receita":23633.12,"tx":1197,"items":2373,"ticket":19.74,"itemsTx":1.98,"doy":60},{"date":"2026-03-02","receita":21629.23,"tx":1332,"items":2311,"ticket":16.24,"itemsTx":1.73,"doy":61},{"date":"2026-03-03","receita":23979.99,"tx":1416,"items":2569,"ticket":16.94,"itemsTx":1.81,"doy":62},{"date":"2026-03-04","receita":23389.28,"tx":1471,"items":2498,"ticket":15.9,"itemsTx":1.7,"doy":63},{"date":"2026-03-05","receita":25068.08,"tx":1470,"items":2644,"ticket":17.05,"itemsTx":1.8,"doy":64},{"date":"2026-03-06","receita":28652.27,"tx":1600,"items":2935,"ticket":17.91,"itemsTx":1.83,"doy":65},{"date":"2026-03-07","receita":32851.78,"tx":1682,"items":3346,"ticket":19.53,"itemsTx":1.99,"doy":66},{"date":"2026-03-08","receita":31047.99,"tx":1535,"items":3058,"ticket":20.23,"itemsTx":1.99,"doy":67},{"date":"2026-03-09","receita":20826.78,"tx":1266,"items":2180,"ticket":16.45,"itemsTx":1.72,"doy":68},{"date":"2026-03-10","receita":23202.58,"tx":1380,"items":2438,"ticket":16.81,"itemsTx":1.77,"doy":69},{"date":"2026-03-11","receita":23016.3,"tx":1396,"items":2423,"ticket":16.49,"itemsTx":1.74,"doy":70},{"date":"2026-03-12","receita":23513.85,"tx":1367,"items":2457,"ticket":17.2,"itemsTx":1.8,"doy":71},{"date":"2026-03-13","receita":27729.93,"tx":1502,"items":2815,"ticket":18.46,"itemsTx":1.87,"doy":72},{"date":"2026-03-14","receita":30543.46,"tx":1493,"items":3024,"ticket":20.46,"itemsTx":2.03,"doy":73},{"date":"2026-03-15","receita":30954.35,"tx":1451,"items":2958,"ticket":21.33,"itemsTx":2.04,"doy":74},{"date":"2026-03-16","receita":22312.68,"tx":1338,"items":2285,"ticket":16.68,"itemsTx":1.71,"doy":75},{"date":"2026-03-17","receita":22192.48,"tx":1321,"items":2230,"ticket":16.8,"itemsTx":1.69,"doy":76},{"date":"2026-03-18","receita":24541.02,"tx":1422,"items":2512,"ticket":17.26,"itemsTx":1.77,"doy":77},{"date":"2026-03-19","receita":23725.51,"tx":1406,"items":2474,"ticket":16.87,"itemsTx":1.76,"doy":78},{"date":"2026-03-20","receita":26411.97,"tx":1417,"items":2578,"ticket":18.64,"itemsTx":1.82,"doy":79},{"date":"2026-03-21","receita":29650.83,"tx":1492,"items":2952,"ticket":19.87,"itemsTx":1.98,"doy":80},{"date":"2026-03-22","receita":29384.9,"tx":1385,"items":2853,"ticket":21.22,"itemsTx":2.06,"doy":81},{"date":"2026-03-23","receita":19810.17,"tx":1237,"items":2070,"ticket":16.01,"itemsTx":1.67,"doy":82},{"date":"2026-03-24","receita":21764.13,"tx":1302,"items":2281,"ticket":16.72,"itemsTx":1.75,"doy":83},{"date":"2026-03-25","receita":23145.03,"tx":1309,"items":2303,"ticket":17.68,"itemsTx":1.76,"doy":84},{"date":"2026-03-26","receita":23172.86,"tx":1325,"items":2310,"ticket":17.49,"itemsTx":1.74,"doy":85},{"date":"2026-03-27","receita":29033.02,"tx":1552,"items":2837,"ticket":18.71,"itemsTx":1.83,"doy":86},{"date":"2026-03-28","receita":31481.07,"tx":1555,"items":3108,"ticket":20.25,"itemsTx":2,"doy":87},{"date":"2026-03-29","receita":29777.09,"tx":1508,"items":2846,"ticket":19.75,"itemsTx":1.89,"doy":88},{"date":"2026-03-30","receita":22861.09,"tx":1332,"items":2317,"ticket":17.16,"itemsTx":1.74,"doy":89},{"date":"2026-03-31","receita":22395.8,"tx":1288,"items":2213,"ticket":17.39,"itemsTx":1.72,"doy":90}],"hourly2025":[{"hora":0,"tx":2678,"receita":51465.95},{"hora":1,"tx":1711,"receita":32292.85},{"hora":2,"tx":1304,"receita":23928.77},{"hora":3,"tx":1301,"receita":20302.84},{"hora":4,"tx":793,"receita":12544.38},{"hora":5,"tx":874,"receita":13090.86},{"hora":6,"tx":1852,"receita":25737.28},{"hora":7,"tx":2839,"receita":38415.02},{"hora":8,"tx":3088,"receita":43568.03},{"hora":9,"tx":3392,"receita":50732.79},{"hora":10,"tx":3963,"receita":64480.05},{"hora":11,"tx":4815,"receita":76796.73},{"hora":12,"tx":7111,"receita":113154.73},{"hora":13,"tx":7467,"receita":127024.26},{"hora":14,"tx":6759,"receita":118205.89},{"hora":15,"tx":6521,"receita":120045.03},{"hora":16,"tx":6686,"receita":123418.74},{"hora":17,"tx":6832,"receita":127064.14},{"hora":18,"tx":7030,"receita":133405.01},{"hora":19,"tx":7407,"receita":142145.14},{"hora":20,"tx":8306,"receita":157781.48},{"hora":21,"tx":8193,"receita":153676.12},{"hora":22,"tx":6509,"receita":119047.59},{"hora":23,"tx":4206,"receita":79591.08}],"hourly2026":[{"hora":0,"tx":3198,"receita":64215.82},{"hora":1,"tx":1969,"receita":39214.53},{"hora":2,"tx":1350,"receita":25769.5},{"hora":3,"tx":1072,"receita":19766.16},{"hora":4,"tx":827,"receita":13822.21},{"hora":5,"tx":1119,"receita":16911.85},{"hora":6,"tx":2269,"receita":33350.16},{"hora":7,"tx":3647,"receita":51435.8},{"hora":8,"tx":5204,"receita":71825.63},{"hora":9,"tx":5211,"receita":78683.39},{"hora":10,"tx":5238,"receita":83531.69},{"hora":11,"tx":5641,"receita":94813.64},{"hora":12,"tx":7882,"receita":133484.55},{"hora":13,"tx":8930,"receita":156834.86},{"hora":14,"tx":8122,"receita":146625.83},{"hora":15,"tx":7491,"receita":140040.23},{"hora":16,"tx":8056,"receita":153303.98},{"hora":17,"tx":8477,"receita":162020.49},{"hora":18,"tx":8376,"receita":165285.77},{"hora":19,"tx":8694,"receita":178514.61},{"hora":20,"tx":9584,"receita":194492.85},{"hora":21,"tx":8729,"receita":175284.27},{"hora":22,"tx":7302,"receita":143466.78},{"hora":23,"tx":4725,"receita":94349.58}],"heatmap2025":[{"dia":0,"diaLabel":"Dom","hora":0,"count":518},{"dia":0,"diaLabel":"Dom","hora":1,"count":308},{"dia":0,"diaLabel":"Dom","hora":2,"count":249},{"dia":0,"diaLabel":"Dom","hora":3,"count":217},{"dia":0,"diaLabel":"Dom","hora":4,"count":142},{"dia":0,"diaLabel":"Dom","hora":5,"count":102},{"dia":0,"diaLabel":"Dom","hora":6,"count":214},{"dia":0,"diaLabel":"Dom","hora":7,"count":328},{"dia":0,"diaLabel":"Dom","hora":8,"count":418},{"dia":0,"diaLabel":"Dom","hora":9,"count":429},{"dia":0,"diaLabel":"Dom","hora":10,"count":514},{"dia":0,"diaLabel":"Dom","hora":11,"count":706},{"dia":0,"diaLabel":"Dom","hora":12,"count":1014},{"dia":0,"diaLabel":"Dom","hora":13,"count":1187},{"dia":0,"diaLabel":"Dom","hora":14,"count":1203},{"dia":0,"diaLabel":"Dom","hora":15,"count":1229},{"dia":0,"diaLabel":"Dom","hora":16,"count":1074},{"dia":0,"diaLabel":"Dom","hora":17,"count":1051},{"dia":0,"diaLabel":"Dom","hora":18,"count":1049},{"dia":0,"diaLabel":"Dom","hora":19,"count":1051},{"dia":0,"diaLabel":"Dom","hora":20,"count":1159},{"dia":0,"diaLabel":"Dom","hora":21,"count":1104},{"dia":0,"diaLabel":"Dom","hora":22,"count":803},{"dia":0,"diaLabel":"Dom","hora":23,"count":502},{"dia":1,"diaLabel":"Seg","hora":0,"count":307},{"dia":1,"diaLabel":"Seg","hora":1,"count":182},{"dia":1,"diaLabel":"Seg","hora":2,"count":142},{"dia":1,"diaLabel":"Seg","hora":3,"count":77},{"dia":1,"diaLabel":"Seg","hora":4,"count":74},{"dia":1,"diaLabel":"Seg","hora":5,"count":89},{"dia":1,"diaLabel":"Seg","hora":6,"count":272},{"dia":1,"diaLabel":"Seg","hora":7,"count":393},{"dia":1,"diaLabel":"Seg","hora":8,"count":485},{"dia":1,"diaLabel":"Seg","hora":9,"count":462},{"dia":1,"diaLabel":"Seg","hora":10,"count":533},{"dia":1,"diaLabel":"Seg","hora":11,"count":627},{"dia":1,"diaLabel":"Seg","hora":12,"count":946},{"dia":1,"diaLabel":"Seg","hora":13,"count":970},{"dia":1,"diaLabel":"Seg","hora":14,"count":869},{"dia":1,"diaLabel":"Seg","hora":15,"count":819},{"dia":1,"diaLabel":"Seg","hora":16,"count":867},{"dia":1,"diaLabel":"Seg","hora":17,"count":972},{"dia":1,"diaLabel":"Seg","hora":18,"count":971},{"dia":1,"diaLabel":"Seg","hora":19,"count":1092},{"dia":1,"diaLabel":"Seg","hora":20,"count":1137},{"dia":1,"diaLabel":"Seg","hora":21,"count":1103},{"dia":1,"diaLabel":"Seg","hora":22,"count":825},{"dia":1,"diaLabel":"Seg","hora":23,"count":505},{"dia":2,"diaLabel":"Ter","hora":0,"count":306},{"dia":2,"diaLabel":"Ter","hora":1,"count":204},{"dia":2,"diaLabel":"Ter","hora":2,"count":136},{"dia":2,"diaLabel":"Ter","hora":3,"count":169},{"dia":2,"diaLabel":"Ter","hora":4,"count":91},{"dia":2,"diaLabel":"Ter","hora":5,"count":111},{"dia":2,"diaLabel":"Ter","hora":6,"count":280},{"dia":2,"diaLabel":"Ter","hora":7,"count":388},{"dia":2,"diaLabel":"Ter","hora":8,"count":368},{"dia":2,"diaLabel":"Ter","hora":9,"count":477},{"dia":2,"diaLabel":"Ter","hora":10,"count":546},{"dia":2,"diaLabel":"Ter","hora":11,"count":628},{"dia":2,"diaLabel":"Ter","hora":12,"count":897},{"dia":2,"diaLabel":"Ter","hora":13,"count":938},{"dia":2,"diaLabel":"Ter","hora":14,"count":802},{"dia":2,"diaLabel":"Ter","hora":15,"count":845},{"dia":2,"diaLabel":"Ter","hora":16,"count":841},{"dia":2,"diaLabel":"Ter","hora":17,"count":897},{"dia":2,"diaLabel":"Ter","hora":18,"count":957},{"dia":2,"diaLabel":"Ter","hora":19,"count":991},{"dia":2,"diaLabel":"Ter","hora":20,"count":1045},{"dia":2,"diaLabel":"Ter","hora":21,"count":1110},{"dia":2,"diaLabel":"Ter","hora":22,"count":822},{"dia":2,"diaLabel":"Ter","hora":23,"count":503},{"dia":3,"diaLabel":"Qua","hora":0,"count":357},{"dia":3,"diaLabel":"Qua","hora":1,"count":265},{"dia":3,"diaLabel":"Qua","hora":2,"count":154},{"dia":3,"diaLabel":"Qua","hora":3,"count":195},{"dia":3,"diaLabel":"Qua","hora":4,"count":128},{"dia":3,"diaLabel":"Qua","hora":5,"count":153},{"dia":3,"diaLabel":"Qua","hora":6,"count":285},{"dia":3,"diaLabel":"Qua","hora":7,"count":404},{"dia":3,"diaLabel":"Qua","hora":8,"count":398},{"dia":3,"diaLabel":"Qua","hora":9,"count":463},{"dia":3,"diaLabel":"Qua","hora":10,"count":540},{"dia":3,"diaLabel":"Qua","hora":11,"count":659},{"dia":3,"diaLabel":"Qua","hora":12,"count":995},{"dia":3,"diaLabel":"Qua","hora":13,"count":996},{"dia":3,"diaLabel":"Qua","hora":14,"count":874},{"dia":3,"diaLabel":"Qua","hora":15,"count":873},{"dia":3,"diaLabel":"Qua","hora":16,"count":947},{"dia":3,"diaLabel":"Qua","hora":17,"count":987},{"dia":3,"diaLabel":"Qua","hora":18,"count":1059},{"dia":3,"diaLabel":"Qua","hora":19,"count":1001},{"dia":3,"diaLabel":"Qua","hora":20,"count":1242},{"dia":3,"diaLabel":"Qua","hora":21,"count":1140},{"dia":3,"diaLabel":"Qua","hora":22,"count":912},{"dia":3,"diaLabel":"Qua","hora":23,"count":533},{"dia":4,"diaLabel":"Qui","hora":0,"count":347},{"dia":4,"diaLabel":"Qui","hora":1,"count":217},{"dia":4,"diaLabel":"Qui","hora":2,"count":144},{"dia":4,"diaLabel":"Qui","hora":3,"count":177},{"dia":4,"diaLabel":"Qui","hora":4,"count":106},{"dia":4,"diaLabel":"Qui","hora":5,"count":137},{"dia":4,"diaLabel":"Qui","hora":6,"count":299},{"dia":4,"diaLabel":"Qui","hora":7,"count":455},{"dia":4,"diaLabel":"Qui","hora":8,"count":451},{"dia":4,"diaLabel":"Qui","hora":9,"count":556},{"dia":4,"diaLabel":"Qui","hora":10,"count":614},{"dia":4,"diaLabel":"Qui","hora":11,"count":668},{"dia":4,"diaLabel":"Qui","hora":12,"count":1033},{"dia":4,"diaLabel":"Qui","hora":13,"count":1059},{"dia":4,"diaLabel":"Qui","hora":14,"count":943},{"dia":4,"diaLabel":"Qui","hora":15,"count":895},{"dia":4,"diaLabel":"Qui","hora":16,"count":906},{"dia":4,"diaLabel":"Qui","hora":17,"count":938},{"dia":4,"diaLabel":"Qui","hora":18,"count":951},{"dia":4,"diaLabel":"Qui","hora":19,"count":1089},{"dia":4,"diaLabel":"Qui","hora":20,"count":1188},{"dia":4,"diaLabel":"Qui","hora":21,"count":1118},{"dia":4,"diaLabel":"Qui","hora":22,"count":990},{"dia":4,"diaLabel":"Qui","hora":23,"count":582},{"dia":5,"diaLabel":"Sex","hora":0,"count":367},{"dia":5,"diaLabel":"Sex","hora":1,"count":234},{"dia":5,"diaLabel":"Sex","hora":2,"count":210},{"dia":5,"diaLabel":"Sex","hora":3,"count":187},{"dia":5,"diaLabel":"Sex","hora":4,"count":116},{"dia":5,"diaLabel":"Sex","hora":5,"count":140},{"dia":5,"diaLabel":"Sex","hora":6,"count":309},{"dia":5,"diaLabel":"Sex","hora":7,"count":449},{"dia":5,"diaLabel":"Sex","hora":8,"count":532},{"dia":5,"diaLabel":"Sex","hora":9,"count":491},{"dia":5,"diaLabel":"Sex","hora":10,"count":590},{"dia":5,"diaLabel":"Sex","hora":11,"count":720},{"dia":5,"diaLabel":"Sex","hora":12,"count":1119},{"dia":5,"diaLabel":"Sex","hora":13,"count":1081},{"dia":5,"diaLabel":"Sex","hora":14,"count":956},{"dia":5,"diaLabel":"Sex","hora":15,"count":798},{"dia":5,"diaLabel":"Sex","hora":16,"count":1008},{"dia":5,"diaLabel":"Sex","hora":17,"count":964},{"dia":5,"diaLabel":"Sex","hora":18,"count":1009},{"dia":5,"diaLabel":"Sex","hora":19,"count":1201},{"dia":5,"diaLabel":"Sex","hora":20,"count":1399},{"dia":5,"diaLabel":"Sex","hora":21,"count":1403},{"dia":5,"diaLabel":"Sex","hora":22,"count":1171},{"dia":5,"diaLabel":"Sex","hora":23,"count":831},{"dia":6,"diaLabel":"Sáb","hora":0,"count":476},{"dia":6,"diaLabel":"Sáb","hora":1,"count":301},{"dia":6,"diaLabel":"Sáb","hora":2,"count":269},{"dia":6,"diaLabel":"Sáb","hora":3,"count":279},{"dia":6,"diaLabel":"Sáb","hora":4,"count":136},{"dia":6,"diaLabel":"Sáb","hora":5,"count":142},{"dia":6,"diaLabel":"Sáb","hora":6,"count":193},{"dia":6,"diaLabel":"Sáb","hora":7,"count":422},{"dia":6,"diaLabel":"Sáb","hora":8,"count":436},{"dia":6,"diaLabel":"Sáb","hora":9,"count":514},{"dia":6,"diaLabel":"Sáb","hora":10,"count":626},{"dia":6,"diaLabel":"Sáb","hora":11,"count":807},{"dia":6,"diaLabel":"Sáb","hora":12,"count":1107},{"dia":6,"diaLabel":"Sáb","hora":13,"count":1236},{"dia":6,"diaLabel":"Sáb","hora":14,"count":1112},{"dia":6,"diaLabel":"Sáb","hora":15,"count":1062},{"dia":6,"diaLabel":"Sáb","hora":16,"count":1043},{"dia":6,"diaLabel":"Sáb","hora":17,"count":1023},{"dia":6,"diaLabel":"Sáb","hora":18,"count":1034},{"dia":6,"diaLabel":"Sáb","hora":19,"count":982},{"dia":6,"diaLabel":"Sáb","hora":20,"count":1136},{"dia":6,"diaLabel":"Sáb","hora":21,"count":1215},{"dia":6,"diaLabel":"Sáb","hora":22,"count":986},{"dia":6,"diaLabel":"Sáb","hora":23,"count":750}],"heatmap2026":[{"dia":0,"diaLabel":"Dom","hora":0,"count":522},{"dia":0,"diaLabel":"Dom","hora":1,"count":375},{"dia":0,"diaLabel":"Dom","hora":2,"count":254},{"dia":0,"diaLabel":"Dom","hora":3,"count":209},{"dia":0,"diaLabel":"Dom","hora":4,"count":141},{"dia":0,"diaLabel":"Dom","hora":5,"count":133},{"dia":0,"diaLabel":"Dom","hora":6,"count":259},{"dia":0,"diaLabel":"Dom","hora":7,"count":352},{"dia":0,"diaLabel":"Dom","hora":8,"count":547},{"dia":0,"diaLabel":"Dom","hora":9,"count":656},{"dia":0,"diaLabel":"Dom","hora":10,"count":674},{"dia":0,"diaLabel":"Dom","hora":11,"count":786},{"dia":0,"diaLabel":"Dom","hora":12,"count":1127},{"dia":0,"diaLabel":"Dom","hora":13,"count":1331},{"dia":0,"diaLabel":"Dom","hora":14,"count":1298},{"dia":0,"diaLabel":"Dom","hora":15,"count":1209},{"dia":0,"diaLabel":"Dom","hora":16,"count":1182},{"dia":0,"diaLabel":"Dom","hora":17,"count":1245},{"dia":0,"diaLabel":"Dom","hora":18,"count":1177},{"dia":0,"diaLabel":"Dom","hora":19,"count":1188},{"dia":0,"diaLabel":"Dom","hora":20,"count":1341},{"dia":0,"diaLabel":"Dom","hora":21,"count":1158},{"dia":0,"diaLabel":"Dom","hora":22,"count":871},{"dia":0,"diaLabel":"Dom","hora":23,"count":524},{"dia":1,"diaLabel":"Seg","hora":0,"count":357},{"dia":1,"diaLabel":"Seg","hora":1,"count":186},{"dia":1,"diaLabel":"Seg","hora":2,"count":115},{"dia":1,"diaLabel":"Seg","hora":3,"count":96},{"dia":1,"diaLabel":"Seg","hora":4,"count":51},{"dia":1,"diaLabel":"Seg","hora":5,"count":119},{"dia":1,"diaLabel":"Seg","hora":6,"count":352},{"dia":1,"diaLabel":"Seg","hora":7,"count":511},{"dia":1,"diaLabel":"Seg","hora":8,"count":786},{"dia":1,"diaLabel":"Seg","hora":9,"count":713},{"dia":1,"diaLabel":"Seg","hora":10,"count":689},{"dia":1,"diaLabel":"Seg","hora":11,"count":785},{"dia":1,"diaLabel":"Seg","hora":12,"count":1058},{"dia":1,"diaLabel":"Seg","hora":13,"count":1136},{"dia":1,"diaLabel":"Seg","hora":14,"count":1064},{"dia":1,"diaLabel":"Seg","hora":15,"count":964},{"dia":1,"diaLabel":"Seg","hora":16,"count":1095},{"dia":1,"diaLabel":"Seg","hora":17,"count":1260},{"dia":1,"diaLabel":"Seg","hora":18,"count":1185},{"dia":1,"diaLabel":"Seg","hora":19,"count":1209},{"dia":1,"diaLabel":"Seg","hora":20,"count":1320},{"dia":1,"diaLabel":"Seg","hora":21,"count":1193},{"dia":1,"diaLabel":"Seg","hora":22,"count":950},{"dia":1,"diaLabel":"Seg","hora":23,"count":646},{"dia":2,"diaLabel":"Ter","hora":0,"count":396},{"dia":2,"diaLabel":"Ter","hora":1,"count":269},{"dia":2,"diaLabel":"Ter","hora":2,"count":177},{"dia":2,"diaLabel":"Ter","hora":3,"count":127},{"dia":2,"diaLabel":"Ter","hora":4,"count":107},{"dia":2,"diaLabel":"Ter","hora":5,"count":176},{"dia":2,"diaLabel":"Ter","hora":6,"count":387},{"dia":2,"diaLabel":"Ter","hora":7,"count":577},{"dia":2,"diaLabel":"Ter","hora":8,"count":746},{"dia":2,"diaLabel":"Ter","hora":9,"count":781},{"dia":2,"diaLabel":"Ter","hora":10,"count":787},{"dia":2,"diaLabel":"Ter","hora":11,"count":795},{"dia":2,"diaLabel":"Ter","hora":12,"count":1090},{"dia":2,"diaLabel":"Ter","hora":13,"count":1284},{"dia":2,"diaLabel":"Ter","hora":14,"count":1160},{"dia":2,"diaLabel":"Ter","hora":15,"count":1035},{"dia":2,"diaLabel":"Ter","hora":16,"count":1131},{"dia":2,"diaLabel":"Ter","hora":17,"count":1197},{"dia":2,"diaLabel":"Ter","hora":18,"count":1186},{"dia":2,"diaLabel":"Ter","hora":19,"count":1167},{"dia":2,"diaLabel":"Ter","hora":20,"count":1388},{"dia":2,"diaLabel":"Ter","hora":21,"count":1249},{"dia":2,"diaLabel":"Ter","hora":22,"count":1003},{"dia":2,"diaLabel":"Ter","hora":23,"count":560},{"dia":3,"diaLabel":"Qua","hora":0,"count":404},{"dia":3,"diaLabel":"Qua","hora":1,"count":242},{"dia":3,"diaLabel":"Qua","hora":2,"count":165},{"dia":3,"diaLabel":"Qua","hora":3,"count":147},{"dia":3,"diaLabel":"Qua","hora":4,"count":110},{"dia":3,"diaLabel":"Qua","hora":5,"count":119},{"dia":3,"diaLabel":"Qua","hora":6,"count":271},{"dia":3,"diaLabel":"Qua","hora":7,"count":512},{"dia":3,"diaLabel":"Qua","hora":8,"count":694},{"dia":3,"diaLabel":"Qua","hora":9,"count":729},{"dia":3,"diaLabel":"Qua","hora":10,"count":719},{"dia":3,"diaLabel":"Qua","hora":11,"count":720},{"dia":3,"diaLabel":"Qua","hora":12,"count":1072},{"dia":3,"diaLabel":"Qua","hora":13,"count":1182},{"dia":3,"diaLabel":"Qua","hora":14,"count":1071},{"dia":3,"diaLabel":"Qua","hora":15,"count":965},{"dia":3,"diaLabel":"Qua","hora":16,"count":1061},{"dia":3,"diaLabel":"Qua","hora":17,"count":1138},{"dia":3,"diaLabel":"Qua","hora":18,"count":1158},{"dia":3,"diaLabel":"Qua","hora":19,"count":1207},{"dia":3,"diaLabel":"Qua","hora":20,"count":1226},{"dia":3,"diaLabel":"Qua","hora":21,"count":1101},{"dia":3,"diaLabel":"Qua","hora":22,"count":955},{"dia":3,"diaLabel":"Qua","hora":23,"count":597},{"dia":4,"diaLabel":"Qui","hora":0,"count":451},{"dia":4,"diaLabel":"Qui","hora":1,"count":295},{"dia":4,"diaLabel":"Qui","hora":2,"count":186},{"dia":4,"diaLabel":"Qui","hora":3,"count":137},{"dia":4,"diaLabel":"Qui","hora":4,"count":112},{"dia":4,"diaLabel":"Qui","hora":5,"count":165},{"dia":4,"diaLabel":"Qui","hora":6,"count":377},{"dia":4,"diaLabel":"Qui","hora":7,"count":553},{"dia":4,"diaLabel":"Qui","hora":8,"count":764},{"dia":4,"diaLabel":"Qui","hora":9,"count":730},{"dia":4,"diaLabel":"Qui","hora":10,"count":770},{"dia":4,"diaLabel":"Qui","hora":11,"count":840},{"dia":4,"diaLabel":"Qui","hora":12,"count":1138},{"dia":4,"diaLabel":"Qui","hora":13,"count":1269},{"dia":4,"diaLabel":"Qui","hora":14,"count":1135},{"dia":4,"diaLabel":"Qui","hora":15,"count":1017},{"dia":4,"diaLabel":"Qui","hora":16,"count":1184},{"dia":4,"diaLabel":"Qui","hora":17,"count":1151},{"dia":4,"diaLabel":"Qui","hora":18,"count":1253},{"dia":4,"diaLabel":"Qui","hora":19,"count":1273},{"dia":4,"diaLabel":"Qui","hora":20,"count":1323},{"dia":4,"diaLabel":"Qui","hora":21,"count":1220},{"dia":4,"diaLabel":"Qui","hora":22,"count":1122},{"dia":4,"diaLabel":"Qui","hora":23,"count":670},{"dia":5,"diaLabel":"Sex","hora":0,"count":450},{"dia":5,"diaLabel":"Sex","hora":1,"count":260},{"dia":5,"diaLabel":"Sex","hora":2,"count":178},{"dia":5,"diaLabel":"Sex","hora":3,"count":164},{"dia":5,"diaLabel":"Sex","hora":4,"count":133},{"dia":5,"diaLabel":"Sex","hora":5,"count":192},{"dia":5,"diaLabel":"Sex","hora":6,"count":355},{"dia":5,"diaLabel":"Sex","hora":7,"count":612},{"dia":5,"diaLabel":"Sex","hora":8,"count":837},{"dia":5,"diaLabel":"Sex","hora":9,"count":802},{"dia":5,"diaLabel":"Sex","hora":10,"count":755},{"dia":5,"diaLabel":"Sex","hora":11,"count":818},{"dia":5,"diaLabel":"Sex","hora":12,"count":1215},{"dia":5,"diaLabel":"Sex","hora":13,"count":1368},{"dia":5,"diaLabel":"Sex","hora":14,"count":1108},{"dia":5,"diaLabel":"Sex","hora":15,"count":1101},{"dia":5,"diaLabel":"Sex","hora":16,"count":1203},{"dia":5,"diaLabel":"Sex","hora":17,"count":1275},{"dia":5,"diaLabel":"Sex","hora":18,"count":1244},{"dia":5,"diaLabel":"Sex","hora":19,"count":1410},{"dia":5,"diaLabel":"Sex","hora":20,"count":1591},{"dia":5,"diaLabel":"Sex","hora":21,"count":1500},{"dia":5,"diaLabel":"Sex","hora":22,"count":1266},{"dia":5,"diaLabel":"Sex","hora":23,"count":842},{"dia":6,"diaLabel":"Sáb","hora":0,"count":618},{"dia":6,"diaLabel":"Sáb","hora":1,"count":342},{"dia":6,"diaLabel":"Sáb","hora":2,"count":275},{"dia":6,"diaLabel":"Sáb","hora":3,"count":192},{"dia":6,"diaLabel":"Sáb","hora":4,"count":173},{"dia":6,"diaLabel":"Sáb","hora":5,"count":215},{"dia":6,"diaLabel":"Sáb","hora":6,"count":268},{"dia":6,"diaLabel":"Sáb","hora":7,"count":530},{"dia":6,"diaLabel":"Sáb","hora":8,"count":830},{"dia":6,"diaLabel":"Sáb","hora":9,"count":800},{"dia":6,"diaLabel":"Sáb","hora":10,"count":844},{"dia":6,"diaLabel":"Sáb","hora":11,"count":897},{"dia":6,"diaLabel":"Sáb","hora":12,"count":1182},{"dia":6,"diaLabel":"Sáb","hora":13,"count":1360},{"dia":6,"diaLabel":"Sáb","hora":14,"count":1286},{"dia":6,"diaLabel":"Sáb","hora":15,"count":1200},{"dia":6,"diaLabel":"Sáb","hora":16,"count":1200},{"dia":6,"diaLabel":"Sáb","hora":17,"count":1211},{"dia":6,"diaLabel":"Sáb","hora":18,"count":1173},{"dia":6,"diaLabel":"Sáb","hora":19,"count":1240},{"dia":6,"diaLabel":"Sáb","hora":20,"count":1395},{"dia":6,"diaLabel":"Sáb","hora":21,"count":1308},{"dia":6,"diaLabel":"Sáb","hora":22,"count":1135},{"dia":6,"diaLabel":"Sáb","hora":23,"count":886}],"clients2025Top20":[{"card":"5316********4928","tx":37,"valor":4640.93,"stores":1},{"card":"5899********7222","tx":86,"valor":3997.46,"stores":2},{"card":"5350********4969","tx":62,"valor":2862.63,"stores":4},{"card":"6790********9928","tx":99,"valor":2780.41,"stores":1},{"card":"5456********7983","tx":44,"valor":2761.03,"stores":1},{"card":"5248********0664","tx":266,"valor":2690.86,"stores":1},{"card":"4793********6828","tx":128,"valor":2478.06,"stores":1},{"card":"5154********0566","tx":78,"valor":2463.7,"stores":1},{"card":"5149********1233","tx":36,"valor":2414.21,"stores":1},{"card":"4103********7832","tx":42,"valor":2368.82,"stores":1},{"card":"4108********5489","tx":59,"valor":2293.32,"stores":1},{"card":"5155********7102","tx":33,"valor":2243.14,"stores":1},{"card":"4590********7773","tx":48,"valor":2108.77,"stores":1},{"card":"5595********8010","tx":59,"valor":2080.74,"stores":1},{"card":"5536********3741","tx":11,"valor":2048.42,"stores":1},{"card":"4897********7177","tx":71,"valor":2032.3,"stores":1},{"card":"4078********8659","tx":58,"valor":1979.95,"stores":1},{"card":"5598********2443","tx":39,"valor":1964.95,"stores":1},{"card":"4984********6274","tx":101,"valor":1954.8,"stores":2},{"card":"5899********0332","tx":75,"valor":1946.99,"stores":1}],"clients2026Top20":[{"card":"531664******4928","tx":46,"valor":9556.54,"stores":1},{"card":"518055******7182","tx":181,"valor":6081.58,"stores":1},{"card":"406871******1922","tx":83,"valor":4075.06,"stores":2},{"card":"516292******1427","tx":130,"valor":3852.42,"stores":3},{"card":"422061******6938","tx":124,"valor":3742.37,"stores":2},{"card":"515590******7102","tx":39,"valor":3661.39,"stores":1},{"card":"515470******0566","tx":87,"valor":3584.01,"stores":1},{"card":"540819******1471","tx":177,"valor":3579.12,"stores":1},{"card":"521422******9085","tx":77,"valor":3507.16,"stores":1},{"card":"516362******9756","tx":61,"valor":3315.55,"stores":1},{"card":"415937******4490","tx":65,"valor":3307.78,"stores":1},{"card":"480630******7351","tx":83,"valor":3292.43,"stores":1},{"card":"545605******7983","tx":48,"valor":3266.2,"stores":1},{"card":"524830******0664","tx":336,"valor":3219.88,"stores":1},{"card":"540409******7472","tx":89,"valor":3104.3,"stores":1},{"card":"553665******0771","tx":29,"valor":3028.16,"stores":1},{"card":"407267******7238","tx":167,"valor":2901.32,"stores":1},{"card":"480630******8695","tx":48,"valor":2825.33,"stores":1},{"card":"439267******9602","tx":33,"valor":2755.89,"stores":1},{"card":"542511******9672","tx":50,"valor":2419.75,"stores":2}],"storeClients2025":[{"store":"Cond. Presidente Médici","uniqueClients":215,"totalTx":1235,"txPerClient":5.74,"paretoRatio":67.45,"totalValor":18877.59},{"store":"Cond. Costa Verde","uniqueClients":330,"totalTx":1341,"txPerClient":4.06,"paretoRatio":67.12,"totalValor":27600.48},{"store":"Ed. Ilha das Palmas","uniqueClients":242,"totalTx":959,"txPerClient":3.96,"paretoRatio":72.72,"totalValor":16572.72},{"store":"Ed. Trouville","uniqueClients":405,"totalTx":1727,"txPerClient":4.26,"paretoRatio":70.64,"totalValor":36455},{"store":"Ed. Rotondo","uniqueClients":616,"totalTx":1668,"txPerClient":2.71,"paretoRatio":69.45,"totalValor":34833.37},{"store":"Cond. Vernissage","uniqueClients":995,"totalTx":3410,"txPerClient":3.43,"paretoRatio":65.23,"totalValor":73204.21},{"store":"Cond. East Side Meier 2","uniqueClients":1013,"totalTx":4840,"txPerClient":4.78,"paretoRatio":69.19,"totalValor":72675.64},{"store":"Ed. Chácara Sacopã","uniqueClients":340,"totalTx":1692,"txPerClient":4.98,"paretoRatio":69.53,"totalValor":36678.76},{"store":"Cond. Saint Tropez","uniqueClients":529,"totalTx":1579,"txPerClient":2.98,"paretoRatio":63.37,"totalValor":25238.22},{"store":"Ed. Ilha de Cozumel","uniqueClients":504,"totalTx":2151,"txPerClient":4.27,"paretoRatio":67.28,"totalValor":42939.01},{"store":"Ed. Maxime","uniqueClients":567,"totalTx":2021,"txPerClient":3.56,"paretoRatio":70.47,"totalValor":36410.83},{"store":"Ed. Deauville","uniqueClients":398,"totalTx":1587,"txPerClient":3.99,"paretoRatio":70.88,"totalValor":36651.49},{"store":"Ed. Samambaia","uniqueClients":175,"totalTx":963,"txPerClient":5.5,"paretoRatio":67.64,"totalValor":17719.59},{"store":"Cond. Jean Labasque","uniqueClients":265,"totalTx":1171,"txPerClient":4.42,"paretoRatio":68.16,"totalValor":23221.51},{"store":"Ed. Solari","uniqueClients":286,"totalTx":1435,"txPerClient":5.02,"paretoRatio":69.48,"totalValor":27480.74},{"store":"Ed. Pedra Bonita","uniqueClients":302,"totalTx":1403,"txPerClient":4.65,"paretoRatio":70.24,"totalValor":22030.62},{"store":"Cond. Pq. Visconde Albuq.","uniqueClients":280,"totalTx":1222,"txPerClient":4.36,"paretoRatio":68.05,"totalValor":27157.54},{"store":"Ed. Gávea IV","uniqueClients":343,"totalTx":1423,"txPerClient":4.15,"paretoRatio":68.48,"totalValor":27977.68},{"store":"Canoas","uniqueClients":260,"totalTx":1431,"txPerClient":5.5,"paretoRatio":69.22,"totalValor":25406.94},{"store":"Ed. Torrigiani","uniqueClients":313,"totalTx":1372,"txPerClient":4.38,"paretoRatio":63.52,"totalValor":24241.73},{"store":"Cond. John F. Kennedy","uniqueClients":264,"totalTx":1149,"txPerClient":4.35,"paretoRatio":64.07,"totalValor":22819.72},{"store":"Ed. Bruneleschi","uniqueClients":233,"totalTx":892,"txPerClient":3.83,"paretoRatio":71.35,"totalValor":19701.01},{"store":"Ed. Ferrara","uniqueClients":443,"totalTx":1835,"txPerClient":4.14,"paretoRatio":70.53,"totalValor":34191.81},{"store":"Ed.Bosque Freguesia 2","uniqueClients":527,"totalTx":2226,"txPerClient":4.22,"paretoRatio":65.53,"totalValor":41406.85},{"store":"Cond. Reserva Árvores 2","uniqueClients":27,"totalTx":37,"txPerClient":1.37,"paretoRatio":55.25,"totalValor":832.24},{"store":"Projac","uniqueClients":5014,"totalTx":17528,"txPerClient":3.5,"paretoRatio":63.16,"totalValor":229846.5},{"store":"Cond. Adorabile Tijuca","uniqueClients":458,"totalTx":2866,"txPerClient":6.26,"paretoRatio":66.54,"totalValor":54834.79},{"store":"Cond. Wonderful","uniqueClients":1462,"totalTx":5496,"txPerClient":3.76,"paretoRatio":66.14,"totalValor":117278.08},{"store":"Cond. Key Biscayne","uniqueClients":768,"totalTx":4334,"txPerClient":5.64,"paretoRatio":67.7,"totalValor":74211.83},{"store":"Cond. East Side Meier 1","uniqueClients":765,"totalTx":3576,"txPerClient":4.67,"paretoRatio":70.41,"totalValor":57135.95},{"store":"Ed. Prince","uniqueClients":534,"totalTx":2291,"txPerClient":4.29,"paretoRatio":70.14,"totalValor":48728.42},{"store":"Cond. Reserva das Arvores","uniqueClients":238,"totalTx":521,"txPerClient":2.19,"paretoRatio":57.96,"totalValor":9223.34},{"store":"Cond. Summer Coast","uniqueClients":546,"totalTx":3055,"txPerClient":5.6,"paretoRatio":70.73,"totalValor":60874.45},{"store":"Cond. Palais de Nice","uniqueClients":576,"totalTx":2828,"txPerClient":4.91,"paretoRatio":72.3,"totalValor":65998.72},{"store":"Ed.Bosque Freguesia","uniqueClients":646,"totalTx":3050,"txPerClient":4.72,"paretoRatio":70.09,"totalValor":57021.63},{"store":"Cond. Completo Guanabara","uniqueClients":870,"totalTx":3047,"txPerClient":3.5,"paretoRatio":62.98,"totalValor":54292.26},{"store":"Ed. Paradiso","uniqueClients":414,"totalTx":1965,"txPerClient":4.75,"paretoRatio":71.73,"totalValor":44782.22},{"store":"Cond. Verrochio","uniqueClients":167,"totalTx":614,"txPerClient":3.68,"paretoRatio":70.72,"totalValor":14976.62}],"storeClients2026":[{"store":"Cond. Verrochio","uniqueClients":222,"totalTx":837,"txPerClient":3.77,"paretoRatio":68.92,"totalValor":21589.89},{"store":"Cond. Palais de Nice","uniqueClients":641,"totalTx":4129,"txPerClient":6.44,"paretoRatio":75.83,"totalValor":96466.4},{"store":"Cond. Saint Tropez","uniqueClients":595,"totalTx":1734,"txPerClient":2.91,"paretoRatio":61.59,"totalValor":34052.84},{"store":"Projac","uniqueClients":6156,"totalTx":22768,"txPerClient":3.7,"paretoRatio":63.37,"totalValor":302210.29},{"store":"Ed.Bosque Freguesia","uniqueClients":579,"totalTx":2768,"txPerClient":4.78,"paretoRatio":70.58,"totalValor":56683.59},{"store":"Ed. Deauville","uniqueClients":438,"totalTx":1965,"txPerClient":4.49,"paretoRatio":70.1,"totalValor":42743.27},{"store":"Cond. Completo Guanabara","uniqueClients":866,"totalTx":3173,"txPerClient":3.66,"paretoRatio":65.09,"totalValor":60623.28},{"store":"Cond. Pq. Visconde Albuq.","uniqueClients":249,"totalTx":1145,"txPerClient":4.6,"paretoRatio":68.23,"totalValor":25225.58},{"store":"Ed. Samambaia","uniqueClients":211,"totalTx":1205,"txPerClient":5.71,"paretoRatio":72.2,"totalValor":24770.37},{"store":"Ed.Bosque Freguesia 2","uniqueClients":620,"totalTx":3154,"txPerClient":5.09,"paretoRatio":66.6,"totalValor":63197.25},{"store":"Ed. Ilha de Cozumel","uniqueClients":535,"totalTx":2618,"txPerClient":4.89,"paretoRatio":66.88,"totalValor":52648.98},{"store":"Ed. Maxime","uniqueClients":585,"totalTx":2735,"txPerClient":4.68,"paretoRatio":72.88,"totalValor":45727.09},{"store":"Cond. East Side Meier 2","uniqueClients":1477,"totalTx":6800,"txPerClient":4.6,"paretoRatio":70.08,"totalValor":107037.96},{"store":"Cond. Wonderful","uniqueClients":1823,"totalTx":8019,"txPerClient":4.4,"paretoRatio":68.47,"totalValor":185214.93},{"store":"Cond. Vernissage","uniqueClients":788,"totalTx":2785,"txPerClient":3.53,"paretoRatio":65.09,"totalValor":72386.59},{"store":"Cond. East Side Meier 1","uniqueClients":723,"totalTx":3023,"txPerClient":4.18,"paretoRatio":65.13,"totalValor":49097.56},{"store":"Ed. Chácara Sacopã","uniqueClients":329,"totalTx":1554,"txPerClient":4.72,"paretoRatio":72.71,"totalValor":36251},{"store":"Cond. Summer Coast","uniqueClients":602,"totalTx":3533,"txPerClient":5.87,"paretoRatio":72.41,"totalValor":77270.25},{"store":"Cond. Costa Verde","uniqueClients":344,"totalTx":1554,"txPerClient":4.52,"paretoRatio":67.03,"totalValor":31886.8},{"store":"Cond. Saint Germain","uniqueClients":589,"totalTx":2824,"txPerClient":4.79,"paretoRatio":68.65,"totalValor":59614.55},{"store":"Ed. Paradiso","uniqueClients":480,"totalTx":2723,"txPerClient":5.67,"paretoRatio":73.39,"totalValor":59239.17},{"store":"Cond. Key Biscayne","uniqueClients":777,"totalTx":4815,"txPerClient":6.2,"paretoRatio":70.32,"totalValor":92781.07},{"store":"Ed. Pedra Bonita","uniqueClients":310,"totalTx":1463,"txPerClient":4.72,"paretoRatio":73.24,"totalValor":25443.68},{"store":"Ed. Ferrara","uniqueClients":524,"totalTx":2330,"txPerClient":4.45,"paretoRatio":71.22,"totalValor":41545.4},{"store":"Cond. East Side Meier 3","uniqueClients":1045,"totalTx":4382,"txPerClient":4.19,"paretoRatio":66.26,"totalValor":82677.69},{"store":"Canoas","uniqueClients":262,"totalTx":1159,"txPerClient":4.42,"paretoRatio":66.45,"totalValor":20645.33},{"store":"Ed. Bruneleschi","uniqueClients":216,"totalTx":876,"txPerClient":4.06,"paretoRatio":67.93,"totalValor":20077.69},{"store":"Ed. Prince","uniqueClients":574,"totalTx":2865,"txPerClient":4.99,"paretoRatio":72.12,"totalValor":55780.05},{"store":"Cond. Presidente Médici","uniqueClients":363,"totalTx":1355,"txPerClient":3.73,"paretoRatio":62.94,"totalValor":21046.62},{"store":"Ed. Trouville","uniqueClients":426,"totalTx":2075,"txPerClient":4.87,"paretoRatio":72.61,"totalValor":44291.99},{"store":"Ed. Rotondo","uniqueClients":615,"totalTx":2045,"txPerClient":3.33,"paretoRatio":67.85,"totalValor":41227.62},{"store":"Ed. Ilha das Palmas","uniqueClients":230,"totalTx":984,"txPerClient":4.28,"paretoRatio":72.79,"totalValor":19029.11},{"store":"Cond. Jean Labasque","uniqueClients":211,"totalTx":926,"txPerClient":4.39,"paretoRatio":66.71,"totalValor":17181.57},{"store":"Ed. Torrigiani","uniqueClients":312,"totalTx":1485,"txPerClient":4.76,"paretoRatio":65.92,"totalValor":25216.16},{"store":"Ed. Solari","uniqueClients":301,"totalTx":1308,"txPerClient":4.35,"paretoRatio":68.04,"totalValor":26537.7},{"store":"Ed. Brancusi","uniqueClients":220,"totalTx":851,"txPerClient":3.87,"paretoRatio":67.47,"totalValor":17757.81}],"freq2025":{"1":9003,"2-3":5553,"4-5":2156,"6-10":2252,"11-20":1331,"21-50":623,"51+":79},"freq2026":{"1":9487,"2-3":6164,"4-5":2548,"6-10":2587,"11-20":1555,"21-50":767,"51+":131},"alerts":{"revenueDecline":[{"store":"Cond. Jean Labasque","r25":29282.51,"r26":22810.47,"yoy":-22.1,"tm25":19.85,"tm26":18.44,"tmYoy":-7.11,"tx25":1475,"tx26":1237,"items25":2853,"items26":2306,"itemsTx25":1.93,"itemsTx26":1.86,"isNew":false,"isClosed":false},{"store":"Canoas","r25":28318.13,"r26":23973.04,"yoy":-15.34,"tm25":17.69,"tm26":17.37,"tmYoy":-1.79,"tx25":1601,"tx26":1380,"items25":2945,"items26":2382,"itemsTx25":1.84,"itemsTx26":1.73,"isNew":false,"isClosed":false}],"ticketDecline":[],"newStores":[{"store":"Cond. East Side Meier 3","r25":0,"r26":101769.52,"yoy":999,"tm25":0,"tm26":18.87,"tmYoy":0,"tx25":0,"tx26":5393,"items25":0,"items26":10243,"itemsTx25":0,"itemsTx26":1.9,"isNew":true,"isClosed":false},{"store":"Cond. Saint Germain","r25":0,"r26":70440.87,"yoy":999,"tm25":0,"tm26":21.04,"tmYoy":0,"tx25":0,"tx26":3348,"items25":0,"items26":7264,"itemsTx25":0,"itemsTx26":2.17,"isNew":true,"isClosed":false},{"store":"Ed. Brancusi","r25":0,"r26":20501.73,"yoy":999,"tm25":0,"tm26":19.94,"tmYoy":0,"tx25":0,"tx26":1028,"items25":0,"items26":2116,"itemsTx25":0,"itemsTx26":2.06,"isNew":true,"isClosed":false}],"closedStores":[{"store":"Cond. Adorabile Tijuca","r25":63784.4,"r26":0,"yoy":-100,"tm25":19.1,"tm26":0,"tmYoy":-100,"tx25":3340,"tx26":0,"items25":6394,"items26":0,"itemsTx25":1.91,"itemsTx26":0,"isNew":false,"isClosed":true},{"store":"Cond. John F. Kennedy","r25":26358.76,"r26":0,"yoy":-100,"tm25":19.25,"tm26":0,"tmYoy":-100,"tx25":1369,"tx26":0,"items25":2620,"items26":0,"itemsTx25":1.91,"itemsTx26":0,"isNew":false,"isClosed":true},{"store":"Cond. Reserva das Arvores","r25":13089.51,"r26":0,"yoy":-100,"tm25":17.55,"tm26":0,"tmYoy":-100,"tx25":746,"tx26":0,"items25":1446,"items26":0,"itemsTx25":1.94,"itemsTx26":0,"isNew":false,"isClosed":true},{"store":"Cond. Reserva Árvores 2","r25":1178.74,"r26":0,"yoy":-100,"tm25":19.65,"tm26":0,"tmYoy":-100,"tx25":60,"tx26":0,"items25":133,"items26":0,"itemsTx25":2.22,"itemsTx26":0,"isNew":false,"isClosed":true},{"store":"Ed. Gávea IV","r25":30983.31,"r26":0,"yoy":-100,"tm25":19.16,"tm26":0,"tmYoy":-100,"tx25":1617,"tx26":0,"items25":3221,"items26":0,"itemsTx25":1.99,"itemsTx26":0,"isNew":false,"isClosed":true}],"anomalies2026":[]}};
+
+// ============ TABS ============
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    // Trigger chart resize
+    window.dispatchEvent(new Event('resize'));
+  });
+});
+
+// ============ CHART DEFAULTS ============
+Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+Chart.defaults.font.size = 12;
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.padding = 16;
+
+const TEAL = 'rgb(13, 148, 136)';
+const TEAL_BG = 'rgba(13, 148, 136, 0.7)';
+const EMERALD = 'rgb(16, 185, 129)';
+const EMERALD_BG = 'rgba(16, 185, 129, 0.7)';
+const GRAY = 'rgb(148, 163, 184)';
+const GRAY_BG = 'rgba(148, 163, 184, 0.5)';
+
+// ============ CHART 1: Store Revenue Bar ============
+{
+  const stores = DATA.storeTable.filter(s => s.r26 > 0).sort((a, b) => b.r26 - a.r26).slice(0, 20);
+  new Chart(document.getElementById('chartStoreRevenue'), {
+    type: 'bar',
+    data: {
+      labels: stores.map(s => s.store),
+      datasets: [
+        { label: 'Q1 2025', data: stores.map(s => s.r25), backgroundColor: GRAY_BG, borderColor: GRAY, borderWidth: 1 },
+        { label: 'Q1 2026', data: stores.map(s => s.r26), backgroundColor: TEAL_BG, borderColor: TEAL, borderWidth: 1 },
+      ]
+    },
+    options: {
+      responsive: true,
+      indexAxis: 'y',
+      plugins: {
+        tooltip: {
+          callbacks: { label: ctx => ctx.dataset.label + ': R$ ' + ctx.raw.toLocaleString('pt-BR', {minimumFractionDigits: 2}) }
+        }
+      },
+      scales: {
+        x: { ticks: { callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' } }
+      }
+    }
+  });
+}
+
+// ============ CHART 2-5: Trends ============
+function movingAvg(arr, key, window) {
+  return arr.map((d, i) => {
+    if (i < window - 1) return null;
+    const slice = arr.slice(i - window + 1, i + 1);
+    return slice.reduce((s, x) => s + x[key], 0) / window;
+  });
+}
+
+function makeTrendChart(canvasId, key, label, prefix) {
+  const d25 = DATA.trends2025;
+  const d26 = DATA.trends2026;
+  const ma25 = movingAvg(d25, key, 7);
+  const ma26 = movingAvg(d26, key, 7);
+  
+  // Align by day of year
+  const doys = [...new Set([...d25.map(d => d.doy), ...d26.map(d => d.doy)])].sort((a,b) => a-b);
+  const map25 = {}; d25.forEach((d, i) => map25[d.doy] = ma25[i]);
+  const map26 = {}; d26.forEach((d, i) => map26[d.doy] = ma26[i]);
+  
+  // Create labels from doy (use 2025 dates as reference)
+  const labels = doys.map(doy => {
+    const d = new Date(2025, 0, doy);
+    return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'short'});
+  });
+  
+  new Chart(document.getElementById(canvasId), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: '2025 (MA7)', data: doys.map(d => map25[d] ?? null), borderColor: GRAY, backgroundColor: 'rgba(148,163,184,0.1)', fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+        { label: '2026 (MA7)', data: doys.map(d => map26[d] ?? null), borderColor: TEAL, backgroundColor: 'rgba(13,148,136,0.1)', fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        tooltip: {
+          callbacks: { label: ctx => {
+            if (ctx.raw == null) return '';
+            return ctx.dataset.label + ': ' + (prefix || '') + ctx.raw.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+          }}
+        }
+      },
+      scales: {
+        x: { ticks: { maxTicksLimit: 15 } },
+        y: { ticks: { callback: v => prefix === 'R$ ' ? 'R$ ' + (v/1000).toFixed(0) + 'k' : v.toFixed(1) } }
+      }
+    }
+  });
+}
+
+makeTrendChart('chartTrendRevenue', 'receita', 'Receita', 'R$ ');
+makeTrendChart('chartTrendTicket', 'ticket', 'Ticket Médio', 'R$ ');
+makeTrendChart('chartTrendTx', 'tx', 'Transações', '');
+makeTrendChart('chartTrendItems', 'itemsTx', 'Itens/Tx', '');
+
+// ============ CHART 6: Hourly ============
+{
+  const labels = Array.from({length: 24}, (_, i) => i + 'h');
+  new Chart(document.getElementById('chartHourly'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Q1 2025', data: DATA.hourly2025.map(h => h.tx), backgroundColor: GRAY_BG, borderColor: GRAY, borderWidth: 1 },
+        { label: 'Q1 2026', data: DATA.hourly2026.map(h => h.tx), backgroundColor: TEAL_BG, borderColor: TEAL, borderWidth: 1 },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw.toLocaleString('pt-BR') + ' transações' } }
+      },
+      scales: {
+        y: { ticks: { callback: v => (v/1000).toFixed(1) + 'k' } }
+      }
+    }
+  });
+}
+
+// ============ HEATMAP ============
+{
+  const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  const maxCount = Math.max(...DATA.heatmap2026.map(h => h.count));
+  let html = '<table class="text-xs"><thead><tr><th class="px-1 py-1"></th>';
+  for (let h = 0; h < 24; h++) html += '<th class="px-1 py-1 text-center">' + h + 'h</th>';
+  html += '</tr></thead><tbody>';
+  
+  for (let d = 0; d < 7; d++) {
+    // Reorder: Mon=1 first
+    const di = (d + 1) % 7;
+    html += '<tr><td class="px-2 py-1 font-medium text-right">' + dias[di] + '</td>';
+    for (let h = 0; h < 24; h++) {
+      const cell = DATA.heatmap2026.find(c => c.dia === di && c.hora === h);
+      const count = cell ? cell.count : 0;
+      const intensity = maxCount > 0 ? count / maxCount : 0;
+      const r = Math.round(240 - intensity * 220);
+      const g = Math.round(253 - intensity * 108);
+      const b = Math.round(244 - intensity * 108);
+      const textColor = intensity > 0.6 ? '#fff' : '#374151';
+      html += '<td class="px-0 py-0"><div class="heatmap-cell" style="background:rgb(' + r + ',' + g + ',' + b + ');color:' + textColor + '">' + (count > 0 ? count : '') + '</div></td>';
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  document.getElementById('heatmapContainer').innerHTML = html;
+}
+
+// ============ CHART 7: Frequency Distribution ============
+{
+  const labels = Object.keys(DATA.freq2025);
+  new Chart(document.getElementById('chartFreq'), {
+    type: 'bar',
+    data: {
+      labels: labels.map(l => l + ' tx'),
+      datasets: [
+        { label: 'Q1 2025', data: labels.map(l => DATA.freq2025[l]), backgroundColor: GRAY_BG, borderColor: GRAY, borderWidth: 1 },
+        { label: 'Q1 2026', data: labels.map(l => DATA.freq2026[l]), backgroundColor: EMERALD_BG, borderColor: EMERALD, borderWidth: 1 },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw.toLocaleString('pt-BR') + ' clientes' } }
+      }
+    }
+  });
+}
+
+// ============ CHART 8: Top Clients ============
+{
+  const top = DATA.clients2026Top20;
+  new Chart(document.getElementById('chartTopClients'), {
+    type: 'bar',
+    data: {
+      labels: top.map((c, i) => '#' + (i + 1) + ' (' + c.tx + ' tx)'),
+      datasets: [{
+        label: 'Gasto Total Q1 2026',
+        data: top.map(c => c.valor),
+        backgroundColor: TEAL_BG,
+        borderColor: TEAL,
+        borderWidth: 1,
+      }]
+    },
+    options: {
+      responsive: true,
+      indexAxis: 'y',
+      plugins: {
+        tooltip: {
+          callbacks: { 
+            title: (items) => {
+              const i = items[0].dataIndex;
+              return 'Cartão: ' + top[i].card;
+            },
+            label: ctx => 'R$ ' + ctx.raw.toLocaleString('pt-BR', {minimumFractionDigits: 2}) + ' | ' + top[ctx.dataIndex].tx + ' transações | ' + top[ctx.dataIndex].stores + ' loja(s)' 
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { callback: v => 'R$ ' + (v/1000).toFixed(1) + 'k' } }
+      }
+    }
+  });
+}
+</script>
+
+</body>
+</html>
