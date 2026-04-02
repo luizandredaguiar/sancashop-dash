@@ -81,6 +81,9 @@
 
   const formatR$ = (v) => `R$ ${Number(v).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
   const formatR$M = (v) => { const n = Number(v); if (n >= 1000000) return `R$ ${(n/1000000).toLocaleString('pt-BR', {minimumFractionDigits: 3, maximumFractionDigits: 3})}M`; if (n >= 1000) return `R$ ${(n/1000).toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1})}K`; return formatR$(v); };
+  // Parse "YYYY-MM-DD" as local date (avoids UTC midnight → wrong day in BRT)
+  const parseLocalDate = (s) => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+  const dayOfYear = (dateStr) => { const dt = parseLocalDate(dateStr); return Math.ceil((dt - new Date(dt.getFullYear(), 0, 1)) / 86400000) + 1; };
   const formatK = (v) => v >= 1000000 ? `R$ ${(v/1000000).toFixed(3).replace('.', ',')}M` : v >= 1000 ? `R$ ${(v/1000).toFixed(0)}k` : formatR$(v);
   const formatM = (v) => `R$ ${(v/1000000).toFixed(2)}M`;
 
@@ -1154,14 +1157,22 @@ return {
     // KPI cards react to filter selection (MoM tab)
     const momKPI = useMemo(() => {
       const cd = momChartData;
-      // Use last full-month entry (not MTD)
-      const fullEntries = cd.filter(d => !d.isMTD);
+      // Use MTD entry if available, otherwise last full month
+      const mtdEntry = cd.find(d => d.isMTD);
+      if (mtdEntry) {
+        const fat26 = mtdEntry['2026'] || 0;
+        const fat25 = mtdEntry['2025'] || 0;
+        const varMoM = fat25 > 0 ? ((fat26 / fat25) - 1) * 100 : 0;
+        const monthName = mtdEntry.month || '';
+        return { fat26, fat25, varMoM, monthName, isMTD: true };
+      }
+      const fullEntries = cd.filter(d => !d.isSpacer);
       const lastEntry = fullEntries[fullEntries.length - 1] || {};
       const fat26 = lastEntry['2026'] || 0;
       const fat25 = lastEntry['2025'] || 0;
       const varMoM = fat25 > 0 ? ((fat26 / fat25) - 1) * 100 : 0;
       const monthName = lastEntry.month || '';
-      return { fat26, fat25, varMoM, monthName };
+      return { fat26, fat25, varMoM, monthName, isMTD: false };
     }, [momChartData]);
 
     // Daily tab computed values
@@ -1412,13 +1423,14 @@ return {
               {/* MoM KPI Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <MetricCard
-                  title={`Fat. ${momKPI.monthName || MESES[computed.lastMonth - 1]} 2026`}
+                  title={`Fat. 2026 MTD`}
                   value={formatK(momKPI.fat26)}
+                  subtitle={momKPI.monthName || MESES[computed.lastMonth - 1]}
                   icon="📊"
                   color="green"
                 />
                 <MetricCard
-                  title={`Fat. ${momKPI.monthName || MESES[computed.lastMonth - 1]} 2025`}
+                  title={`Fat. 2025 MTD`}
                   value={formatK(momKPI.fat25)}
                   subtitle={momChartSubtitle}
                   icon="📊"
@@ -1853,14 +1865,11 @@ return {
             // Build chart data from computed trends
             // Revenue MA7 — filter 2025 to match 2026 YTD range
             const maxDay2026 = td.daily2026.length > 0 
-              ? Math.ceil((new Date(td.daily2026[td.daily2026.length-1].date) - new Date(2026, 0, 1)) / 86400000) + 1
+              ? dayOfYear(td.daily2026[td.daily2026.length-1].date)
               : 91;
-            const filtered2025 = td.daily2025.filter(d => {
-              const dayNum = Math.ceil((new Date(d.date) - new Date(2025, 0, 1)) / 86400000) + 1;
-              return dayNum <= maxDay2026;
-            });
-            const allDays25 = filtered2025.map(d => { const dt = new Date(d.date); return Math.ceil((dt - new Date(dt.getFullYear(), 0, 1)) / 86400000) + 1; });
-            const allDays26 = td.daily2026.map(d => { const dt = new Date(d.date); return Math.ceil((dt - new Date(dt.getFullYear(), 0, 1)) / 86400000) + 1; });
+            const filtered2025 = td.daily2025.filter(d => dayOfYear(d.date) <= maxDay2026);
+            const allDays25 = filtered2025.map(d => dayOfYear(d.date));
+            const allDays26 = td.daily2026.map(d => dayOfYear(d.date));
             
             const dayMap25 = {};
             filtered2025.forEach((d, i) => { dayMap25[allDays25[i]] = d; });
