@@ -111,13 +111,14 @@
     const [chartStore, setChartStore] = useState('');
     const [activeTab, setActiveTab] = useState('yoy');
     const [momChartStore, setMomChartStore] = useState('');
-    const [momSortCol, setMomSortCol] = useState('fatMar26');
+    const [momSortCol, setMomSortCol] = useState('fatAbr26');
     const [momSortDir, setMomSortDir] = useState('desc');
     const [dailyStore, setDailyStore] = useState('');
     const [dailySortCol, setDailySortCol] = useState('fatDU26');
     const [dailySortDir, setDailySortDir] = useState('desc');
 
     const YEAR_COLORS = { 2023: '#64748b', 2024: '#3b82f6', 2025: '#8b5cf6', 2026: '#22c55e' };
+    const YTD_COLORS = { '2025 YTD': '#c084fc', '2026 YTD': '#4ade80' };
 
     const computed = useMemo(() => {
       const lastUpdate = DATA.lastUpdate;
@@ -129,12 +130,14 @@
 
       const DAYS_IN_MONTH = { 1: 31, 2: 28, 3: 31, 4: 30, 5: 31, 6: 30, 7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31 };
 
-      const monthRange = [];
-      for (let m = 1; m <= maxMonth2026; m++) monthRange.push(m);
-
       // Month is partial only if last update is in the same month AND not the last day
       const isPartial = (lastUpdateMonth === maxMonth2026) && (lastUpdateDay < DAYS_IN_MONTH[maxMonth2026]);
       const partialMonth = isPartial ? maxMonth2026 : null;
+
+      // monthRange: only FULL months (exclude partial month — MTD handles it separately)
+      const monthRange = [];
+      const lastFullMonth = partialMonth ? maxMonth2026 - 1 : maxMonth2026;
+      for (let m = 1; m <= lastFullMonth; m++) monthRange.push(m);
       const daysElapsed = partialMonth ? lastUpdateDay : null;
       const daysInPartial = partialMonth ? DAYS_IN_MONTH[partialMonth] : null;
       const linearFactor = partialMonth ? (daysInPartial / daysElapsed) : 1;
@@ -178,7 +181,7 @@
       const projectionFactor = linearFactor;
 
       const periodLabel = monthRange.length === 1 ? MESES[monthRange[0]-1] : MESES[monthRange[0]-1] + '-' + MESES[monthRange[monthRange.length-1]-1];
-      const hasProjection = partialMonth !== null;
+      const hasProjection = false;
 
       const stores2026 = Object.keys(DATA.stores).filter(s => s !== 'CD Sancashop');
 
@@ -384,6 +387,9 @@
           varMar: monthData[3]?.var2526,
         };
       });
+
+      // Merge MTD April data into momStoreRows for sorting
+      // (done after computeMTD is available — patched below)
 
       // MoM grouped bar chart data
       const momChartAllStores = (() => {
@@ -783,6 +789,117 @@
       const momSameStores = momStoreRows.filter(r => momSameStoreNames.includes(r.name));
       const momSummarySame = buildMomSummaryRow('Mesmas lojas (todos os anos)', momSameStores);
 
+      // ============================================================================
+      // YTD DATA (Jan 1 to last available date in April)
+      // ============================================================================
+      const computeYTD = (() => {
+        // 2026 YTD: months 1-3 from DATA + month 4 from DATA (actual Apr 1 data)
+        // 2025 YTD: months 1-3 from HISTORICAL + April 1 2025 estimated (full April / 30)
+        const ytdMonthsFull = [1, 2, 3]; // Full months
+        const apr2026HasData = Object.keys(DATA.stores).some(s => DATA.stores[s]?.['2026']?.[4]);
+
+        // Per-store YTD
+        const ytdStoreRows = stores2026.map(name => {
+          const d2026 = DATA.stores[name]?.['2026'] || {};
+          const hStore = HISTORICAL[name];
+
+          // 2026 YTD
+          let fat2026ytd = 0;
+          ytdMonthsFull.forEach(m => { if (d2026[m]) fat2026ytd += d2026[m].valor; });
+          if (d2026[4]) fat2026ytd += d2026[4].valor; // April partial (actual data)
+
+          // 2025 YTD
+          let fat2025ytd = null;
+          if (hStore && hStore['2025']) {
+            const h25 = hStore['2025'];
+            let hasAll = true;
+            let fat = 0;
+            ytdMonthsFull.forEach(m => {
+              if (h25[String(m)]) fat += h25[String(m)].valor;
+              else hasAll = false;
+            });
+            if (hasAll) {
+              // Add April 1 2025 estimate: full April 2025 / 30
+              if (h25['4']) {
+                fat += h25['4'].valor / 30;
+              }
+              fat2025ytd = fat;
+            }
+          }
+
+          const varYTD = (fat2025ytd && fat2026ytd) ? ((fat2026ytd / fat2025ytd) - 1) * 100 : null;
+          return { name, fat2026ytd, fat2025ytd, varYTD };
+        });
+
+        // Consolidated chart data for YTD
+        const buildYTDChartData = (storeFilter) => {
+          let relevantStores;
+          if (storeFilter === '__consolidated__') {
+            relevantStores = ytdStoreRows;
+          } else if (!storeFilter) {
+            // Same stores present in all 4 years
+            relevantStores = ytdStoreRows.filter(s => {
+              const row = allYearsStores.find(r => r.name === s.name);
+              return !!row;
+            });
+          } else {
+            relevantStores = ytdStoreRows.filter(s => s.name === storeFilter);
+          }
+
+          const fat2025ytd = relevantStores.reduce((sum, s) => sum + (s.fat2025ytd || 0), 0);
+          const fat2026ytd = relevantStores.reduce((sum, s) => sum + s.fat2026ytd, 0);
+          return { fat2025ytd, fat2026ytd };
+        };
+
+        return { ytdStoreRows, buildYTDChartData };
+      })();
+
+      // ============================================================================
+      // MOM MTD DATA (April month-to-date)
+      // ============================================================================
+      const computeMTD = (() => {
+        // April 2026 MTD = DATA month 4 value (actual Apr 1)
+        // April 2025 MTD = HISTORICAL April 2025 full / 30 (estimate for 1 day)
+        const mtdStoreRows = stores2026.map(name => {
+          const d2026 = DATA.stores[name]?.['2026'] || {};
+          const hStore = HISTORICAL[name];
+
+          const fatAbr26 = d2026[4] ? d2026[4].valor : 0;
+          let fatAbr25 = null;
+          if (hStore && hStore['2025'] && hStore['2025']['4']) {
+            fatAbr25 = hStore['2025']['4'].valor / 30; // 1 day estimate
+          }
+          const varAbr = (fatAbr25 && fatAbr26) ? ((fatAbr26 / fatAbr25) - 1) * 100 : null;
+          return { name, fatAbr26, fatAbr25, varAbr };
+        });
+
+        const buildMTDChartData = (storeFilter) => {
+          let relevantStores;
+          if (storeFilter === '__consolidated__') {
+            relevantStores = mtdStoreRows;
+          } else if (!storeFilter) {
+            relevantStores = mtdStoreRows.filter(s => {
+              return allYearsStores.find(r => r.name === s.name);
+            });
+          } else {
+            relevantStores = mtdStoreRows.filter(s => s.name === storeFilter);
+          }
+
+          const fatAbr25 = relevantStores.reduce((sum, s) => sum + (s.fatAbr25 || 0), 0);
+          const fatAbr26 = relevantStores.reduce((sum, s) => sum + s.fatAbr26, 0);
+          return { fatAbr25, fatAbr26 };
+        };
+
+        return { mtdStoreRows, buildMTDChartData };
+      })();
+
+      // Merge MTD April data into momStoreRows for sorting
+      momStoreRows.forEach(row => {
+        const mtd = computeMTD.mtdStoreRows.find(r => r.name === row.name);
+        row.fatAbr26 = mtd ? mtd.fatAbr26 : 0;
+        row.varAbr = mtd ? mtd.varAbr : null;
+      });
+
 return {
         storeRows, comparableStores, totalFat2026, totalFat2025, varTotal,
         consolidatedChart, consolidatedAllChart, allYearsStores, storeChartData, storeNames2026, fatYTD,
@@ -795,6 +912,8 @@ return {
         yoySummaryAll, yoySummarySame, momSummaryAll, momSummarySame,
         // Daily data
         dailyComputed,
+        // YTD/MTD data
+        computeYTD, computeMTD,
       };
     }, []);
 
@@ -857,11 +976,19 @@ return {
 
     const { periodLabel, hasProjection, partialMonth, daysElapsed, daysInPartial } = computed;
 
-    // Chart data based on store filter
+    // Chart data based on store filter (full year bars + YTD bars)
     const chartData = useMemo(() => {
-      if (chartStore === '__consolidated__') return computed.consolidatedAllChart;
-      if (!chartStore) return computed.consolidatedChart;
-      return computed.storeChartData(chartStore);
+      let base;
+      if (chartStore === '__consolidated__') base = computed.consolidatedAllChart;
+      else if (!chartStore) base = computed.consolidatedChart;
+      else base = computed.storeChartData(chartStore);
+
+      // Append YTD entries
+      const ytd = computed.computeYTD.buildYTDChartData(chartStore || '');
+      const ytdEntries = [];
+      if (ytd.fat2025ytd > 0) ytdEntries.push({ ano: '2025 YTD', faturamento: ytd.fat2025ytd, isYTD: true });
+      if (ytd.fat2026ytd > 0) ytdEntries.push({ ano: '2026 YTD', faturamento: ytd.fat2026ytd, isYTD: true });
+      return [...base, ...ytdEntries];
     }, [chartStore, computed]);
 
     const chartSubtitle = useMemo(() => {
@@ -883,9 +1010,22 @@ return {
     }, [chartData, chartStore, computed]);
 
     const momChartData = useMemo(() => {
-      if (momChartStore === '__consolidated__') return computed.momChartConsolidated;
-      if (!momChartStore) return computed.momChartAllStores;
-      return computed.momChartForStore(momChartStore);
+      let base;
+      if (momChartStore === '__consolidated__') base = computed.momChartConsolidated;
+      else if (!momChartStore) base = computed.momChartAllStores;
+      else base = computed.momChartForStore(momChartStore);
+
+      // Append MTD bars for April
+      const mtd = computed.computeMTD.buildMTDChartData(momChartStore || '');
+      if (mtd.fatAbr25 > 0 || mtd.fatAbr26 > 0) {
+        base = [...base, {
+          month: 'Abr MTD',
+          '2025': mtd.fatAbr25 || 0,
+          '2026': mtd.fatAbr26 || 0,
+          isMTD: true,
+        }];
+      }
+      return base;
     }, [momChartStore, computed]);
 
     const momChartSubtitle = useMemo(() => {
@@ -897,7 +1037,9 @@ return {
     // KPI cards react to filter selection (MoM tab)
     const momKPI = useMemo(() => {
       const cd = momChartData;
-      const lastEntry = cd[cd.length - 1] || {};
+      // Use last full-month entry (not MTD)
+      const fullEntries = cd.filter(d => !d.isMTD);
+      const lastEntry = fullEntries[fullEntries.length - 1] || {};
       const fat26 = lastEntry['2026'] || 0;
       const fat25 = lastEntry['2025'] || 0;
       const varMoM = fat25 > 0 ? ((fat26 / fat25) - 1) * 100 : 0;
@@ -950,16 +1092,7 @@ return {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-          {/* Projection banner (hidden on daily tab) */}
-          {hasProjection && activeTab !== 'daily' && (
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 flex items-center gap-3">
-              <span className="text-amber-400 text-lg">⚠️</span>
-              <p className="text-amber-300 text-sm">
-                <strong>{MESES_FULL[partialMonth-1]} 2026 projetado:</strong> dados reais de {daysElapsed} dias, projeção blend (sazonalidade YoY + linear) para {daysInPartial} dias.
-                Valores de 2026 incluem projeção para o mês corrente.
-              </p>
-            </div>
-          )}
+          {/* Projection banner removed */}
 
           {/* Tab Bar */}
           <div className="flex gap-6 border-b border-slate-700/50">
@@ -1037,15 +1170,21 @@ return {
                       <XAxis dataKey="ano" stroke="#94a3b8" />
                       <YAxis stroke="#94a3b8" tickFormatter={v => `R${(v/1000).toFixed(0)}k`} domain={[0, dataMax => Math.ceil(dataMax * 1.12)]} />
                       <Tooltip content={<CustomTooltip />} />
+                      {/* Vertical dashed line separating full-year from YTD */}
+                      {chartData.some(d => d.isYTD) && (
+                        <ReferenceLine x={chartData.find(d => d.isYTD)?.ano} stroke="#94a3b8" strokeDasharray="6 4" strokeWidth={1.5} label={{ value: 'YTD →', position: 'top', fill: '#94a3b8', fontSize: 11 }} />
+                      )}
                       <Bar dataKey="faturamento" name="Faturamento" radius={[4, 4, 0, 0]}>
                         {chartData.map((entry, i) => (
-                          <Cell key={i} fill={YEAR_COLORS[parseInt(entry.ano)]} />
+                          <Cell key={i} fill={entry.isYTD ? (YTD_COLORS[entry.ano] || '#94a3b8') : (YEAR_COLORS[parseInt(entry.ano)] || '#94a3b8')} />
                         ))}
                         <LabelList content={({ x, y, width, index }) => {
                           if (index === 0 || !chartData[index - 1]) return null;
                           const cur = chartData[index].faturamento;
                           const prev = chartData[index - 1].faturamento;
                           if (!prev || !cur) return null;
+                          // Only show % between same-type bars (full→full or YTD→YTD)
+                          if (chartData[index].isYTD !== chartData[index - 1].isYTD) return null;
                           const pct = ((cur - prev) / prev) * 100;
                           return (
                             <text x={x + width / 2} y={y - 6} textAnchor="middle" fontSize={11} fill={pct >= 0 ? '#22c55e' : '#ef4444'}>
@@ -1069,11 +1208,12 @@ return {
                     <thead>
                       <tr className="border-b border-slate-700">
                         <SortHeader col="name" label="Loja" />
-                        <SortHeader col="fat2023" label={`Fat ${periodLabel} 23`} align="right" />
-                        <SortHeader col="fat2024" label={`Fat ${periodLabel} 24`} align="right" />
                         <SortHeader col="fat2025" label={`Fat ${periodLabel} 25`} align="right" />
-                        <SortHeader col="fat2026" label={`Fat ${periodLabel} 26${hasProjection ? '*' : ''}`} align="right" />
+                        <SortHeader col="fat2026" label={`Fat ${periodLabel} 26`} align="right" />
                         <SortHeader col="varYoY" label="Var Fat 25→26" align="right" />
+                        <SortHeader col="fat2025ytd" label="2025 YTD" align="right" />
+                        <SortHeader col="fat2026ytd" label="2026 YTD" align="right" />
+                        <SortHeader col="varYTD" label="Var YTD" align="right" />
                         <SortHeader col="ticket2026" label="Ticket 26" align="right" />
                         <SortHeader col="varTicketYoY" label="Var 25→26" align="right" />
                         <SortHeader col="vendas2026" label="Vendas 26" align="right" />
@@ -1081,15 +1221,26 @@ return {
                       </tr>
                     </thead>
                     <tbody>
-                      {[computed.yoySummaryAll, computed.yoySummarySame].map((s) => (
+                      {[computed.yoySummaryAll, computed.yoySummarySame].map((s) => {
+                        const ytdRow = computed.computeYTD.ytdStoreRows.filter(r => {
+                          if (s.name.includes('todas')) return true;
+                          return computed.allYearsStores.find(a => a.name === r.name);
+                        });
+                        const ytd25 = ytdRow.reduce((sum, r) => sum + (r.fat2025ytd || 0), 0);
+                        const ytd26 = ytdRow.reduce((sum, r) => sum + r.fat2026ytd, 0);
+                        const varYTD = ytd25 > 0 ? ((ytd26 / ytd25) - 1) * 100 : null;
+                        return (
                         <tr key={s.name} className="border-b border-slate-600 bg-slate-700/50">
                           <td className="px-3 py-2 text-white font-semibold whitespace-nowrap">{s.name}</td>
-                          <td className="px-3 py-2 text-slate-200 text-right whitespace-nowrap font-semibold">{s.fat2023 !== null ? formatR$(s.fat2023) : <span className="text-slate-600">—</span>}</td>
-                          <td className="px-3 py-2 text-slate-200 text-right whitespace-nowrap font-semibold">{s.fat2024 !== null ? formatR$(s.fat2024) : <span className="text-slate-600">—</span>}</td>
                           <td className="px-3 py-2 text-slate-200 text-right whitespace-nowrap font-semibold">{s.fat2025 !== null ? formatR$(s.fat2025) : <span className="text-slate-600">—</span>}</td>
                           <td className="px-3 py-2 text-white font-bold text-right whitespace-nowrap">{formatR$(s.fat2026)}</td>
                           <td className={`px-3 py-2 text-right font-bold whitespace-nowrap ${s.varYoY === null ? 'text-slate-600' : s.varYoY >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                             {s.varYoY !== null ? `${s.varYoY >= 0 ? '+' : ''}${s.varYoY.toFixed(1)}%` : '—'}
+                          </td>
+                          <td className="px-3 py-2 text-slate-200 text-right whitespace-nowrap font-semibold">{ytd25 > 0 ? formatR$(ytd25) : <span className="text-slate-600">—</span>}</td>
+                          <td className="px-3 py-2 text-white font-bold text-right whitespace-nowrap">{ytd26 > 0 ? formatR$(ytd26) : '—'}</td>
+                          <td className={`px-3 py-2 text-right font-bold whitespace-nowrap ${varYTD === null ? 'text-slate-600' : varYTD >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {varYTD !== null ? `${varYTD >= 0 ? '+' : ''}${varYTD.toFixed(1)}%` : '—'}
                           </td>
                           <td className="px-3 py-2 text-slate-200 text-right whitespace-nowrap font-semibold">R$ {s.ticket2026.toFixed(2)}</td>
                           <td className={`px-3 py-2 text-right font-bold whitespace-nowrap ${s.varTicketYoY === null ? 'text-slate-600' : s.varTicketYoY >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -1100,16 +1251,22 @@ return {
                             {s.varVendasYoY !== null ? `${s.varVendasYoY >= 0 ? '+' : ''}${s.varVendasYoY.toFixed(1)}%` : '—'}
                           </td>
                         </tr>
-                      ))}
-                      {sortedStores.map((s, i) => (
+                        );
+                      })}
+                      {sortedStores.map((s, i) => {
+                        const ytdRow = computed.computeYTD.ytdStoreRows.find(r => r.name === s.name);
+                        return (
                         <tr key={s.name} className={`border-b border-slate-700/50 ${i % 2 === 0 ? 'bg-slate-800/30' : ''}`}>
                           <td className="px-3 py-2 text-white font-medium whitespace-nowrap">{s.name}</td>
-                          <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.fat2023 !== null ? formatR$(s.fat2023) : <span className="text-slate-600">—</span>}</td>
-                          <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.fat2024 !== null ? formatR$(s.fat2024) : <span className="text-slate-600">—</span>}</td>
                           <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.fat2025 !== null ? formatR$(s.fat2025) : <span className="text-slate-600">—</span>}</td>
                           <td className="px-3 py-2 text-white font-medium text-right whitespace-nowrap">{formatR$(s.fat2026)}</td>
                           <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${s.varYoY === null ? 'text-slate-600' : s.varYoY >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                             {s.varYoY !== null ? `${s.varYoY >= 0 ? '+' : ''}${s.varYoY.toFixed(1)}%` : '—'}
+                          </td>
+                          <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{ytdRow?.fat2025ytd ? formatR$(ytdRow.fat2025ytd) : <span className="text-slate-600">—</span>}</td>
+                          <td className="px-3 py-2 text-white font-medium text-right whitespace-nowrap">{ytdRow?.fat2026ytd ? formatR$(ytdRow.fat2026ytd) : '—'}</td>
+                          <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${!ytdRow?.varYTD ? 'text-slate-600' : ytdRow.varYTD >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {ytdRow?.varYTD != null ? `${ytdRow.varYTD >= 0 ? '+' : ''}${ytdRow.varYTD.toFixed(1)}%` : '—'}
                           </td>
                           <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">R$ {s.ticket2026.toFixed(2)}</td>
                           <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${s.varTicketYoY === null ? 'text-slate-600' : s.varTicketYoY >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -1120,7 +1277,8 @@ return {
                             {s.varVendasYoY !== null ? `${s.varVendasYoY >= 0 ? '+' : ''}${s.varVendasYoY.toFixed(1)}%` : '—'}
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1194,6 +1352,10 @@ return {
                           </div>
                         );
                       }} />
+                      {/* Vertical dashed line separating full months from MTD */}
+                      {momChartData.some(d => d.isMTD) && (
+                        <ReferenceLine x="Abr MTD" stroke="#94a3b8" strokeDasharray="6 4" strokeWidth={1.5} label={{ value: 'MTD →', position: 'top', fill: '#94a3b8', fontSize: 11 }} />
+                      )}
                       <Bar dataKey="2023" name="2023" fill={YEAR_COLORS[2023]} radius={[4, 4, 0, 0]} />
                       <Bar dataKey="2024" name="2024" fill={YEAR_COLORS[2024]} radius={[4, 4, 0, 0]}>
                         <LabelList content={({ x, y, width, index }) => {
@@ -1259,13 +1421,19 @@ return {
                         <MomSortHeader col="varJan" label="Var 25→26" align="right" />
                         <MomSortHeader col="fatFev26" label="Fat Fev 26" align="right" />
                         <MomSortHeader col="varFev" label="Var 25→26" align="right" />
-                        <MomSortHeader col="fatMar26" label="Fat Mar 26*" align="right" />
+                        <MomSortHeader col="fatMar26" label="Fat Mar 26" align="right" />
                         <MomSortHeader col="varMar" label="Var 25→26" align="right" />
-
+                        <MomSortHeader col="fatAbr26" label="Fat Abr 26" align="right" />
+                        <MomSortHeader col="varAbr" label="Var 25→26" align="right" />
                       </tr>
                     </thead>
                     <tbody>
-                      {[computed.momSummaryAll, computed.momSummarySame].map((s) => (
+                      {[computed.momSummaryAll, computed.momSummarySame].map((s) => {
+                        // April MTD from computeMTD
+                        const isSame = s.name.includes('Mesmas');
+                        const mtdFilter = isSame ? '' : '__consolidated__';
+                        const mtd = computed.computeMTD.buildMTDChartData(mtdFilter);
+                        return (
                         <tr key={s.name} className="border-b border-slate-600 bg-slate-700/50">
                           <td className="px-3 py-2 text-white font-semibold whitespace-nowrap">{s.name}</td>
                           <td className="px-3 py-2 text-slate-200 text-right whitespace-nowrap font-semibold">{formatR$(s.monthData[1]?.fat26 || 0)}</td>
@@ -1280,9 +1448,16 @@ return {
                           <td className={`px-3 py-2 text-right font-bold whitespace-nowrap ${s.monthData[3]?.var2526 == null ? 'text-slate-600' : s.monthData[3]?.var2526 >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                             {s.monthData[3]?.var2526 != null ? `${s.monthData[3].var2526 >= 0 ? '+' : ''}${s.monthData[3].var2526.toFixed(1)}%` : '—'}
                           </td>
+                          <td className="px-3 py-2 text-white font-bold text-right whitespace-nowrap">{formatR$(mtd.fatAbr26)}</td>
+                          <td className={`px-3 py-2 text-right font-bold whitespace-nowrap ${!mtd.fatAbr25 ? 'text-slate-600' : ((mtd.fatAbr26/mtd.fatAbr25)-1)*100 >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {mtd.fatAbr25 ? `${((mtd.fatAbr26/mtd.fatAbr25)-1)*100 >= 0 ? '+' : ''}${(((mtd.fatAbr26/mtd.fatAbr25)-1)*100).toFixed(1)}%` : '—'}
+                          </td>
                         </tr>
-                      ))}
-                      {sortedMomStores.map((s, i) => (
+                        );
+                      })}
+                      {sortedMomStores.map((s, i) => {
+                        const mtdRow = computed.computeMTD.mtdStoreRows.find(r => r.name === s.name);
+                        return (
                         <tr key={s.name} className={`border-b border-slate-700/50 ${i % 2 === 0 ? 'bg-slate-800/30' : ''}`}>
                           <td className="px-3 py-2 text-white font-medium whitespace-nowrap">{s.name}</td>
                           <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{formatR$(s.monthData[1]?.fat26 || 0)}</td>
@@ -1297,9 +1472,13 @@ return {
                           <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${s.monthData[3]?.var2526 === null ? 'text-slate-600' : s.monthData[3]?.var2526 >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                             {s.monthData[3]?.var2526 !== null ? `${s.monthData[3].var2526 >= 0 ? '+' : ''}${s.monthData[3].var2526.toFixed(1)}%` : '—'}
                           </td>
-
+                          <td className="px-3 py-2 text-white font-medium text-right whitespace-nowrap">{mtdRow ? formatR$(mtdRow.fatAbr26) : '—'}</td>
+                          <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${!mtdRow?.varAbr ? 'text-slate-600' : mtdRow.varAbr >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {mtdRow?.varAbr != null ? `${mtdRow.varAbr >= 0 ? '+' : ''}${mtdRow.varAbr.toFixed(1)}%` : '—'}
+                          </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1422,7 +1601,7 @@ return {
 
               {/* Summary Metrics Table */}
               <Card>
-                <h3 className="text-lg font-semibold text-white mb-4">Média por Tipo de Dia — Jan a Mar</h3>
+                <h3 className="text-lg font-semibold text-white mb-4">Média por Tipo de Dia — Jan a Abr</h3>
                 <p className="text-slate-400 text-xs mb-4">
                   {!dailyStore ? 'Consolidado (todas as lojas)' : dailyStore}
                 </p>
@@ -1444,7 +1623,7 @@ return {
                       </tr>
                     </thead>
                     <tbody>
-                      {[1, 2, 3].map(month => {
+                      {[1, 2, 3, 4].map(month => {
                         const m25 = dailyMetrics2025[month] || { util: {avgFat:0,avgVendas:0,avgTicket:0,count:0}, fds: {avgFat:0,avgVendas:0,avgTicket:0,count:0}, feriado: {avgFat:0,avgVendas:0,avgTicket:0,count:0} };
                         const m26 = dailyMetrics2026[month] || { util: {avgFat:0,avgVendas:0,avgTicket:0,count:0}, fds: {avgFat:0,avgVendas:0,avgTicket:0,count:0}, feriado: {avgFat:0,avgVendas:0,avgTicket:0,count:0} };
                         const monthLabel = MESES[month - 1];
@@ -1490,7 +1669,7 @@ return {
 
               {/* Per-Store Daily Table */}
               <Card>
-                <h3 className="text-lg font-semibold text-white mb-4">Faturamento Médio Diário por Loja — Jan a Mar 2026</h3>
+                <h3 className="text-lg font-semibold text-white mb-4">Faturamento Médio Diário por Loja — Jan a Abr 2026</h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
