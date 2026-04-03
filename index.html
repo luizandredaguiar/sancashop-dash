@@ -2030,8 +2030,10 @@ return {
             const m25 = cd.metrics2025;
             const m26 = cd.metrics2026;
             
-            // Revenue from DAILY_DATA (more complete than cashless data)
-            const revData = computeRevenueFromDailyData(storeKey, storeKey === '__same__', DATA.lastUpdate);
+            // Revenue from computeYTD (same source as Anual tab for consistency)
+            const ytdFilter = storeKey === '__all__' ? '__consolidated__' : storeKey === '__same__' ? '' : storeKey;
+            const ytdData = computed.computeYTD.buildYTDChartData(ytdFilter);
+            const revData = { rev2025: ytdData.fat2025ytd, rev2026: ytdData.fat2026ytd };
             
             // Frequency chart
             const freqBuckets = ['1', '2-3', '4-5', '6-10', '11-20', '21-50', '51+'];
