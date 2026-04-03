@@ -299,6 +299,8 @@
       const hasProjection = false;
 
       const stores2026 = Object.keys(DATA.stores).filter(s => s !== 'CD Sancashop');
+      const stores2026Set = new Set(stores2026);
+      const allHistStoreNames = Object.keys(HISTORICAL).filter(s => s !== 'CD Sancashop');
 
       const storeRows = stores2026.map(name => {
         const d2026 = DATA.stores[name]?.['2026'] || {};
@@ -537,7 +539,6 @@
       })();
 
       // MoM consolidated: ALL stores that existed in EACH period (including closed ones)
-      const allHistStoreNames = Object.keys(HISTORICAL).filter(s => s !== 'CD Sancashop');
       const momChartConsolidated = momMonths.map(m => {
         const entry = { month: MESES[m - 1] };
         [2023, 2024, 2025].forEach(year => {
@@ -939,7 +940,6 @@
         });
 
         // Closed stores: in HISTORICAL with 2025 data but NOT in stores2026
-        const stores2026Set = new Set(stores2026);
         const closedStoreRows = Object.keys(HISTORICAL)
           .filter(name => name !== 'CD Sancashop' && !stores2026Set.has(name) && HISTORICAL[name]['2025'])
           .map(name => {
