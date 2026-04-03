@@ -1344,10 +1344,10 @@ return {
                     </thead>
                     <tbody>
                       {[computed.yoySummaryAll, computed.yoySummarySame].map((s) => {
-                        const ytdRow = computed.computeYTD.ytdStoreRows.filter(r => {
-                          if (s.name.includes('todas')) return true;
-                          return computed.allYearsStores.find(a => a.name === r.name);
-                        });
+                        const isAll = s.name.includes('todas');
+                        const ytdRow = isAll
+                          ? computed.computeYTD.allStoreRows  // includes closed stores
+                          : computed.computeYTD.ytdStoreRows.filter(r => computed.allYearsStores.find(a => a.name === r.name));
                         const ytd25 = ytdRow.reduce((sum, r) => sum + (r.fat2025ytd || 0), 0);
                         const ytd26 = ytdRow.reduce((sum, r) => sum + r.fat2026ytd, 0);
                         const varYTD = ytd25 > 0 ? ((ytd26 / ytd25) - 1) * 100 : null;
