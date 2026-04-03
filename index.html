@@ -375,12 +375,10 @@
         return { ano: String(year), faturamento: total };
       });
 
-      // Consolidated chart: ALL stores that existed in EACH period (including closed ones)
+      // Consolidated chart: ALL stores that existed in EACH period (including closed ones, excl CD)
       const consolidatedAllChart = [2023, 2024, 2025].map(year => {
         let total = 0;
-        // Sum ALL months from HISTORICAL for ALL stores that had data in this year
-        const allHistStores = Object.keys(HISTORICAL);
-        allHistStores.forEach(name => {
+        allHistStoreNames.forEach(name => {
           const hYear = HISTORICAL[name]?.[String(year)];
           if (!hYear || Object.keys(hYear).length === 0) return;
           Object.values(hYear).forEach(md => { total += md.valor || 0; });
@@ -539,7 +537,7 @@
       })();
 
       // MoM consolidated: ALL stores that existed in EACH period (including closed ones)
-      const allHistStoreNames = Object.keys(HISTORICAL);
+      const allHistStoreNames = Object.keys(HISTORICAL).filter(s => s !== 'CD Sancashop');
       const momChartConsolidated = momMonths.map(m => {
         const entry = { month: MESES[m - 1] };
         [2023, 2024, 2025].forEach(year => {
@@ -910,54 +908,63 @@
         // 2026 YTD: months 1-3 from DATA + month 4 from DATA (actual Apr 1 data)
         // 2025 YTD: months 1-3 from HISTORICAL + April 1 2025 estimated (full April / 30)
         const ytdMonthsFull = [1, 2, 3]; // Full months
-        const apr2026HasData = Object.keys(DATA.stores).some(s => DATA.stores[s]?.['2026']?.[4]);
 
-        // Per-store YTD
+        // Helper: compute 2025 YTD for a store from HISTORICAL
+        const compute2025YTD = (name) => {
+          const hStore = HISTORICAL[name];
+          if (!hStore || !hStore['2025']) return null;
+          const h25 = hStore['2025'];
+          let hasAll = true, fat = 0;
+          ytdMonthsFull.forEach(m => {
+            if (h25[String(m)]) fat += h25[String(m)].valor;
+            else hasAll = false;
+          });
+          if (!hasAll) return null;
+          if (h25['4']) fat += h25['4'].valor / 30; // April 1 estimate
+          return fat;
+        };
+
+        // Per-store YTD (active stores in 2026)
         const ytdStoreRows = stores2026.map(name => {
           const d2026 = DATA.stores[name]?.['2026'] || {};
-          const hStore = HISTORICAL[name];
 
           // 2026 YTD
           let fat2026ytd = 0;
           ytdMonthsFull.forEach(m => { if (d2026[m]) fat2026ytd += d2026[m].valor; });
           if (d2026[4]) fat2026ytd += d2026[4].valor; // April partial (actual data)
 
-          // 2025 YTD
-          let fat2025ytd = null;
-          if (hStore && hStore['2025']) {
-            const h25 = hStore['2025'];
-            let hasAll = true;
-            let fat = 0;
-            ytdMonthsFull.forEach(m => {
-              if (h25[String(m)]) fat += h25[String(m)].valor;
-              else hasAll = false;
-            });
-            if (hasAll) {
-              // Add April 1 2025 estimate: full April 2025 / 30
-              if (h25['4']) {
-                fat += h25['4'].valor / 30;
-              }
-              fat2025ytd = fat;
-            }
-          }
-
+          const fat2025ytd = compute2025YTD(name);
           const varYTD = (fat2025ytd && fat2026ytd) ? ((fat2026ytd / fat2025ytd) - 1) * 100 : null;
           return { name, fat2026ytd, fat2025ytd, varYTD };
         });
+
+        // Closed stores: in HISTORICAL with 2025 data but NOT in stores2026
+        const stores2026Set = new Set(stores2026);
+        const closedStoreRows = Object.keys(HISTORICAL)
+          .filter(name => name !== 'CD Sancashop' && !stores2026Set.has(name) && HISTORICAL[name]['2025'])
+          .map(name => {
+            const fat2025ytd = compute2025YTD(name);
+            return { name, fat2026ytd: 0, fat2025ytd, varYTD: null, isClosed: true };
+          })
+          .filter(r => r.fat2025ytd > 0);
+
+        // All rows (active + closed) for consolidated view
+        const allStoreRows = [...ytdStoreRows, ...closedStoreRows];
 
         // Consolidated chart data for YTD
         const buildYTDChartData = (storeFilter) => {
           let relevantStores;
           if (storeFilter === '__consolidated__') {
-            relevantStores = ytdStoreRows;
+            // ALL stores that faturaram in any period (active + closed)
+            relevantStores = allStoreRows;
           } else if (!storeFilter) {
-            // Same stores present in all 4 years
+            // Same stores present in all 4 years (only active)
             relevantStores = ytdStoreRows.filter(s => {
               const row = allYearsStores.find(r => r.name === s.name);
               return !!row;
             });
           } else {
-            relevantStores = ytdStoreRows.filter(s => s.name === storeFilter);
+            relevantStores = allStoreRows.filter(s => s.name === storeFilter);
           }
 
           const fat2025ytd = relevantStores.reduce((sum, s) => sum + (s.fat2025ytd || 0), 0);
@@ -965,7 +972,7 @@
           return { fat2025ytd, fat2026ytd };
         };
 
-        return { ytdStoreRows, buildYTDChartData };
+        return { ytdStoreRows, closedStoreRows, allStoreRows, buildYTDChartData };
       })();
 
       // ============================================================================
@@ -987,10 +994,19 @@
           return { name, fatAbr26, fatAbr25, varAbr };
         });
 
+        // Closed stores with April 2025 data (for consolidated view)
+        const closedMtdRows = allHistStoreNames
+          .filter(name => !stores2026Set.has(name) && HISTORICAL[name]?.['2025']?.['4'])
+          .map(name => {
+            const fatAbr25 = HISTORICAL[name]['2025']['4'].valor / 30;
+            return { name, fatAbr26: 0, fatAbr25, varAbr: null, isClosed: true };
+          });
+        const allMtdRows = [...mtdStoreRows, ...closedMtdRows];
+
         const buildMTDChartData = (storeFilter) => {
           let relevantStores;
           if (storeFilter === '__consolidated__') {
-            relevantStores = mtdStoreRows;
+            relevantStores = allMtdRows; // includes closed stores
           } else if (!storeFilter) {
             relevantStores = mtdStoreRows.filter(s => {
               return allYearsStores.find(r => r.name === s.name);
@@ -2030,10 +2046,8 @@ return {
             const m25 = cd.metrics2025;
             const m26 = cd.metrics2026;
             
-            // Revenue from computeYTD (same source as Anual tab for consistency)
-            const ytdFilter = storeKey === '__all__' ? '__consolidated__' : storeKey === '__same__' ? '' : storeKey;
-            const ytdData = computed.computeYTD.buildYTDChartData(ytdFilter);
-            const revData = { rev2025: ytdData.fat2025ytd, rev2026: ytdData.fat2026ytd };
+            // Revenue from DAILY_DATA (includes all stores that faturaram, including closed ones)
+            const revData = computeRevenueFromDailyData(storeKey, storeKey === '__same__', DATA.lastUpdate);
             
             // Frequency chart
             const freqBuckets = ['1', '2-3', '4-5', '6-10', '11-20', '21-50', '51+'];
