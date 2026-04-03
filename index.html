@@ -261,39 +261,8 @@
       // Days 1-7: 80% proportional + 20% linear
       // Days 8-15: 50/50
       // Days 16+: 20% proportional + 80% linear
-      const computeBlendFactor = (storeName, month, fatPartial, vendasPartial) => {
-        if (!partialMonth || month !== partialMonth) return { fatFactor: 1, vendasFactor: 1 };
-        const linFactor = daysInPartial / daysElapsed;
-        // Try to get proportional factor from daily data
-        if (DAILY_DATA && DAILY_DATA.days) {
-          const prevYear = 2025;
-          const pad = n => String(n).padStart(2, '0');
-          let fatPrev = 0, fatPrevTotal = 0, vendasPrev = 0, vendasPrevTotal = 0;
-          for (let d = 1; d <= daysInPartial; d++) {
-            const dateStr = prevYear + '-' + pad(month) + '-' + pad(d);
-            const dayData = DAILY_DATA.days[dateStr];
-            if (dayData && dayData[storeName]) {
-              if (d <= daysElapsed) { fatPrev += dayData[storeName].fat; vendasPrev += dayData[storeName].vendas; }
-              fatPrevTotal += dayData[storeName].fat;
-              vendasPrevTotal += dayData[storeName].vendas;
-            }
-          }
-          if (fatPrev > 0 && fatPrevTotal > 0) {
-            const propFatFactor = fatPrevTotal / fatPrev;
-            const propVendasFactor = vendasPrev > 0 ? vendasPrevTotal / vendasPrev : linFactor;
-            // Blend weights based on days elapsed
-            const propWeight = daysElapsed <= 7 ? 0.8 : daysElapsed <= 15 ? 0.5 : 0.2;
-            const linWeight = 1 - propWeight;
-            return {
-              fatFactor: propWeight * propFatFactor + linWeight * linFactor,
-              vendasFactor: propWeight * propVendasFactor + linWeight * linFactor,
-            };
-          }
-        }
-        return { fatFactor: linFactor, vendasFactor: linFactor };
-      };
-      // Legacy factor for places that don't use per-store blend
-      const projectionFactor = linearFactor;
+      // No projections — all data is actual values from VMPay
+      const computeBlendFactor = () => ({ fatFactor: 1, vendasFactor: 1 });
 
       const periodLabel = monthRange.length === 1 ? MESES[monthRange[0]-1] : MESES[monthRange[0]-1] + '-' + MESES[monthRange[monthRange.length-1]-1];
       const hasProjection = false;
@@ -911,61 +880,40 @@
         const ytdMonthsFull = [1, 2, 3]; // Full months
 
         // Helper: compute 2025 YTD for a store from HISTORICAL
-        // Compute 2025 partial-month revenue from DAILY_DATA (same days as 2026)
+        // Compute YTD per store from DAILY_DATA (single source of truth)
         const DD = (window.DAILY_DATA?.days || window.DAILY_DATA || {});
         const lastUpdate = DATA.lastUpdate; // "YYYY-MM-DD"
-        const partialMonthNum = parseInt(lastUpdate.substring(5, 7));
-        const partialDayMax = parseInt(lastUpdate.substring(8, 10));
-        const partialMonthStr = String(partialMonthNum).padStart(2, '0');
+        const cutoffMMDD = lastUpdate.substring(5); // "MM-DD"
 
-        // Pre-compute 2025 partial month per store from DAILY_DATA
-        const partial2025 = {};
+        // Aggregate per store from DAILY_DATA
+        const ytdAgg = {}; // { storeName: { fat25, fat26, vendas25, vendas26 } }
         Object.entries(DD).forEach(([date, stores]) => {
-          if (!date.startsWith('2025-' + partialMonthStr)) return;
-          const dd = parseInt(date.substring(8, 10));
-          if (dd > partialDayMax) return;
+          const mmdd = date.substring(5);
+          const is2026 = date.startsWith('2026') && date <= lastUpdate;
+          const is2025 = date.startsWith('2025') && mmdd <= cutoffMMDD;
+          if (!is2025 && !is2026) return;
           Object.entries(stores).forEach(([store, vals]) => {
-            partial2025[store] = (partial2025[store] || 0) + (vals.fat || 0);
+            if (!ytdAgg[store]) ytdAgg[store] = { fat25: 0, fat26: 0, vendas25: 0, vendas26: 0 };
+            if (is2026) { ytdAgg[store].fat26 += (vals.fat || 0); ytdAgg[store].vendas26 += (vals.vendas || 0); }
+            if (is2025) { ytdAgg[store].fat25 += (vals.fat || 0); ytdAgg[store].vendas25 += (vals.vendas || 0); }
           });
         });
 
-        const compute2025YTD = (name) => {
-          const hStore = HISTORICAL[name];
-          if (!hStore || !hStore['2025']) return null;
-          const h25 = hStore['2025'];
-          let hasAll = true, fat = 0;
-          ytdMonthsFull.forEach(m => {
-            if (h25[String(m)]) fat += h25[String(m)].valor;
-            else hasAll = false;
-          });
-          if (!hasAll) return null;
-          // Add partial month from DAILY_DATA (actual data, not estimate)
-          if (partial2025[name]) fat += partial2025[name];
-          return fat;
-        };
-
         // Per-store YTD (active stores in 2026)
         const ytdStoreRows = stores2026.map(name => {
-          const d2026 = DATA.stores[name]?.['2026'] || {};
-
-          // 2026 YTD
-          let fat2026ytd = 0;
-          ytdMonthsFull.forEach(m => { if (d2026[m]) fat2026ytd += d2026[m].valor; });
-          if (d2026[4]) fat2026ytd += d2026[4].valor; // April partial (actual data)
-
-          const fat2025ytd = compute2025YTD(name);
+          const d = ytdAgg[name] || { fat25: 0, fat26: 0 };
+          const fat2026ytd = d.fat26;
+          const fat2025ytd = d.fat25 > 0 ? d.fat25 : null;
           const varYTD = (fat2025ytd && fat2026ytd) ? ((fat2026ytd / fat2025ytd) - 1) * 100 : null;
           return { name, fat2026ytd, fat2025ytd, varYTD };
         });
 
-        // Closed stores: in HISTORICAL with 2025 data but NOT in stores2026
-        const closedStoreRows = Object.keys(HISTORICAL)
-          .filter(name => name !== 'CD Sancashop' && !stores2026Set.has(name) && HISTORICAL[name]['2025'])
+        // Closed stores: stores with 2025 data in DAILY_DATA but NOT in stores2026
+        const closedStoreRows = Object.keys(ytdAgg)
+          .filter(name => !stores2026Set.has(name) && ytdAgg[name].fat25 > 0)
           .map(name => {
-            const fat2025ytd = compute2025YTD(name);
-            return { name, fat2026ytd: 0, fat2025ytd, varYTD: null, isClosed: true };
-          })
-          .filter(r => r.fat2025ytd > 0);
+            return { name, fat2026ytd: 0, fat2025ytd: ytdAgg[name].fat25, varYTD: null, isClosed: true };
+          });
 
         // All rows (active + closed) for consolidated view
         const allStoreRows = [...ytdStoreRows, ...closedStoreRows];
@@ -991,7 +939,7 @@
           return { fat2025ytd, fat2026ytd };
         };
 
-        return { ytdStoreRows, closedStoreRows, allStoreRows, buildYTDChartData };
+        return { ytdStoreRows, closedStoreRows, allStoreRows, buildYTDChartData, ytdAgg };
       })();
 
       // ============================================================================
@@ -1074,22 +1022,19 @@
         row.varAbr = mtd ? mtd.varAbr : null;
       });
 
-      // Augment storeRows (Anual table) with partial month data from DAILY_DATA
-      // This makes vendas26/ticket26 include YTD partial month
-      if (computeMTD.isPartialMonth && computeMTD.mtdPerStore) {
+      // Override storeRows fat/vendas/ticket with DAILY_DATA YTD (single source of truth)
+      // computeYTD.ytdAgg has per-store totals from DAILY_DATA
+      const ytdAggData = computeYTD.ytdAgg;
+      if (ytdAggData) {
         storeRows.forEach(row => {
-          const mtdData = computeMTD.mtdPerStore[row.name];
-          if (mtdData) {
-            row.fat2026 += mtdData.fat26;
-            row.vendas2026 += mtdData.vendas26;
-            row.ticket2026 = row.vendas2026 > 0 ? row.fat2026 / row.vendas2026 : 0;
-            // Also add 2025 partial month for fair comparison
-            if (mtdData.fat25 > 0) {
-              row.fat2025 = (row.fat2025 || 0) + mtdData.fat25;
-              row.vendas2025 = (row.vendas2025 || 0) + mtdData.vendas25;
-              row.ticket2025 = row.vendas2025 > 0 ? row.fat2025 / row.vendas2025 : null;
-            }
-            // Recompute variances
+          const d = ytdAggData[row.name];
+          if (d) {
+            row.fat2026 = d.fat26;
+            row.vendas2026 = d.vendas26;
+            row.ticket2026 = d.vendas26 > 0 ? d.fat26 / d.vendas26 : 0;
+            row.fat2025 = d.fat25 > 0 ? d.fat25 : null;
+            row.vendas2025 = d.vendas25 > 0 ? d.vendas25 : null;
+            row.ticket2025 = d.vendas25 > 0 ? d.fat25 / d.vendas25 : null;
             row.varYoY = (row.fat2025 && row.fat2026) ? ((row.fat2026 / row.fat2025) - 1) * 100 : null;
             row.varTicketYoY = (row.ticket2025 && row.ticket2026) ? ((row.ticket2026 / row.ticket2025) - 1) * 100 : null;
             row.varVendasYoY = (row.vendas2025 && row.vendas2026) ? ((row.vendas2026 / row.vendas2025) - 1) * 100 : null;
