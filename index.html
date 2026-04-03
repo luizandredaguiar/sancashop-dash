@@ -2002,8 +2002,11 @@ return {
               ma2025.forEach(d => { dayMapIpt25[d.day] = d.ma; });
               const dayMapIpt26 = {};
               ma2026.forEach(d => { dayMapIpt26[d.day] = d.ma; });
-              const allIptDays = new Set([...ma2025.map(d=>d.day), ...ma2026.map(d=>d.day)]);
-              itemsTxChart = [...allIptDays].sort((a,b)=>a-b).map(day => ({
+              // Build continuous day range (1 to max day) to avoid gaps in X axis
+              const maxIptDay = Math.max(...[...ma2025.map(d=>d.day), ...ma2026.map(d=>d.day)]);
+              const allIptDays = [];
+              for (let day = 1; day <= maxIptDay; day++) allIptDays.push(day);
+              itemsTxChart = allIptDays.map(day => ({
                 day,
                 ipt2025: dayMapIpt25[day] ?? null,
                 ipt2026: dayMapIpt26[day] ?? null,
