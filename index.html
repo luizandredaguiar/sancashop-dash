@@ -85,7 +85,6 @@
   const parseLocalDate = (s) => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
   const dayOfYear = (dateStr) => { const dt = parseLocalDate(dateStr); return Math.ceil((dt - new Date(dt.getFullYear(), 0, 1)) / 86400000) + 1; };
   const formatK = (v) => v >= 1000000 ? `R$ ${(v/1000000).toFixed(3).replace('.', ',')}M` : v >= 1000 ? `R$ ${(v/1000).toFixed(0)}k` : formatR$(v);
-  const formatM = (v) => `R$ ${(v/1000000).toFixed(2)}M`;
 
   // ============================================================================
   // COMPONENTS
@@ -132,13 +131,16 @@
   // MAIN APP
   // ============================================================================
   
+    // Shared set: created once, reused by trends/revenue/daily computations
+    const _sameStoresSet = new Set(window.STORE_ANALYTICS?.sameStores || []);
+
     // ========== Trends computed from DAILY_DATA (auto-updated daily) ==========
     function computeTrendsFromDailyData(storeFilter, isSameFilter) {
       const raw = window.DAILY_DATA;
       if (!raw) return { daily2025: [], daily2026: [], labels: [] };
       const DD = raw.days || raw;
       
-      const sameSet = isSameFilter ? new Set(window.STORE_ANALYTICS?.sameStores || []) : null;
+      const sameSet = isSameFilter ? _sameStoresSet : null;
       
       // Collect all dates and aggregate
       const dayAgg = {}; // { "YYYY-MM-DD": { fat, vendas } }
@@ -192,7 +194,7 @@
       if (!raw || !lastUpdate) return { rev2025: 0, rev2026: 0 };
       const DD = raw.days || raw;
       
-      const sameSet = isSameFilter ? new Set(window.STORE_ANALYTICS?.sameStores || []) : null;
+      const sameSet = isSameFilter ? _sameStoresSet : null;
       const cutoffMMDD = lastUpdate.substring(5); // "MM-DD"
       
       let rev2025 = 0, rev2026 = 0;
@@ -243,30 +245,15 @@
       const months2026 = Object.keys(DATA.stores[Object.keys(DATA.stores)[0]]?.['2026'] || {}).map(Number);
       const maxMonth2026 = Math.max(...months2026);
 
+      // Determine full months (partial month handled via DAILY_DATA in YTD/MTD)
       const DAYS_IN_MONTH = { 1: 31, 2: 28, 3: 31, 4: 30, 5: 31, 6: 30, 7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31 };
-
-      // Month is partial only if last update is in the same month AND not the last day
       const isPartial = (lastUpdateMonth === maxMonth2026) && (lastUpdateDay < DAYS_IN_MONTH[maxMonth2026]);
       const partialMonth = isPartial ? maxMonth2026 : null;
-
-      // monthRange: only FULL months (partial month added to YTD via DAILY_DATA)
       const monthRange = [];
       const lastFullMonth = partialMonth ? maxMonth2026 - 1 : maxMonth2026;
       for (let m = 1; m <= lastFullMonth; m++) monthRange.push(m);
-      const daysElapsed = partialMonth ? lastUpdateDay : null;
-      const daysInPartial = partialMonth ? DAYS_IN_MONTH[partialMonth] : null;
-      const linearFactor = partialMonth ? (daysInPartial / daysElapsed) : 1;
-
-      // Blend projection: uses same-month-last-year proportion + linear, weighted by day of month
-      // Days 1-7: 80% proportional + 20% linear
-      // Days 8-15: 50/50
-      // Days 16+: 20% proportional + 80% linear
-      // No projections — all data is actual values from VMPay
-      const computeBlendFactor = () => ({ fatFactor: 1, vendasFactor: 1 });
 
       const periodLabel = monthRange.length === 1 ? MESES[monthRange[0]-1] : MESES[monthRange[0]-1] + '-' + MESES[monthRange[monthRange.length-1]-1];
-      const hasProjection = false;
-
       const stores2026 = Object.keys(DATA.stores).filter(s => s !== 'CD Sancashop');
       const stores2026Set = new Set(stores2026);
       const allHistStoreNames = Object.keys(HISTORICAL).filter(s => s !== 'CD Sancashop');
@@ -276,14 +263,8 @@
         let fat2026 = 0, vendas2026 = 0;
         monthRange.forEach(m => {
           if (d2026[m]) {
-            if (m === partialMonth) {
-              const blend = computeBlendFactor(name, m, d2026[m].valor, d2026[m].vendas);
-              fat2026 += d2026[m].valor * blend.fatFactor;
-              vendas2026 += Math.round(d2026[m].vendas * blend.vendasFactor);
-            } else {
-              fat2026 += d2026[m].valor;
-              vendas2026 += d2026[m].vendas;
-            }
+            fat2026 += d2026[m].valor;
+            vendas2026 += d2026[m].vendas;
           }
         });
         const ticket2026 = vendas2026 > 0 ? fat2026 / vendas2026 : 0;
@@ -374,16 +355,9 @@
       // Sorted store names for dropdown
       const storeNames2026 = stores2026.slice().sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
-      // Fat YTD for header
-      const fatYTD = Object.keys(DATA.stores).filter(s => s !== 'CD Sancashop').reduce((sum, name) => {
-        const yearData = DATA.stores[name]?.['2026'] || {};
-        return sum + Object.values(yearData).reduce((s, d) => s + d.valor, 0);
-      }, 0);
-
       // ============================================================================
       // MOM DATA
       // ============================================================================
-      const DAYS_IN_MONTH_MAP = DAYS_IN_MONTH;
       const momMonths = monthRange; // same months as YoY (1,2,3)
 
       const momStoreRows = stores2026.map(name => {
@@ -397,13 +371,8 @@
           const raw2026 = d2026[m];
           if (!raw2026) { monthData[m] = { fat26: 0, fat25: null, fat24: null, fat23: null, var2526: null }; return; }
 
-          let fat26 = raw2026.valor;
-          let vendas26 = raw2026.vendas;
-          if (m === partialMonth) {
-            const blend = computeBlendFactor(name, m, raw2026.valor, raw2026.vendas);
-            fat26 = raw2026.valor * blend.fatFactor;
-            vendas26 = Math.round(raw2026.vendas * blend.vendasFactor);
-          }
+          const fat26 = raw2026.valor;
+          const vendas26 = raw2026.vendas;
 
           totalFat26 += fat26;
           totalVendas26 += vendas26;
@@ -495,13 +464,7 @@
           });
           // 2026
           entry['2026'] = storesInAllYears.reduce((sum, name) => {
-            const raw = DATA.stores[name]?.['2026']?.[m];
-            if (!raw) return sum;
-            if (m === partialMonth) {
-              const blend = computeBlendFactor(name, m, raw.valor, raw.vendas);
-              return sum + raw.valor * blend.fatFactor;
-            }
-            return sum + raw.valor;
+            return sum + (DATA.stores[name]?.['2026']?.[m]?.valor || 0);
           }, 0);
           return entry;
         });
@@ -516,13 +479,7 @@
           }, 0);
         });
         entry['2026'] = stores2026.reduce((sum, name) => {
-          const raw = DATA.stores[name]?.['2026']?.[m];
-          if (!raw) return sum;
-          if (m === partialMonth) {
-            const blend = computeBlendFactor(name, m, raw.valor, raw.vendas);
-            return sum + raw.valor * blend.fatFactor;
-          }
-          return sum + raw.valor;
+          return sum + (DATA.stores[name]?.['2026']?.[m]?.valor || 0);
         }, 0);
         return entry;
       });
@@ -535,13 +492,7 @@
           [2023, 2024, 2025].forEach(year => {
             entry[String(year)] = hStore?.[String(year)]?.[String(m)]?.valor || 0;
           });
-          const raw = DATA.stores[storeName]?.['2026']?.[m];
-          if (raw && m === partialMonth) {
-            const blend = computeBlendFactor(storeName, m, raw.valor, raw.vendas);
-            entry['2026'] = raw.valor * blend.fatFactor;
-          } else {
-            entry['2026'] = raw ? raw.valor : 0;
-          }
+          entry['2026'] = DATA.stores[storeName]?.['2026']?.[m]?.valor || 0;
           return entry;
         });
       };
@@ -567,13 +518,7 @@
         return has25 && has26;
       });
       const momFatMar26 = momComparableMarStores.reduce((sum, name) => {
-        const raw = DATA.stores[name]?.['2026']?.[lastMonth];
-        if (!raw) return sum;
-        if (lastMonth === partialMonth) {
-          const blend = computeBlendFactor(name, lastMonth, raw.valor, raw.vendas);
-          return sum + raw.valor * blend.fatFactor;
-        }
-        return sum + raw.valor;
+        return sum + (DATA.stores[name]?.['2026']?.[lastMonth]?.valor || 0);
       }, 0);
       const momFatMar25 = momComparableMarStores.reduce((sum, name) => {
         return sum + (HISTORICAL[name]?.['2025']?.[String(lastMonth)]?.valor || 0);
@@ -654,7 +599,7 @@
             
             let fat25 = null, fat26 = null;
             const isSameFilter = storeName === '__same__';
-            const sameSet = isSameFilter ? new Set(window.STORE_ANALYTICS?.sameStores || []) : null;
+            const sameSet = isSameFilter ? _sameStoresSet : null;
             if (!storeName || storeName === '' || isSameFilter) {
               // Consolidated - sum all stores (or same stores only)
               if (days[d25]) {
@@ -720,7 +665,7 @@
             
             let fat = 0, vendas = 0;
             const isSameFilter = storeName === '__same__';
-            const sameSet = isSameFilter ? new Set(window.STORE_ANALYTICS?.sameStores || []) : null;
+            const sameSet = isSameFilter ? _sameStoresSet : null;
             if (!storeName || storeName === '' || isSameFilter) {
               if (days[dateStr]) {
                 Object.entries(days[dateStr]).forEach(([s, v]) => {
@@ -874,32 +819,53 @@
       // ============================================================================
       // YTD DATA (Jan 1 to last available date in April)
       // ============================================================================
-      const computeYTD = (() => {
-        // 2026 YTD: months 1-3 from DATA + month 4 from DATA (actual Apr 1 data)
-        // 2025 YTD: months 1-3 from HISTORICAL + April 1 2025 estimated (full April / 30)
-        const ytdMonthsFull = [1, 2, 3]; // Full months
-
-        // Helper: compute 2025 YTD for a store from HISTORICAL
-        // Compute YTD per store from DAILY_DATA (single source of truth)
+      // ============================================================================
+      // SINGLE-PASS DAILY_DATA AGGREGATION (YTD + MTD)
+      // ============================================================================
+      const [computeYTD, computeMTD] = (() => {
         const DD = (window.DAILY_DATA?.days || window.DAILY_DATA || {});
         const lastUpdate = DATA.lastUpdate; // "YYYY-MM-DD"
         const cutoffMMDD = lastUpdate.substring(5); // "MM-DD"
+        const mtdMonth = parseInt(lastUpdate.substring(5, 7));
+        const mtdDayMax = parseInt(lastUpdate.substring(8, 10));
+        const mtdMonthStr = String(mtdMonth).padStart(2, '0');
+        const mtdMonthName = MESES[mtdMonth - 1] || '';
+        const isPartialMonth = mtdMonth > (monthRange[monthRange.length - 1] || 0);
 
-        // Aggregate per store from DAILY_DATA
-        const ytdAgg = {}; // { storeName: { fat25, fat26, vendas25, vendas26 } }
+        // Single pass: aggregate YTD + MTD per store simultaneously
+        const ytdAgg = {}; // { store: { fat25, fat26, vendas25, vendas26 } }
+        const mtdPerStore = {}; // { store: { fat26, fat25, vendas26, vendas25 } }
+
         Object.entries(DD).forEach(([date, stores]) => {
           const mmdd = date.substring(5);
-          const is2026 = date.startsWith('2026') && date <= lastUpdate;
-          const is2025 = date.startsWith('2025') && mmdd <= cutoffMMDD;
+          const mm = date.substring(5, 7);
+          const dd = parseInt(date.substring(8, 10));
+          const year = date.substring(0, 4);
+          const is2026 = year === '2026' && date <= lastUpdate;
+          const is2025 = year === '2025' && mmdd <= cutoffMMDD;
           if (!is2025 && !is2026) return;
+
+          const isMtdMonth = mm === mtdMonthStr && dd <= mtdDayMax;
+
           Object.entries(stores).forEach(([store, vals]) => {
+            const fat = vals.fat || 0;
+            const vendas = vals.vendas || 0;
+
+            // YTD aggregation
             if (!ytdAgg[store]) ytdAgg[store] = { fat25: 0, fat26: 0, vendas25: 0, vendas26: 0 };
-            if (is2026) { ytdAgg[store].fat26 += (vals.fat || 0); ytdAgg[store].vendas26 += (vals.vendas || 0); }
-            if (is2025) { ytdAgg[store].fat25 += (vals.fat || 0); ytdAgg[store].vendas25 += (vals.vendas || 0); }
+            if (is2026) { ytdAgg[store].fat26 += fat; ytdAgg[store].vendas26 += vendas; }
+            if (is2025) { ytdAgg[store].fat25 += fat; ytdAgg[store].vendas25 += vendas; }
+
+            // MTD aggregation (subset of YTD — only the partial month)
+            if (isMtdMonth) {
+              if (!mtdPerStore[store]) mtdPerStore[store] = { fat26: 0, fat25: 0, vendas26: 0, vendas25: 0 };
+              if (is2026) { mtdPerStore[store].fat26 += fat; mtdPerStore[store].vendas26 += vendas; }
+              if (is2025) { mtdPerStore[store].fat25 += fat; mtdPerStore[store].vendas25 += vendas; }
+            }
           });
         });
 
-        // Per-store YTD (active stores in 2026)
+        // --- YTD ---
         const ytdStoreRows = stores2026.map(name => {
           const d = ytdAgg[name] || { fat25: 0, fat26: 0 };
           const fat2026ytd = d.fat26;
@@ -908,76 +874,27 @@
           return { name, fat2026ytd, fat2025ytd, varYTD };
         });
 
-        // Closed stores: stores with 2025 data in DAILY_DATA but NOT in stores2026
         const closedStoreRows = Object.keys(ytdAgg)
           .filter(name => !stores2026Set.has(name) && ytdAgg[name].fat25 > 0)
-          .map(name => {
-            return { name, fat2026ytd: 0, fat2025ytd: ytdAgg[name].fat25, varYTD: null, isClosed: true };
-          });
+          .map(name => ({ name, fat2026ytd: 0, fat2025ytd: ytdAgg[name].fat25, varYTD: null, isClosed: true }));
 
-        // All rows (active + closed) for consolidated view
         const allStoreRows = [...ytdStoreRows, ...closedStoreRows];
 
-        // Consolidated chart data for YTD
         const buildYTDChartData = (storeFilter) => {
           let relevantStores;
-          if (storeFilter === '__consolidated__') {
-            // ALL stores that faturaram in any period (active + closed)
-            relevantStores = allStoreRows;
-          } else if (!storeFilter) {
-            // Same stores present in all 4 years (only active)
-            relevantStores = ytdStoreRows.filter(s => {
-              const row = allYearsStores.find(r => r.name === s.name);
-              return !!row;
-            });
-          } else {
-            relevantStores = allStoreRows.filter(s => s.name === storeFilter);
-          }
+          if (storeFilter === '__consolidated__') relevantStores = allStoreRows;
+          else if (!storeFilter) relevantStores = ytdStoreRows.filter(s => allYearsStores.find(r => r.name === s.name));
+          else relevantStores = allStoreRows.filter(s => s.name === storeFilter);
 
-          const fat2025ytd = relevantStores.reduce((sum, s) => sum + (s.fat2025ytd || 0), 0);
-          const fat2026ytd = relevantStores.reduce((sum, s) => sum + s.fat2026ytd, 0);
-          return { fat2025ytd, fat2026ytd };
+          return {
+            fat2025ytd: relevantStores.reduce((sum, s) => sum + (s.fat2025ytd || 0), 0),
+            fat2026ytd: relevantStores.reduce((sum, s) => sum + s.fat2026ytd, 0),
+          };
         };
 
-        return { ytdStoreRows, closedStoreRows, allStoreRows, buildYTDChartData, ytdAgg };
-      })();
+        const ytdResult = { ytdStoreRows, closedStoreRows, allStoreRows, buildYTDChartData, ytdAgg };
 
-      // ============================================================================
-      // MOM MTD DATA (April month-to-date)
-      // ============================================================================
-      const computeMTD = (() => {
-        // MTD: current partial month computed from DAILY_DATA for BOTH years
-        // Determine the current partial month from DATA (last month with data)
-        const DD = (window.DAILY_DATA?.days || window.DAILY_DATA || {});
-        const lastUpdate = DATA.lastUpdate; // "YYYY-MM-DD"
-        const mtdMonth = parseInt(lastUpdate.substring(5, 7));
-        const mtdDayMax = parseInt(lastUpdate.substring(8, 10));
-        const mtdMonthStr = String(mtdMonth).padStart(2, '0');
-        const MESES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-        const mtdMonthName = MESES_SHORT[mtdMonth - 1] || '';
-
-        // Only compute MTD if we're past the full months already shown
-        const isPartialMonth = mtdMonth > (monthRange[monthRange.length - 1] || 0);
-
-        // Sum DAILY_DATA for the MTD month, per store, for both years
-        const mtdPerStore = {}; // { storeName: { fat26, fat25, vendas26, vendas25 } }
-        Object.entries(DD).forEach(([date, stores]) => {
-          const mm = date.substring(5, 7);
-          const dd = parseInt(date.substring(8, 10));
-          if (mm !== mtdMonthStr || dd > mtdDayMax) return;
-          const year = date.substring(0, 4);
-          Object.entries(stores).forEach(([store, vals]) => {
-            if (!mtdPerStore[store]) mtdPerStore[store] = { fat26: 0, fat25: 0, vendas26: 0, vendas25: 0 };
-            if (year === '2026') {
-              mtdPerStore[store].fat26 += (vals.fat || 0);
-              mtdPerStore[store].vendas26 += (vals.vendas || 0);
-            } else if (year === '2025') {
-              mtdPerStore[store].fat25 += (vals.fat || 0);
-              mtdPerStore[store].vendas25 += (vals.vendas || 0);
-            }
-          });
-        });
-
+        // --- MTD ---
         const mtdStoreRows = stores2026.map(name => {
           const d = mtdPerStore[name] || { fat26: 0, fat25: 0 };
           const fatAbr26 = d.fat26;
@@ -986,33 +903,26 @@
           return { name, fatAbr26, fatAbr25, varAbr };
         });
 
-        // Closed stores with MTD month 2025 data (for consolidated view)
         const closedMtdRows = allHistStoreNames
           .filter(name => !stores2026Set.has(name) && mtdPerStore[name]?.fat25 > 0)
-          .map(name => {
-            const fatAbr25 = mtdPerStore[name].fat25;
-            return { name, fatAbr26: 0, fatAbr25, varAbr: null, isClosed: true };
-          });
+          .map(name => ({ name, fatAbr26: 0, fatAbr25: mtdPerStore[name].fat25, varAbr: null, isClosed: true }));
         const allMtdRows = [...mtdStoreRows, ...closedMtdRows];
 
         const buildMTDChartData = (storeFilter) => {
           let relevantStores;
-          if (storeFilter === '__consolidated__') {
-            relevantStores = allMtdRows;
-          } else if (!storeFilter) {
-            relevantStores = mtdStoreRows.filter(s => {
-              return allYearsStores.find(r => r.name === s.name);
-            });
-          } else {
-            relevantStores = allMtdRows.filter(s => s.name === storeFilter);
-          }
+          if (storeFilter === '__consolidated__') relevantStores = allMtdRows;
+          else if (!storeFilter) relevantStores = mtdStoreRows.filter(s => allYearsStores.find(r => r.name === s.name));
+          else relevantStores = allMtdRows.filter(s => s.name === storeFilter);
 
-          const fatAbr25 = relevantStores.reduce((sum, s) => sum + (s.fatAbr25 || 0), 0);
-          const fatAbr26 = relevantStores.reduce((sum, s) => sum + s.fatAbr26, 0);
-          return { fatAbr25, fatAbr26 };
+          return {
+            fatAbr25: relevantStores.reduce((sum, s) => sum + (s.fatAbr25 || 0), 0),
+            fatAbr26: relevantStores.reduce((sum, s) => sum + s.fatAbr26, 0),
+          };
         };
 
-        return { mtdStoreRows, buildMTDChartData, mtdMonthName, isPartialMonth, mtdPerStore };
+        const mtdResult = { mtdStoreRows, buildMTDChartData, mtdMonthName, isPartialMonth, mtdPerStore };
+
+        return [ytdResult, mtdResult];
       })();
 
       // Merge MTD April data into momStoreRows for sorting
@@ -1044,8 +954,8 @@
 
 return {
         storeRows, comparableStores, totalFat2026, totalFat2025, varTotal,
-        consolidatedChart, consolidatedAllChart, allYearsStores, storeChartData, storeNames2026, fatYTD,
-        periodLabel, monthRange, hasProjection, partialMonth, daysElapsed, daysInPartial,
+        consolidatedChart, consolidatedAllChart, allYearsStores, storeChartData, storeNames2026,
+        periodLabel, monthRange, partialMonth,
         // MoM data
         momStoreRows, momChartAllStores, momChartConsolidated, momChartForStore, momAllYearsCount,
         momFatMar26, momFatMar25, momVarMar, momComparableMarStores, lastMonth,
@@ -1116,7 +1026,7 @@ return {
       </th>
     );
 
-    const { periodLabel, hasProjection, partialMonth, daysElapsed, daysInPartial } = computed;
+    const { periodLabel, partialMonth } = computed;
 
     // Chart data based on store filter (full year bars + YTD bars)
     const chartData = useMemo(() => {
