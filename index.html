@@ -2308,7 +2308,9 @@ return {
                   if (mc) return mc['2025-'+m] || mc['2026-'+m];
                   return false;
                 });
-                const hasAprilMTD = mc && (mc['2026-04'] || mc['2025-04']);
+                // Always show MTD for the next month after the last full month
+                const nextMonth = fullMonths.length > 0 ? String(parseInt(fullMonths[fullMonths.length - 1]) + 1).padStart(2, '0') : '04';
+                const hasAprilMTD = true; // Always show MTD column
 
                 // ── Top 6 categories by total 2026 revenue ──
                 const catTotals = {};
@@ -2343,19 +2345,18 @@ return {
                     row['Outros_26'] = sumOthers(cats26);
                     data.push(row);
                   });
-                  if (hasAprilMTD) {
-                    data.push({ month: ' ', isSpacer: true });
-                    const cats25apr = mc['2025-04'] || {};
-                    const cats26apr = mc['2026-04'] || {};
-                    const row = { month: 'Abr MTD' };
-                    top6cats.forEach(cat => {
-                      row[cat + '_25'] = cats25apr[cat] || 0;
-                      row[cat + '_26'] = cats26apr[cat] || 0;
-                    });
-                    row['Outros_25'] = sumOthers(cats25apr);
-                    row['Outros_26'] = sumOthers(cats26apr);
-                    data.push(row);
-                  }
+                  // Always add spacer + MTD for next month (even with 0 values)
+                  data.push({ month: ' ', isSpacer: true });
+                  const cats25mtd = mc['2025-'+nextMonth] || {};
+                  const cats26mtd = mc['2026-'+nextMonth] || {};
+                  const rowMTD = { month: MESES[parseInt(nextMonth)-1] + ' MTD' };
+                  top6cats.forEach(cat => {
+                    rowMTD[cat + '_25'] = cats25mtd[cat] || 0;
+                    rowMTD[cat + '_26'] = cats26mtd[cat] || 0;
+                  });
+                  rowMTD['Outros_25'] = sumOthers(cats25mtd);
+                  rowMTD['Outros_26'] = sumOthers(cats26mtd);
+                  data.push(rowMTD);
                   return data;
                 };
 
@@ -2376,28 +2377,7 @@ return {
                   });
                 }
 
-                // ── Card-specific simple bar data (2025 vs 2026 spend by month) ──
-                const buildCardMonthlyData = () => {
-                  if (!isCardSelected) return [];
-                  const cd = PM.byCard[mixCardFilter];
-                  const ms = cd.monthlySpend || {};
-                  const mmet = cd.monthlyMetrics || {};
-                  const allMs = ['01','02','03'];
-                  const data = [];
-                  allMs.forEach(m => {
-                    const s25 = ms['2025-'+m] || (mmet['2025-'+m]?.spend) || 0;
-                    const s26 = ms['2026-'+m] || (mmet['2026-'+m]?.spend) || 0;
-                    data.push({ month: MESES[parseInt(m)-1], '2025': s25, '2026': s26 });
-                  });
-                  const hasApr = ms['2026-04'] || mmet['2026-04'];
-                  if (hasApr) {
-                    data.push({ month: ' ', isSpacer: true });
-                    const s25a = ms['2025-04'] || (mmet['2025-04']?.spend) || 0;
-                    const s26a = ms['2026-04'] || (mmet['2026-04']?.spend) || 0;
-                    data.push({ month: 'Abr MTD', '2025': s25a, '2026': s26a });
-                  }
-                  return data;
-                };
+                // buildCardMonthlyData removed — Chart A always shows stacked category data from store/consolidated
 
                 // ── Chart B data: operational metrics ──
                 const buildOpData = () => {
@@ -2411,13 +2391,11 @@ return {
                     const v26 = src['2026-'+m]?.[metricKey] || 0;
                     data.push({ month: MESES[parseInt(m)-1], '2025': v25, '2026': v26 });
                   });
-                  const hasApr = src['2026-04'] || src['2025-04'];
-                  if (hasApr) {
-                    data.push({ month: ' ', isSpacer: true });
-                    const v25a = src['2025-04']?.[metricKey] || 0;
-                    const v26a = src['2026-04']?.[metricKey] || 0;
-                    data.push({ month: 'Abr MTD', '2025': v25a, '2026': v26a });
-                  }
+                  // Always add spacer + MTD for next month
+                  data.push({ month: ' ', isSpacer: true });
+                  const v25a = src['2025-'+nextMonth]?.[metricKey] || 0;
+                  const v26a = src['2026-'+nextMonth]?.[metricKey] || 0;
+                  data.push({ month: MESES[parseInt(nextMonth)-1] + ' MTD', '2025': v25a, '2026': v26a });
                   return data;
                 };
 
@@ -2448,47 +2426,30 @@ return {
 
                 return (
                 <React.Fragment>
+                {/* Card filter dropdown — above charts, controls Charts B and C only */}
+                <div className="mb-4">
+                  <select value={mixCardFilter} onChange={e => setMixCardFilter(e.target.value)}
+                    className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full sm:w-auto sm:min-w-[260px]">
+                    <option value="__all__">Todos os clientes</option>
+                    {cardOptions.map(c => <option key={c} value={c}>{c} — {PM.byCard[c]?.store || '?'}</option>)}
+                  </select>
+                  {isCardSelected && <span className="ml-2 text-xs text-slate-400">(Filtro de cartão afeta Métricas e Heatmap)</span>}
+                </div>
+
                 {/* ── Chart A: Mix de Categorias — Comparativo Mensal ── */}
                 <Card>
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                     <div>
-                      <h3 className="text-white font-semibold text-base">
-                        {isCardSelected ? `Gasto Mensal — Cartão ${mixCardFilter}` : 'Mix de Categorias — Comparativo Mensal'}
-                      </h3>
-                      <p className="text-slate-400 text-sm">
-                        {isCardSelected ? 'Gasto 2025 vs 2026 por mês' : '2025 vs 2026 — top categorias lado a lado'}
-                      </p>
+                      <h3 className="text-white font-semibold text-base">Mix de Categorias — Comparativo Mensal</h3>
+                      <p className="text-slate-400 text-sm">2025 vs 2026 — top categorias lado a lado</p>
                     </div>
-                    {!isCardSelected && (
                     <div className="flex gap-1 mt-2 sm:mt-0 bg-slate-700/50 rounded-lg p-1">
                       <button onClick={() => setMixView('absolute')} className={`px-3 py-1 rounded text-xs font-medium transition-colors ${mixView === 'absolute' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}>Absoluto</button>
                       <button onClick={() => setMixView('percent')} className={`px-3 py-1 rounded text-xs font-medium transition-colors ${mixView === 'percent' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}>Percentual (100%)</button>
                     </div>
-                    )}
                   </div>
 
-                  {isCardSelected ? (
-                    /* Simple grouped bar for card spend */
-                    <div style={{width:'100%', height:320}}>
-                      <ResponsiveContainer>
-                        <BarChart data={buildCardMonthlyData()} margin={{top:10,right:10,left:10,bottom:0}}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                          <XAxis dataKey="month" stroke="#94a3b8" tick={{fontSize:12}} tickFormatter={v => v === ' ' ? '' : v} />
-                          <YAxis stroke="#94a3b8" tickFormatter={v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v.toFixed(0)} />
-                          <Tooltip
-                            contentStyle={{backgroundColor:'#1e293b',border:'1px solid #334155',borderRadius:8}}
-                            labelStyle={{color:'#f1f5f9'}}
-                            formatter={(v, name) => [fmtR(v), name]}
-                          />
-                          <ReferenceLine x=" " stroke="#94a3b8" strokeDasharray="6 4" strokeWidth={1.5} label={{ value: 'MTD →', position: 'top', fill: '#94a3b8', fontSize: 11 }} />
-                          <Bar dataKey="2025" name="2025" fill={YEAR_COLORS[2025] || '#94a3b8'} radius={[4,4,0,0]} />
-                          <Bar dataKey="2026" name="2026" fill={YEAR_COLORS[2026] || '#3b82f6'} radius={[4,4,0,0]} />
-                          <Legend wrapperStyle={{color:'#94a3b8', fontSize:11}} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  ) : (
-                    /* Stacked paired bar chart for categories */
+                  {/* Stacked paired bar chart for categories — always shows store/consolidated data */}
                     <div style={{width:'100%', height:380}}>
                       <ResponsiveContainer>
                         <BarChart data={mixData} margin={{top:10,right:10,left:10,bottom:0}} barCategoryGap="20%">
@@ -2541,24 +2502,26 @@ return {
                         ))}
                       </div>
                     </div>
-                  )}
                 </Card>
 
-                {/* Card filter dropdown — below Chart A, controls all three charts */}
-                <div className="mb-4 mt-2">
-                  <select value={mixCardFilter} onChange={e => setMixCardFilter(e.target.value)}
-                    className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full sm:w-auto sm:min-w-[260px]">
-                    <option value="__all__">Todos os clientes</option>
-                    {cardOptions.map(c => <option key={c} value={c}>{c} — {PM.byCard[c]?.store || '?'}</option>)}
-                  </select>
-                </div>
+                {/* Card filter moved above Chart A */}
 
                 {/* ── Chart B: Métricas Operacionais — Comparativo Mensal ── */}
                 <Card>
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                     <div>
                       <h3 className="text-white font-semibold text-base">Métricas Operacionais — Comparativo Mensal</h3>
-                      <p className="text-slate-400 text-sm">2025 vs 2026 — {opLabels[opMetric]}</p>
+                      <p className="text-slate-400 text-sm">
+                        2025 vs 2026 — {opLabels[opMetric]}
+                        {(() => {
+                          const has2025 = opData.some(d => !d.isSpacer && d['2025'] > 0);
+                          const has2026 = opData.some(d => !d.isSpacer && d['2026'] > 0);
+                          if (has2025 && has2026) return '';
+                          if (!has2025 && has2026) return ' (sem dados 2025 para esta loja/cartão)';
+                          if (has2025 && !has2026) return ' (sem dados 2026 para esta loja/cartão)';
+                          return ' (sem dados disponíveis)';
+                        })()}
+                      </p>
                     </div>
                     <div className="flex gap-1 mt-2 sm:mt-0 bg-slate-700/50 rounded-lg p-1">
                       <button onClick={() => setOpMetric('txns')} className={`px-3 py-1 rounded text-xs font-medium transition-colors ${opMetric === 'txns' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}>Transações</button>
@@ -2572,7 +2535,7 @@ return {
                       <LineChart data={opData} margin={{top:10,right:10,left:10,bottom:0}}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                         <XAxis dataKey="month" stroke="#94a3b8" tick={{fontSize:12}} tickFormatter={v => v === ' ' ? '' : v} />
-                        <YAxis stroke="#94a3b8" tickFormatter={v => opMetric === 'ticket' ? (v >= 1000 ? (v/1000).toFixed(1)+'k' : v.toFixed(2)) : opMetric === 'itemsPerTx' ? v.toFixed(2) : (v >= 1000 ? (v/1000).toFixed(0)+'k' : v.toFixed(0))} />
+                        <YAxis stroke="#94a3b8" domain={[0, 'auto']} tickFormatter={v => opMetric === 'ticket' ? (v >= 1000 ? (v/1000).toFixed(1)+'k' : v.toFixed(2)) : opMetric === 'itemsPerTx' ? v.toFixed(2) : (v >= 1000 ? (v/1000).toFixed(0)+'k' : v.toFixed(0))} />
                         <Tooltip
                           contentStyle={{backgroundColor:'#1e293b',border:'1px solid #334155',borderRadius:8}}
                           labelStyle={{color:'#f1f5f9'}}
@@ -2583,8 +2546,8 @@ return {
                         />
                         <Legend wrapperStyle={{color:'#94a3b8', fontSize:11}} />
                         <ReferenceLine x=" " stroke="#94a3b8" strokeDasharray="6 4" strokeWidth={1.5} />
-                        <Line type="monotone" dataKey="2025" name="2025" stroke={YEAR_COLORS[2025] || '#94a3b8'} strokeWidth={2} dot={{r:4}} strokeDasharray="6 3" />
-                        <Line type="monotone" dataKey="2026" name="2026" stroke={YEAR_COLORS[2026] || '#3b82f6'} strokeWidth={2.5} dot={{r:4}} />
+                        <Line type="monotone" dataKey="2025" name="2025" stroke={YEAR_COLORS[2025] || '#94a3b8'} strokeWidth={2} dot={{r:4}} strokeDasharray="6 3" connectNulls={true} />
+                        <Line type="monotone" dataKey="2026" name="2026" stroke={YEAR_COLORS[2026] || '#3b82f6'} strokeWidth={2.5} dot={{r:4}} connectNulls={true} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
