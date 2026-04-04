@@ -234,6 +234,9 @@
     const [clientStore, setClientStore] = useState('__all__');
     const [mixStore, setMixStore] = useState('__all__');
     const [mixView, setMixView] = useState('absolute');
+    const [mixCardFilter, setMixCardFilter] = useState('__all__');
+
+    const CLOSED_STORES = new Set(['Adorabile Tijuca', 'Gávea IV', 'John F. Kennedy', 'Reserva das Arvores', 'Reserva Árvores 2', 'PROJAC - Sanca Lev']);
 
     const SA = window.STORE_ANALYTICS;
     const PM = window.PRODUCT_MIX;
@@ -547,6 +550,17 @@
           '2025-03-03': 'Carnaval (Seg)',
           '2025-03-04': 'Carnaval (Terça)',
           '2025-03-05': 'Quarta de Cinzas',
+          '2025-04-18': 'Sexta-Feira Santa',
+          '2025-04-19': 'Sábado de Aleluia',
+          '2025-04-21': 'Tiradentes',
+          '2025-05-01': 'Dia do Trabalho',
+          '2025-06-19': 'Corpus Christi',
+          '2025-09-07': 'Independência',
+          '2025-10-12': 'N.S. Aparecida',
+          '2025-11-02': 'Finados',
+          '2025-11-15': 'Proclamação da República',
+          '2025-11-20': 'Consciência Negra',
+          '2025-12-25': 'Natal',
         };
         const holidays2026 = {
           '2026-01-01': 'Confraternização Universal',
@@ -556,6 +570,17 @@
           '2026-02-16': 'Carnaval (Seg)',
           '2026-02-17': 'Carnaval (Terça)',
           '2026-02-18': 'Quarta de Cinzas',
+          '2026-04-03': 'Sexta-Feira Santa',
+          '2026-04-04': 'Sábado de Aleluia',
+          '2026-04-21': 'Tiradentes',
+          '2026-05-01': 'Dia do Trabalho',
+          '2026-06-04': 'Corpus Christi',
+          '2026-09-07': 'Independência',
+          '2026-10-12': 'N.S. Aparecida',
+          '2026-11-02': 'Finados',
+          '2026-11-15': 'Proclamação da República',
+          '2026-11-20': 'Consciência Negra',
+          '2026-12-25': 'Natal',
         };
         const allHolidays = { ...holidays2025, ...holidays2026 };
         
@@ -579,6 +604,7 @@
         
         const dates2025 = makeDateRange(2025, lastMonth, lastDay);
         const dates2026 = makeDateRange(2026, lastMonth, lastDay);
+        const lastDate2026 = dates2026.length > 0 ? dates2026[dates2026.length - 1] : '2026-01-01';
         const maxDays = Math.min(dates2025.length, dates2026.length);
         
         // Get all store names present in both years
@@ -750,6 +776,7 @@
           computeMetrics,
           dates2025: dates2025.slice(0, maxDays),
           dates2026,
+          lastDate2026,
           maxDays,
           allHolidays,
           holidays2025,
@@ -1245,7 +1272,7 @@ return {
                 className={`pb-3 px-1 text-sm transition-colors whitespace-nowrap ${activeTab === 'mix' ? 'tab-active' : 'tab-inactive'}`}
                 onClick={() => setActiveTab('mix')}
               >
-                Mix de Produtos
+                Detalhes
               </button>
             </div>
             <div className="tab-scroll-fade"></div>
@@ -1295,7 +1322,7 @@ return {
                     className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full sm:w-auto sm:min-w-[260px]">
                     <option value="">Mesmas lojas (presentes em todos os anos)</option>
                     <option value="__consolidated__">Consolidado (todas as lojas)</option>
-                    {computed.storeNames2026.map(name => <option key={name} value={name}>{name}</option>)}
+                    {computed.storeNames2026.filter(name => !CLOSED_STORES.has(name)).map(name => <option key={name} value={name}>{name}</option>)}
                   </select>
                 </div>
                 {chartData.length > 0 ? (
@@ -1454,7 +1481,7 @@ return {
                     className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full sm:w-auto sm:min-w-[260px]">
                     <option value="">Mesmas lojas (presentes em todos os anos)</option>
                     <option value="__consolidated__">Consolidado (todas as lojas)</option>
-                    {computed.storeNames2026.map(name => <option key={name} value={name}>{name}</option>)}
+                    {computed.storeNames2026.filter(name => !CLOSED_STORES.has(name)).map(name => <option key={name} value={name}>{name}</option>)}
                   </select>
                 </div>
                 {momChartData.length > 0 ? (
@@ -1642,7 +1669,7 @@ return {
                     <MetricCard
                       title="Dias analisados"
                       value={computed.dailyComputed.maxDays}
-                      subtitle="Jan 1 → Abr 1"
+                      subtitle={(() => { const ld = computed.dailyComputed.lastDate2026; const d = new Date(ld + 'T12:00:00'); const mon = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][d.getMonth()]; return `Jan 1 → ${mon} ${d.getDate()}`; })()}
                       icon="📆"
                       color="blue"
                     />
@@ -1671,7 +1698,7 @@ return {
                     className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full sm:w-auto sm:min-w-[260px]">
                     <option value="">Consolidado (todas as lojas)</option>
                     <option value="__same__">Mesmas lojas (base 2025)</option>
-                    {computed.dailyComputed.storeNames.map(name => <option key={name} value={name}>{name}</option>)}
+                    {computed.dailyComputed.storeNames.filter(name => !CLOSED_STORES.has(name)).map(name => <option key={name} value={name}>{name}</option>)}
                   </select>
                 </div>
                 <ResponsiveContainer width="100%" height={400}>
@@ -1927,7 +1954,7 @@ return {
                 className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm min-h-[44px] w-full sm:w-auto sm:min-w-[260px]">
                 <option value="__all__">Consolidado (todas as lojas)</option>
                 <option value="__same__">Mesmas lojas (base 2025)</option>
-                {trendStoreNames.map(name => <option key={name} value={name}>{name}</option>)}
+                {trendStoreNames.filter(name => !CLOSED_STORES.has(name)).map(name => <option key={name} value={name}>{name}</option>)}
               </select>
             );
             
@@ -2048,7 +2075,7 @@ return {
                 className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm min-h-[44px] w-full sm:w-auto sm:min-w-[260px]">
                 <option value="__all__">Consolidado (todas as lojas)</option>
                 <option value="__same__">Mesmas lojas (base 2025)</option>
-                {clientStoreNames.map(name => <option key={name} value={name}>{name}</option>)}
+                {clientStoreNames.filter(name => !CLOSED_STORES.has(name)).map(name => <option key={name} value={name}>{name}</option>)}
               </select>
             );
             
@@ -2183,16 +2210,6 @@ return {
 
             // Category data for charts
             const catEntries2026 = Object.entries(selData.categories2026 || {}).map(([name, d]) => ({name, revenue: d.revenue, pct: d.pct})).sort((a,b) => b.revenue - a.revenue);
-            const catEntries2025 = Object.entries(selData.categories2025 || {}).map(([name, d]) => ({name, revenue: d.revenue, pct: d.pct})).sort((a,b) => b.revenue - a.revenue);
-
-            // YoY comparison data
-            const allCatNames = [...new Set([...catEntries2026.map(c=>c.name), ...catEntries2025.map(c=>c.name)])];
-            const yoyData = allCatNames.map(name => {
-              const c26 = selData.categories2026?.[name];
-              const c25 = selData.categories2025?.[name];
-              return {name, '2026': c26?.revenue || 0, '2025': c25?.revenue || 0};
-            }).sort((a,b) => b['2026'] - a['2026']);
-
             // Top 20 products
             const topProds = (selData.topProducts2026 || []).slice(0, 20);
 
@@ -2209,15 +2226,16 @@ return {
               <div className="mb-4">
                 <select
                   value={mixStore}
-                  onChange={e => setMixStore(e.target.value)}
+                  onChange={e => { setMixStore(e.target.value); setMixCardFilter('__all__'); }}
                   className="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-2 text-sm w-full sm:w-auto"
                 >
                   <option value="__all__">Consolidado (todas as lojas)</option>
-                  {storeKeys.map(s => <option key={s} value={s}>{s}</option>)}
+                  {storeKeys.filter(s => !CLOSED_STORES.has(s)).map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
 
               {/* Category Breakdown - Horizontal Bar Chart */}
+              <h3 className="text-white font-semibold text-lg mb-2">Faturamento por Categoria</h3>
               <Card title="Mix por Categoria (2026)" subtitle="Receita por categoria">
                 <div style={{width:'100%', height: Math.max(300, catEntries2026.length * 32)}}>
                   <ResponsiveContainer>
@@ -2267,35 +2285,66 @@ return {
                 </div>
               </Card>
 
-              {/* YoY Category Comparison */}
-              {catEntries2025.length > 0 && (
-              <Card title="Categorias: 2025 vs 2026" subtitle="Comparação de receita por categoria">
-                <div style={{width:'100%', height: Math.max(350, yoyData.length * 36)}}>
-                  <ResponsiveContainer>
-                    <BarChart data={yoyData} layout="vertical" margin={{left:120,right:20,top:5,bottom:5}}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false} />
-                      <XAxis type="number" tickFormatter={v => (v>=1000 ? (v/1000).toFixed(0)+'k' : v)} stroke="#94a3b8" />
-                      <YAxis type="category" dataKey="name" width={110} tick={{fill:'#cbd5e1', fontSize:12}} />
-                      <Tooltip
-                        contentStyle={{background:'#1e293b',border:'1px solid #475569',borderRadius:8}}
-                        formatter={(v, name) => [fmtR(v), name]}
-                        labelStyle={{color:'#f1f5f9'}}
-                      />
-                      <Legend wrapperStyle={{color:'#94a3b8'}} />
-                      <Bar dataKey="2025" fill="#8b5cf6" radius={[0,4,4,0]} barSize={14} />
-                      <Bar dataKey="2026" fill="#22c55e" radius={[0,4,4,0]} barSize={14} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
-              )}
-
               {/* ── Evolução Mensal do Mix ── */}
               {(() => {
                 const CAT_COLORS = {'Bebidas':'#3b82f6','Chocolates/Doces':'#f59e0b','Sorvetes/Gelatos':'#ec4899','Snacks/Salgadinhos':'#10b981','Padaria/Pães':'#f97316','Congelados/Refeições':'#8b5cf6','Laticínios/Frios':'#06b6d4','Tabaco':'#ef4444','Mercearia':'#84cc16','Limpeza/Higiene':'#6366f1','Outros':'#64748b'};
                 const mc = selData.monthlyCategories;
                 if (!mc) return null;
-                const months = Object.keys(mc).sort();
+                const allMonths = Object.keys(mc).sort();
+                const months = allMonths.slice(-12);
+
+                // Build card options for subordinate filter
+                const cardOptions = (() => {
+                  if (!PM.byCard) return [];
+                  if (mixStore === '__all__') {
+                    return Object.entries(PM.byCard).sort((a,b) => b[1].totalSpend - a[1].totalSpend).slice(0, 100).map(([card]) => card);
+                  } else {
+                    return Object.entries(PM.byCard).filter(([_, c]) => c.store === mixStore).sort((a,b) => b[1].totalSpend - a[1].totalSpend).map(([card]) => card);
+                  }
+                })();
+
+                // When a specific card is selected, show monthly spend line chart
+                const showCardSpend = mixCardFilter !== '__all__' && PM.byCard && PM.byCard[mixCardFilter];
+
+                if (showCardSpend) {
+                  const cardData = PM.byCard[mixCardFilter];
+                  const ms = cardData.monthlySpend || {};
+                  const cardMonths = Object.keys(ms).sort().slice(-12);
+                  const lineData = cardMonths.map(m => ({ month: m, spend: ms[m] || 0 }));
+                  return (
+                  <Card>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                      <div>
+                        <h3 className="text-white font-semibold text-base">Gasto Mensal — Cartão {mixCardFilter}</h3>
+                        <p className="text-slate-400 text-sm">Evolução do gasto mensal do cliente (LTM)</p>
+                      </div>
+                    </div>
+                    <div className="mb-3">
+                      <select value={mixCardFilter} onChange={e => setMixCardFilter(e.target.value)}
+                        className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full sm:w-auto sm:min-w-[260px]">
+                        <option value="__all__">Todos os clientes</option>
+                        {cardOptions.map(c => <option key={c} value={c}>{c} — {PM.byCard[c]?.store || '?'}</option>)}
+                      </select>
+                    </div>
+                    <div style={{width:'100%', height:350}}>
+                      <ResponsiveContainer>
+                        <LineChart data={lineData} margin={{top:10,right:10,left:10,bottom:0}}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                          <XAxis dataKey="month" stroke="#94a3b8" tick={{fontSize:11}} />
+                          <YAxis stroke="#94a3b8" tickFormatter={v => (v>=1000 ? (v/1000).toFixed(0)+'k' : v.toFixed(0))} />
+                          <Tooltip
+                            contentStyle={{backgroundColor:'#1e293b',border:'1px solid #334155',borderRadius:8}}
+                            labelStyle={{color:'#f1f5f9'}}
+                            formatter={(v) => [fmtR(v), 'Gasto']}
+                          />
+                          <Line type="monotone" dataKey="spend" stroke="#3b82f6" strokeWidth={2} dot={{r:3}} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </Card>
+                  );
+                }
+
                 // Find top 6 categories by total revenue across all months
                 const catTotals = {};
                 months.forEach(m => { Object.entries(mc[m]).forEach(([cat, val]) => { catTotals[cat] = (catTotals[cat] || 0) + val; }); });
@@ -2321,12 +2370,19 @@ return {
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                     <div>
                       <h3 className="text-white font-semibold text-base">Evolução Mensal do Mix</h3>
-                      <p className="text-slate-400 text-sm">Distribuição de receita por categoria ao longo do tempo</p>
+                      <p className="text-slate-400 text-sm">Distribuição de receita por categoria ao longo do tempo (LTM)</p>
                     </div>
                     <div className="flex gap-1 mt-2 sm:mt-0 bg-slate-700/50 rounded-lg p-1">
                       <button onClick={() => setMixView('absolute')} className={`px-3 py-1 rounded text-xs font-medium transition-colors ${mixView === 'absolute' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}>Absoluto</button>
                       <button onClick={() => setMixView('percent')} className={`px-3 py-1 rounded text-xs font-medium transition-colors ${mixView === 'percent' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}>Percentual</button>
                     </div>
+                  </div>
+                  <div className="mb-3">
+                    <select value={mixCardFilter} onChange={e => setMixCardFilter(e.target.value)}
+                      className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full sm:w-auto sm:min-w-[260px]">
+                      <option value="__all__">Todos os clientes</option>
+                      {cardOptions.map(c => <option key={c} value={c}>{c} — {PM.byCard[c]?.store || '?'}</option>)}
+                    </select>
                   </div>
                   <div style={{width:'100%', height:350}}>
                     <ResponsiveContainer>
