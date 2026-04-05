@@ -2508,10 +2508,11 @@ return {
                           <XAxis dataKey="month" stroke="#94a3b8" tick={{fontSize:12}} tickFormatter={v => v === ' ' ? '' : v} />
                           <YAxis stroke="#94a3b8" tickFormatter={v => mixView === 'percent' ? (v*100).toFixed(0)+'%' : (v >= 1000 ? (v/1000).toFixed(0)+'k' : v.toFixed(0))} />
                           <Tooltip
-                            allowEscapeViewBox={{x:true,y:true}}
+                            allowEscapeViewBox={{x:false,y:true}}
                             position={{y:0}}
-                            wrapperStyle={{zIndex:50,pointerEvents:'none'}}
-                            content={({ active, payload, label }) => {
+                            offset={15}
+                            wrapperStyle={{zIndex:50,pointerEvents:'none',maxWidth:'90vw'}}
+                            content={({ active, payload, label, coordinate }) => {
                               if (!active || !payload || !payload.length) return null;
                               const items25 = payload.filter(p => p.dataKey.endsWith('_25') && p.value > 0);
                               const items26 = payload.filter(p => p.dataKey.endsWith('_26') && p.value > 0);
@@ -2519,25 +2520,36 @@ return {
                               const total25 = items25.reduce((s, it) => s + it.value, 0);
                               const total26 = items26.reduce((s, it) => s + it.value, 0);
                               const catLabel = (dk, suffix) => { const c = dk.replace(suffix,''); return c === 'PROJAC' ? 'PROJAC' : c; };
+                              const isMobile = window.innerWidth < 640;
+                              // On mobile: single column, smaller font; on desktop: two columns
+                              const fs = isMobile ? 10 : 11;
+                              const useTwoCols = !isMobile && items25.length > 0 && items26.length > 0;
+                              const renderItems = (items, suffix, opacity) => items.map((it,i) => {
+                                const cat = it.dataKey.replace(suffix,'');
+                                return React.createElement('p', {key:i, style:{color:CAT_COLORS[cat]||'#64748b',margin:0,whiteSpace:'nowrap',opacity:opacity||1}}, catLabel(it.dataKey,suffix) + ': ' + fmtVal(it.value));
+                              });
                               return (
-                                <div style={{backgroundColor:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'6px 10px',fontSize:11,lineHeight:'1.3'}}>
-                                  <p style={{color:'#f1f5f9',fontWeight:600,marginBottom:3,textAlign:'center'}}>{label}</p>
-                                  <div style={{display:'flex',gap:12}}>
-                                    {items25.length > 0 && <div style={{minWidth:0}}>
-                                      <p style={{color:'#94a3b8',fontWeight:600,marginBottom:1,opacity:0.7}}>2025: {fmtVal(total25)}</p>
-                                      {items25.map((it,i) => {
-                                        const cat = it.dataKey.replace('_25','');
-                                        return <p key={i} style={{color:CAT_COLORS[cat]||'#64748b',margin:0,whiteSpace:'nowrap'}}>{catLabel(it.dataKey,'_25')}: {fmtVal(it.value)}</p>;
-                                      })}
-                                    </div>}
-                                    {items26.length > 0 && <div style={{minWidth:0}}>
-                                      <p style={{color:'#94a3b8',fontWeight:600,marginBottom:1}}>2026: {fmtVal(total26)}</p>
-                                      {items26.map((it,i) => {
-                                        const cat = it.dataKey.replace('_26','');
-                                        return <p key={i} style={{color:CAT_COLORS[cat]||'#64748b',margin:0,whiteSpace:'nowrap'}}>{catLabel(it.dataKey,'_26')}: {fmtVal(it.value)}</p>;
-                                      })}
-                                    </div>}
-                                  </div>
+                                <div style={{backgroundColor:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'5px 8px',fontSize:fs,lineHeight:'1.3',maxWidth:isMobile?'80vw':'none'}}>
+                                  <p style={{color:'#f1f5f9',fontWeight:600,marginBottom:2,textAlign:'center'}}>{label}</p>
+                                  {useTwoCols ? (
+                                    <div style={{display:'flex',gap:10}}>
+                                      <div style={{minWidth:0}}>
+                                        <p style={{color:'#94a3b8',fontWeight:600,marginBottom:1,opacity:0.7}}>2025: {fmtVal(total25)}</p>
+                                        {renderItems(items25, '_25', 0.7)}
+                                      </div>
+                                      <div style={{minWidth:0}}>
+                                        <p style={{color:'#94a3b8',fontWeight:600,marginBottom:1}}>2026: {fmtVal(total26)}</p>
+                                        {renderItems(items26, '_26')}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      {items25.length > 0 && <p style={{color:'#94a3b8',fontWeight:600,marginBottom:1,opacity:0.7}}>2025: {fmtVal(total25)}</p>}
+                                      {renderItems(items25, '_25', 0.7)}
+                                      {items26.length > 0 && <p style={{color:'#94a3b8',fontWeight:600,marginTop:2,marginBottom:1}}>2026: {fmtVal(total26)}</p>}
+                                      {renderItems(items26, '_26')}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             }}
