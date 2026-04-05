@@ -2501,7 +2501,7 @@ return {
                   </div>
 
                   {/* Stacked paired bar chart for categories — always shows store/consolidated data */}
-                    <div style={{width:'100%', height:340}}>
+                    <div style={{width:'100%', height:420}}>
                       <ResponsiveContainer>
                         <BarChart data={mixData} margin={{top:10,right:10,left:10,bottom:0}} barCategoryGap="20%">
                           <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
@@ -2509,6 +2509,7 @@ return {
                           <YAxis stroke="#94a3b8" tickFormatter={v => mixView === 'percent' ? (v*100).toFixed(0)+'%' : (v >= 1000 ? (v/1000).toFixed(0)+'k' : v.toFixed(0))} />
                           <Tooltip
                             allowEscapeViewBox={{x:true,y:true}}
+                            position={{y:0}}
                             wrapperStyle={{zIndex:50,pointerEvents:'none'}}
                             content={({ active, payload, label }) => {
                               if (!active || !payload || !payload.length) return null;
@@ -2517,21 +2518,26 @@ return {
                               const fmtVal = (v) => mixView === 'percent' ? (v*100).toFixed(1)+'%' : fmtR(v);
                               const total25 = items25.reduce((s, it) => s + it.value, 0);
                               const total26 = items26.reduce((s, it) => s + it.value, 0);
+                              const catLabel = (dk, suffix) => { const c = dk.replace(suffix,''); return c === 'PROJAC' ? 'PROJAC' : c; };
                               return (
-                                <div style={{backgroundColor:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'8px 12px',fontSize:12,maxHeight:'70vh',overflowY:'auto'}}>
-                                  <p style={{color:'#f1f5f9',fontWeight:600,marginBottom:4}}>{label}</p>
-                                  {items25.length > 0 && <p style={{color:'#94a3b8',fontWeight:600,marginBottom:2}}>2025: {fmtVal(total25)}</p>}
-                                  {items25.map((it,i) => {
-                                    const cat = it.dataKey.replace('_25','');
-                                    const label = cat === 'PROJAC' ? 'PROJAC - Sanca Lev' : cat;
-                                    return <p key={i} style={{color:CAT_COLORS[cat]||'#64748b',margin:'1px 0'}}>{label}: {fmtVal(it.value)}</p>;
-                                  })}
-                                  {items26.length > 0 && <p style={{color:'#94a3b8',fontWeight:600,marginTop:4,marginBottom:2}}>2026: {fmtVal(total26)}</p>}
-                                  {items26.map((it,i) => {
-                                    const cat = it.dataKey.replace('_26','');
-                                    const label = cat === 'PROJAC' ? 'PROJAC - Sanca Lev' : cat;
-                                    return <p key={i} style={{color:CAT_COLORS[cat]||'#64748b',margin:'1px 0'}}>{label}: {fmtVal(it.value)}</p>;
-                                  })}
+                                <div style={{backgroundColor:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'6px 10px',fontSize:11,lineHeight:'1.3'}}>
+                                  <p style={{color:'#f1f5f9',fontWeight:600,marginBottom:3,textAlign:'center'}}>{label}</p>
+                                  <div style={{display:'flex',gap:12}}>
+                                    {items25.length > 0 && <div style={{minWidth:0}}>
+                                      <p style={{color:'#94a3b8',fontWeight:600,marginBottom:1,opacity:0.7}}>2025: {fmtVal(total25)}</p>
+                                      {items25.map((it,i) => {
+                                        const cat = it.dataKey.replace('_25','');
+                                        return <p key={i} style={{color:CAT_COLORS[cat]||'#64748b',margin:0,whiteSpace:'nowrap'}}>{catLabel(it.dataKey,'_25')}: {fmtVal(it.value)}</p>;
+                                      })}
+                                    </div>}
+                                    {items26.length > 0 && <div style={{minWidth:0}}>
+                                      <p style={{color:'#94a3b8',fontWeight:600,marginBottom:1}}>2026: {fmtVal(total26)}</p>
+                                      {items26.map((it,i) => {
+                                        const cat = it.dataKey.replace('_26','');
+                                        return <p key={i} style={{color:CAT_COLORS[cat]||'#64748b',margin:0,whiteSpace:'nowrap'}}>{catLabel(it.dataKey,'_26')}: {fmtVal(it.value)}</p>;
+                                      })}
+                                    </div>}
+                                  </div>
                                 </div>
                               );
                             }}
