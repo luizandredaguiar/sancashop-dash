@@ -2318,11 +2318,12 @@ return {
                 const isCardSelected = mixCardFilter !== '__all__' && PM.byCard && PM.byCard[mixCardFilter];
 
                 // ── Determine months with data in both years ──
-                const fullMonths = ['01','02','03'].filter(m => {
+                // Dynamic: full months from the Mensal tab's monthRange
+                const fullMonths = (computed.monthRange || [1,2,3]).map(m => String(m).padStart(2, '0')).filter(m => {
                   if (mc) return mc['2025-'+m] || mc['2026-'+m];
                   return false;
                 });
-                // Always show MTD for the next month after the last full month
+                // MTD = next month after last full month
                 const nextMonth = fullMonths.length > 0 ? String(parseInt(fullMonths[fullMonths.length - 1]) + 1).padStart(2, '0') : '04';
                 const hasAprilMTD = true; // Always show MTD column
 
