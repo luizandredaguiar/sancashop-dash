@@ -2349,12 +2349,15 @@ return {
                     });
                     row['Outros_25'] = sumOthers(cats25);
                     row['Outros_26'] = sumOthers(cats26);
+                    // Always extract "Não Mapeado" from data (unmatched cashless txns within this store/card)
+                    row['Não Mapeado_25'] = cats25['Não Mapeado'] || 0;
+                    row['Não Mapeado_26'] = cats26['Não Mapeado'] || 0;
                     if (showBIRecon) {
-                      // Only add BI delta when cashless coverage > 90% of BI (avoids distortion from partial months)
+                      // Also add BI delta for consolidated (PROJAC gap) when coverage > 90%
                       const br25 = biRecon['2025-'+m];
-                      if (br25 && br25.delta > 0 && br25.cashless > br25.bi * 0.9) row['Não Mapeado_25'] = (row['Não Mapeado_25'] || 0) + br25.delta;
+                      if (br25 && br25.delta > 0 && br25.cashless > br25.bi * 0.9) row['Não Mapeado_25'] += br25.delta;
                       const br26 = biRecon['2026-'+m];
-                      if (br26 && br26.delta > 0 && br26.cashless > br26.bi * 0.9) row['Não Mapeado_26'] = (row['Não Mapeado_26'] || 0) + br26.delta;
+                      if (br26 && br26.delta > 0 && br26.cashless > br26.bi * 0.9) row['Não Mapeado_26'] += br26.delta;
                     }
                     data.push(row);
                   });
@@ -2369,11 +2372,14 @@ return {
                   });
                   rowMTD['Outros_25'] = sumOthers(cats25mtd);
                   rowMTD['Outros_26'] = sumOthers(cats26mtd);
+                  // Always extract "Não Mapeado" from data (unmatched cashless txns)
+                  rowMTD['Não Mapeado_25'] = cats25mtd['Não Mapeado'] || 0;
+                  rowMTD['Não Mapeado_26'] = cats26mtd['Não Mapeado'] || 0;
                   if (showBIRecon) {
                     const br25m = biRecon['2025-'+nextMonth];
-                    if (br25m && br25m.delta > 0 && br25m.cashless > br25m.bi * 0.9) rowMTD['Não Mapeado_25'] = (rowMTD['Não Mapeado_25'] || 0) + br25m.delta;
+                    if (br25m && br25m.delta > 0 && br25m.cashless > br25m.bi * 0.9) rowMTD['Não Mapeado_25'] += br25m.delta;
                     const br26m = biRecon['2026-'+nextMonth];
-                    if (br26m && br26m.delta > 0 && br26m.cashless > br26m.bi * 0.9) rowMTD['Não Mapeado_26'] = (rowMTD['Não Mapeado_26'] || 0) + br26m.delta;
+                    if (br26m && br26m.delta > 0 && br26m.cashless > br26m.bi * 0.9) rowMTD['Não Mapeado_26'] += br26m.delta;
                   }
                   data.push(rowMTD);
                   return data;
