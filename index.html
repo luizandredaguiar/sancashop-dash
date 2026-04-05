@@ -1009,19 +1009,44 @@
       const yoySummarySameFinal = buildSummaryRow('Mesmas lojas (todos os anos)', allYearsStores);
 
       // MoM: rebuild with closed stores included for "Consolidado"
-      // Add closed-store momStoreRow-like objects from HISTORICAL
-      const closedMomStoreRows = allHistStoreNames
-        .filter(name => !stores2026Set.has(name))
-        .map(name => {
-          const hStore = HISTORICAL[name];
-          if (!hStore) return null;
+      // Add closed-store momStoreRow-like objects from HISTORICAL + DAILY_DATA-only stores
+      const DD_MOM = window.DAILY_DATA?.days || window.DAILY_DATA || {};
+      // Build monthly 2025 revenue from DAILY_DATA for stores not in HISTORICAL
+      const ddOnly2025Monthly = {};
+      Object.entries(DD_MOM).forEach(([date, stores]) => {
+        if (!date.startsWith('2025-')) return;
+        const m = parseInt(date.substring(5, 7));
+        Object.entries(stores).forEach(([name, vals]) => {
+          if (!stores2026Set.has(name) && !HISTORICAL[name]) {
+            if (!ddOnly2025Monthly[name]) ddOnly2025Monthly[name] = {};
+            ddOnly2025Monthly[name][m] = (ddOnly2025Monthly[name][m] || 0) + (vals.fat || 0);
+          }
+        });
+      });
+
+      const closedMomStoreRows = [
+        ...allHistStoreNames
+          .filter(name => !stores2026Set.has(name))
+          .map(name => {
+            const hStore = HISTORICAL[name];
+            if (!hStore) return null;
+            const monthData = {};
+            momMonths.forEach(m => {
+              const fat25 = hStore?.['2025']?.[String(m)]?.valor || null;
+              monthData[m] = { fat26: 0, fat25, var2526: null };
+            });
+            return { name, monthData, _isClosed: true };
+          }).filter(Boolean),
+        // Stores only in DAILY_DATA (not in HISTORICAL or stores2026)
+        ...Object.entries(ddOnly2025Monthly).map(([name, months]) => {
           const monthData = {};
           momMonths.forEach(m => {
-            const fat25 = hStore?.['2025']?.[String(m)]?.valor || null;
+            const fat25 = months[m] > 0 ? months[m] : null;
             monthData[m] = { fat26: 0, fat25, var2526: null };
           });
           return { name, monthData, _isClosed: true };
-        }).filter(Boolean);
+        })
+      ];
       const allMomStoreRows = [...momStoreRows, ...closedMomStoreRows];
       const momSummaryAllFinal = buildMomSummaryRow('Consolidado (todas as lojas)', allMomStoreRows);
       const momSummarySameFinal = buildMomSummaryRow('Mesmas lojas (todos os anos)', momSameStores);
