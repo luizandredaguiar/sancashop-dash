@@ -867,6 +867,19 @@
         const ytdAgg = {}; // { store: { fat25, fat26, vendas25, vendas26 } }
         const mtdPerStore = {}; // { store: { fat26, fat25, vendas26, vendas25 } }
 
+        // Map DD store names to canonical names (HISTORICAL or stores2026)
+        // e.g. "Paradiso - Playground" and "Paradiso - Piscina" → "Paradiso"
+        const _histNames = Object.keys(HISTORICAL);
+        const _storeNameCache = {};
+        const canonicalName = (ddName) => {
+          if (_storeNameCache[ddName] !== undefined) return _storeNameCache[ddName];
+          if (stores2026Set.has(ddName) || HISTORICAL[ddName]) { _storeNameCache[ddName] = ddName; return ddName; }
+          // Try prefix match against HISTORICAL
+          const match = _histNames.find(h => ddName.startsWith(h + ' '));
+          _storeNameCache[ddName] = match || ddName;
+          return _storeNameCache[ddName];
+        };
+
         Object.entries(DD).forEach(([date, stores]) => {
           const mmdd = date.substring(5);
           const mm = date.substring(5, 7);
@@ -878,7 +891,8 @@
 
           const isMtdMonth = mm === mtdMonthStr && dd <= mtdDayMax;
 
-          Object.entries(stores).forEach(([store, vals]) => {
+          Object.entries(stores).forEach(([rawStore, vals]) => {
+            const store = canonicalName(rawStore);
             const fat = vals.fat || 0;
             const vendas = vals.vendas || 0;
 
@@ -934,7 +948,7 @@
           return { name, fatAbr26, fatAbr25, varAbr };
         });
 
-        const closedMtdRows = Object.keys(mtdPerStore)
+        const closedMtdRows = allHistStoreNames
           .filter(name => !stores2026Set.has(name) && mtdPerStore[name]?.fat25 > 0)
           .map(name => ({ name, fatAbr26: 0, fatAbr25: mtdPerStore[name].fat25, varAbr: null, isClosed: true }));
         const allMtdRows = [...mtdStoreRows, ...closedMtdRows];
@@ -1009,44 +1023,19 @@
       const yoySummarySameFinal = buildSummaryRow('Mesmas lojas (todos os anos)', allYearsStores);
 
       // MoM: rebuild with closed stores included for "Consolidado"
-      // Add closed-store momStoreRow-like objects from HISTORICAL + DAILY_DATA-only stores
-      const DD_MOM = window.DAILY_DATA?.days || window.DAILY_DATA || {};
-      // Build monthly 2025 revenue from DAILY_DATA for stores not in HISTORICAL
-      const ddOnly2025Monthly = {};
-      Object.entries(DD_MOM).forEach(([date, stores]) => {
-        if (!date.startsWith('2025-')) return;
-        const m = parseInt(date.substring(5, 7));
-        Object.entries(stores).forEach(([name, vals]) => {
-          if (!stores2026Set.has(name) && !HISTORICAL[name]) {
-            if (!ddOnly2025Monthly[name]) ddOnly2025Monthly[name] = {};
-            ddOnly2025Monthly[name][m] = (ddOnly2025Monthly[name][m] || 0) + (vals.fat || 0);
-          }
-        });
-      });
-
-      const closedMomStoreRows = [
-        ...allHistStoreNames
-          .filter(name => !stores2026Set.has(name))
-          .map(name => {
-            const hStore = HISTORICAL[name];
-            if (!hStore) return null;
-            const monthData = {};
-            momMonths.forEach(m => {
-              const fat25 = hStore?.['2025']?.[String(m)]?.valor || null;
-              monthData[m] = { fat26: 0, fat25, var2526: null };
-            });
-            return { name, monthData, _isClosed: true };
-          }).filter(Boolean),
-        // Stores only in DAILY_DATA (not in HISTORICAL or stores2026)
-        ...Object.entries(ddOnly2025Monthly).map(([name, months]) => {
+      // Add closed-store momStoreRow-like objects from HISTORICAL
+      const closedMomStoreRows = allHistStoreNames
+        .filter(name => !stores2026Set.has(name))
+        .map(name => {
+          const hStore = HISTORICAL[name];
+          if (!hStore) return null;
           const monthData = {};
           momMonths.forEach(m => {
-            const fat25 = months[m] > 0 ? months[m] : null;
+            const fat25 = hStore?.['2025']?.[String(m)]?.valor || null;
             monthData[m] = { fat26: 0, fat25, var2526: null };
           });
           return { name, monthData, _isClosed: true };
-        })
-      ];
+        }).filter(Boolean);
       const allMomStoreRows = [...momStoreRows, ...closedMomStoreRows];
       const momSummaryAllFinal = buildMomSummaryRow('Consolidado (todas as lojas)', allMomStoreRows);
       const momSummarySameFinal = buildMomSummaryRow('Mesmas lojas (todos os anos)', momSameStores);
@@ -2361,19 +2350,6 @@ return {
                 const biRecon = PM.biReconciliation || {};
                 const showBIRecon = mixStore === '__all__' && !isCardSelected;
 
-                // Compute PROJAC monthly revenue from DAILY_DATA
-                const projacMonthly = {};
-                if (showBIRecon) {
-                  const DD = window.DAILY_DATA?.days || window.DAILY_DATA || {};
-                  Object.entries(DD).forEach(([date, stores]) => {
-                    const projac = stores['PROJAC - Sanca Lev'];
-                    if (projac) {
-                      const ym = date.substring(0, 7);
-                      projacMonthly[ym] = (projacMonthly[ym] || 0) + (projac.fat || 0);
-                    }
-                  });
-                }
-
                 const chartCats = [...top6cats, 'Outros', 'Não Mapeado', ...(showBIRecon ? ['PROJAC'] : [])];
                 const buildMixData = () => {
                   if (!mcForChart) return [];
@@ -2392,22 +2368,12 @@ return {
                     row['Não Mapeado_25'] = cats25['Não Mapeado'] || 0;
                     row['Não Mapeado_26'] = cats26['Não Mapeado'] || 0;
                     if (showBIRecon) {
-                      // PROJAC shown as its own category; remaining delta stays in "Não Mapeado"
-                      const projac25 = projacMonthly['2025-'+m] || 0;
-                      const projac26 = projacMonthly['2026-'+m] || 0;
-                      row['PROJAC_25'] = projac25;
-                      row['PROJAC_26'] = projac26;
-                      // Add remaining BI delta (biRecon delta minus PROJAC) to Não Mapeado, only when coverage > 90%
+                      // Use biRecon delta as PROJAC bar value so cats + PROJAC = BI exactly
+                      // Delta ≈ PROJAC revenue (absorbs small pipeline rounding too)
                       const br25 = biRecon['2025-'+m];
-                      if (br25 && br25.delta > 0 && br25.cashless > br25.bi * 0.9) {
-                        const remaining25 = Math.max(0, br25.delta - projac25);
-                        row['Não Mapeado_25'] += remaining25;
-                      }
+                      row['PROJAC_25'] = (br25 && br25.delta > 0 && br25.cashless > br25.bi * 0.9) ? br25.delta : 0;
                       const br26 = biRecon['2026-'+m];
-                      if (br26 && br26.delta > 0 && br26.cashless > br26.bi * 0.9) {
-                        const remaining26 = Math.max(0, br26.delta - projac26);
-                        row['Não Mapeado_26'] += remaining26;
-                      }
+                      row['PROJAC_26'] = (br26 && br26.delta > 0 && br26.cashless > br26.bi * 0.9) ? br26.delta : 0;
                     }
                     data.push(row);
                   });
@@ -2426,18 +2392,10 @@ return {
                   rowMTD['Não Mapeado_25'] = cats25mtd['Não Mapeado'] || 0;
                   rowMTD['Não Mapeado_26'] = cats26mtd['Não Mapeado'] || 0;
                   if (showBIRecon) {
-                    const projac25m = projacMonthly['2025-'+nextMonth] || 0;
-                    const projac26m = projacMonthly['2026-'+nextMonth] || 0;
-                    rowMTD['PROJAC_25'] = projac25m;
-                    rowMTD['PROJAC_26'] = projac26m;
                     const br25m = biRecon['2025-'+nextMonth];
-                    if (br25m && br25m.delta > 0 && br25m.cashless > br25m.bi * 0.9) {
-                      rowMTD['Não Mapeado_25'] += Math.max(0, br25m.delta - projac25m);
-                    }
+                    rowMTD['PROJAC_25'] = (br25m && br25m.delta > 0 && br25m.cashless > br25m.bi * 0.9) ? br25m.delta : 0;
                     const br26m = biRecon['2026-'+nextMonth];
-                    if (br26m && br26m.delta > 0 && br26m.cashless > br26m.bi * 0.9) {
-                      rowMTD['Não Mapeado_26'] += Math.max(0, br26m.delta - projac26m);
-                    }
+                    rowMTD['PROJAC_26'] = (br26m && br26m.delta > 0 && br26m.cashless > br26m.bi * 0.9) ? br26m.delta : 0;
                   }
                   data.push(rowMTD);
                   return data;
@@ -2550,8 +2508,8 @@ return {
                           <XAxis dataKey="month" stroke="#94a3b8" tick={{fontSize:12}} tickFormatter={v => v === ' ' ? '' : v} />
                           <YAxis stroke="#94a3b8" tickFormatter={v => mixView === 'percent' ? (v*100).toFixed(0)+'%' : (v >= 1000 ? (v/1000).toFixed(0)+'k' : v.toFixed(0))} />
                           <Tooltip
-                            contentStyle={{backgroundColor:'#1e293b',border:'1px solid #334155',borderRadius:8}}
-                            labelStyle={{color:'#f1f5f9'}}
+                            allowEscapeViewBox={{x:true,y:true}}
+                            wrapperStyle={{zIndex:50,pointerEvents:'none'}}
                             content={({ active, payload, label }) => {
                               if (!active || !payload || !payload.length) return null;
                               const items25 = payload.filter(p => p.dataKey.endsWith('_25') && p.value > 0);
