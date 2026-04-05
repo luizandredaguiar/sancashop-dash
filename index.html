@@ -2331,10 +2331,11 @@ return {
                 // ── Chart A data: stacked category comparison ──
                 // When a card is selected, use its monthlyCategories; otherwise use store/consolidated
                 const mcForChart = (isCardSelected && PM.byCard[mixCardFilter]?.monthlyCategories) || mc;
-                // BI reconciliation for consolidated: add PROJAC-Sanca Lev delta as "Não Mapeado"
+                // "Não Mapeado" = unmatched cashless txns (no product identified)
+                // Always include if present in data; for consolidado also add BI reconciliation delta
                 const biRecon = PM.biReconciliation || {};
                 const showBIRecon = mixStore === '__all__' && !isCardSelected;
-                const chartCats = [...top6cats, 'Outros', ...(showBIRecon ? ['Não Mapeado'] : [])];
+                const chartCats = [...top6cats, 'Outros', 'Não Mapeado'];
                 const buildMixData = () => {
                   if (!mcForChart) return [];
                   const data = [];
@@ -2349,8 +2350,11 @@ return {
                     row['Outros_25'] = sumOthers(cats25);
                     row['Outros_26'] = sumOthers(cats26);
                     if (showBIRecon) {
-                      row['Não Mapeado_25'] = biRecon['2025-'+m]?.delta > 0 ? biRecon['2025-'+m].delta : 0;
-                      row['Não Mapeado_26'] = biRecon['2026-'+m]?.delta > 0 ? biRecon['2026-'+m].delta : 0;
+                      // Only add BI delta when cashless coverage > 90% of BI (avoids distortion from partial months)
+                      const br25 = biRecon['2025-'+m];
+                      if (br25 && br25.delta > 0 && br25.cashless > br25.bi * 0.9) row['Não Mapeado_25'] = (row['Não Mapeado_25'] || 0) + br25.delta;
+                      const br26 = biRecon['2026-'+m];
+                      if (br26 && br26.delta > 0 && br26.cashless > br26.bi * 0.9) row['Não Mapeado_26'] = (row['Não Mapeado_26'] || 0) + br26.delta;
                     }
                     data.push(row);
                   });
@@ -2366,8 +2370,10 @@ return {
                   rowMTD['Outros_25'] = sumOthers(cats25mtd);
                   rowMTD['Outros_26'] = sumOthers(cats26mtd);
                   if (showBIRecon) {
-                    rowMTD['Não Mapeado_25'] = biRecon['2025-'+nextMonth]?.delta > 0 ? biRecon['2025-'+nextMonth].delta : 0;
-                    rowMTD['Não Mapeado_26'] = biRecon['2026-'+nextMonth]?.delta > 0 ? biRecon['2026-'+nextMonth].delta : 0;
+                    const br25m = biRecon['2025-'+nextMonth];
+                    if (br25m && br25m.delta > 0 && br25m.cashless > br25m.bi * 0.9) rowMTD['Não Mapeado_25'] = (rowMTD['Não Mapeado_25'] || 0) + br25m.delta;
+                    const br26m = biRecon['2026-'+nextMonth];
+                    if (br26m && br26m.delta > 0 && br26m.cashless > br26m.bi * 0.9) rowMTD['Não Mapeado_26'] = (rowMTD['Não Mapeado_26'] || 0) + br26m.delta;
                   }
                   data.push(rowMTD);
                   return data;
