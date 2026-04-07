@@ -2347,16 +2347,18 @@ return {
                 const mc = selData.monthlyCategories;
                 const mm = selData.monthlyMetrics;
 
-                // ── DD monthly revenue per store (computed locally to avoid scope issues) ──
-                const ddMonthlyLocal = (() => {
+                // ── DD monthly revenue for selected store (computed locally, no canonicalName dependency) ──
+                const ddMonthlyForStore = (() => {
+                  if (mixStore === '__all__') return null;
                   const DD = (window.DAILY_DATA?.days || window.DAILY_DATA || {});
                   const result = {};
+                  // Match DD store names to PM store names: exact or prefix match (e.g., "Paradiso - Playground" starts with "Paradiso")
                   Object.entries(DD).forEach(([date, stores]) => {
                     const ym = date.substring(0, 7);
                     Object.entries(stores).forEach(([rawStore, vals]) => {
-                      const store = canonicalName(rawStore);
-                      if (!result[store]) result[store] = {};
-                      result[store][ym] = (result[store][ym] || 0) + (vals.fat || 0);
+                      if (rawStore === mixStore || rawStore.startsWith(mixStore + ' ')) {
+                        result[ym] = (result[ym] || 0) + (vals.fat || 0);
+                      }
                     });
                   });
                   return result;
@@ -2436,7 +2438,7 @@ return {
                       row['PROJAC_26'] = (br26 && br26.delta > 0 && br26.cashless > br26.bi * 0.9) ? br26.delta : 0;
                     }
                     if (showStoreRecon) {
-                      const ddStore = ddMonthlyLocal[mixStore] || {};
+                      const ddStore = ddMonthlyForStore || {};
                       const pmMetrics = PM.byStore[mixStore]?.monthlyMetrics || {};
                       ['25','26'].forEach(yr => {
                         const ym = '20'+yr+'-'+m;
@@ -2469,7 +2471,7 @@ return {
                     rowMTD['PROJAC_26'] = (br26m && br26m.delta > 0 && br26m.cashless > br26m.bi * 0.9) ? br26m.delta : 0;
                   }
                   if (showStoreRecon) {
-                    const ddStore = ddMonthlyLocal[mixStore] || {};
+                    const ddStore = ddMonthlyForStore || {};
                     const pmMetrics = PM.byStore[mixStore]?.monthlyMetrics || {};
                     ['25','26'].forEach(yr => {
                       const ym = '20'+yr+'-'+nextMonth;
