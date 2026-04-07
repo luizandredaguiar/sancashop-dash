@@ -2614,6 +2614,34 @@ return {
 
                 {/* Card filter moved above Chart A */}
 
+              {/* ── Top 20 Products Table (below Mix de Categorias) ── */}
+              <Card title="Top 20 Produtos (2026)" subtitle="Produtos com maior receita">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-slate-400 border-b border-slate-700">
+                        <th className="px-3 py-2 text-left w-8">#</th>
+                        <th className="px-3 py-2 text-left">Produto</th>
+                        <th className="px-3 py-2 text-right">Receita (R$)</th>
+                        <th className="px-3 py-2 text-right">Qtd</th>
+                        <th className="px-3 py-2 text-right">Transações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topProds.map((p, i) => (
+                        <tr key={i} className={`border-b border-slate-700/50 ${i % 2 === 0 ? 'bg-slate-800/30' : ''}`}>
+                          <td className="px-3 py-2 text-slate-500">{i+1}</td>
+                          <td className="px-3 py-2 text-white">{p.name}</td>
+                          <td className="px-3 py-2 text-right text-emerald-400 font-medium">{fmtR(p.revenue)}</td>
+                          <td className="px-3 py-2 text-right text-slate-300">{fmtK(p.qty)}</td>
+                          <td className="px-3 py-2 text-right text-slate-300">{fmtK(p.txns)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+
                 {/* ── Chart B: Métricas Operacionais — Comparativo Mensal ── */}
                 <Card>
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
@@ -2870,34 +2898,6 @@ return {
                 </React.Fragment>
                 );
               })()}
-
-              {/* Top 20 Products Table (moved below charts) */}
-              <Card title="Top 20 Produtos (2026)" subtitle="Produtos com maior receita">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-slate-400 border-b border-slate-700">
-                        <th className="px-3 py-2 text-left w-8">#</th>
-                        <th className="px-3 py-2 text-left">Produto</th>
-                        <th className="px-3 py-2 text-right">Receita (R$)</th>
-                        <th className="px-3 py-2 text-right">Qtd</th>
-                        <th className="px-3 py-2 text-right">Transações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {topProds.map((p, i) => (
-                        <tr key={i} className={`border-b border-slate-700/50 ${i % 2 === 0 ? 'bg-slate-800/30' : ''}`}>
-                          <td className="px-3 py-2 text-slate-500">{i+1}</td>
-                          <td className="px-3 py-2 text-white">{p.name}</td>
-                          <td className="px-3 py-2 text-right text-emerald-400 font-medium">{fmtR(p.revenue)}</td>
-                          <td className="px-3 py-2 text-right text-slate-300">{fmtK(p.qty)}</td>
-                          <td className="px-3 py-2 text-right text-slate-300">{fmtK(p.txns)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
 
               {/* Comparativo entre Lojas and Top Clientes removed per Luiz's request */}
             </React.Fragment>
