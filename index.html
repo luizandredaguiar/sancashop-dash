@@ -2302,11 +2302,12 @@ return {
                   if (mixStore === '__all__') return null;
                   const DD = (window.DAILY_DATA?.days || window.DAILY_DATA || {});
                   const result = {};
-                  // Match DD store names to PM store names: exact or prefix match (e.g., "Paradiso - Playground" starts with "Paradiso")
+                  // Match DD store names to PM store names: exact or sub-store match (e.g., "Paradiso - Playground" starts with "Paradiso - ")
+                  // Using ' - ' (space-dash-space) prevents "Bosque Freguesia 2" from matching "Bosque Freguesia"
                   Object.entries(DD).forEach(([date, stores]) => {
                     const ym = date.substring(0, 7);
                     Object.entries(stores).forEach(([rawStore, vals]) => {
-                      if (rawStore === mixStore || rawStore.startsWith(mixStore + ' ')) {
+                      if (rawStore === mixStore || rawStore.startsWith(mixStore + ' - ')) {
                         result[ym] = (result[ym] || 0) + (vals.fat || 0);
                       }
                     });
