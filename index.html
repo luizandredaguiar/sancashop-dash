@@ -2343,7 +2343,7 @@ return {
 
               {/* ── Mix de Categorias + Métricas Operacionais + Heatmap ── */}
               {(() => {
-                const CAT_COLORS = {'Bebidas':'#3b82f6','Chocolates/Doces':'#f59e0b','Sorvetes/Gelatos':'#ec4899','Snacks/Salgadinhos':'#10b981','Padaria/Pães':'#f97316','Congelados/Refeições':'#8b5cf6','Laticínios/Frios':'#06b6d4','Tabaco':'#ef4444','Mercearia':'#84cc16','Limpeza/Higiene':'#6366f1','Outros':'#64748b','Não Mapeado':'#475569','PROJAC':'#a855f7','Não Rastreado':'#94a3b8'};
+                const CAT_COLORS = {'Bebidas':'#3b82f6','Chocolates/Doces':'#f59e0b','Sorvetes/Gelatos':'#ec4899','Snacks/Salgadinhos':'#10b981','Padaria/Pães':'#f97316','Congelados/Refeições':'#8b5cf6','Laticínios/Frios':'#06b6d4','Tabaco':'#ef4444','Mercearia':'#84cc16','Limpeza/Higiene':'#6366f1','Outros':'#64748b','Não Mapeado':'#475569','PROJAC':'#a855f7'};
                 const mc = selData.monthlyCategories;
                 const mm = selData.monthlyMetrics;
 
@@ -2409,10 +2409,10 @@ return {
                 // "PROJAC" = PROJAC - Sanca Lev revenue (only in consolidated, from BI daily data)
                 const biRecon = PM.biReconciliation || {};
                 const showBIRecon = mixStore === '__all__' && !isCardSelected;
-                // Per-store BI reconciliation: show gap between DAILY_DATA and PRODUCT_MIX as "Não Rastreado"
+                // Per-store BI reconciliation: add gap between DAILY_DATA and PRODUCT_MIX into "Não Mapeado"
                 const showStoreRecon = mixStore !== '__all__' && !isCardSelected;
 
-                const chartCats = [...top6cats, 'Outros', 'Não Mapeado', ...(showBIRecon ? ['PROJAC'] : []), ...(showStoreRecon ? ['Não Rastreado'] : [])];
+                const chartCats = [...top6cats, 'Outros', 'Não Mapeado', ...(showBIRecon ? ['PROJAC'] : [])];
                 const buildMixData = () => {
                   if (!mcForChart) return [];
                   const data = [];
@@ -2445,7 +2445,7 @@ return {
                         const ddRev = ddStore[ym] || 0;
                         const pmRev = pmMetrics[ym]?.revenue || 0;
                         const gap = ddRev - pmRev;
-                        row['Não Rastreado_'+yr] = gap > 0.5 ? gap : 0;
+                        if (gap > 0.5) row['Não Mapeado_'+yr] = (row['Não Mapeado_'+yr] || 0) + gap;
                       });
                     }
                     data.push(row);
@@ -2478,7 +2478,7 @@ return {
                       const ddRev = ddStore[ym] || 0;
                       const pmRev = pmMetrics[ym]?.revenue || 0;
                       const gap = ddRev - pmRev;
-                      rowMTD['Não Rastreado_'+yr] = gap > 0.5 ? gap : 0;
+                      if (gap > 0.5) rowMTD['Não Mapeado_'+yr] = (rowMTD['Não Mapeado_'+yr] || 0) + gap;
                     });
                   }
                   data.push(rowMTD);
