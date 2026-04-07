@@ -855,7 +855,7 @@
       // ============================================================================
       // SINGLE-PASS DAILY_DATA AGGREGATION (YTD + MTD)
       // ============================================================================
-      const [computeYTD, computeMTD] = (() => {
+      const [computeYTD, computeMTD, ddMonthlyByStore] = (() => {
         const DD = (window.DAILY_DATA?.days || window.DAILY_DATA || {});
         const lastUpdate = DATA.lastUpdate; // "YYYY-MM-DD"
         const cutoffMMDD = lastUpdate.substring(5); // "MM-DD"
@@ -969,7 +969,18 @@
 
         const mtdResult = { mtdStoreRows, buildMTDChartData, mtdMonthName, isPartialMonth, mtdPerStore };
 
-        return [ytdResult, mtdResult];
+        // ── DD monthly revenue per store (for Mix reconciliation) ──
+        const ddMonthlyByStore = {};
+        Object.entries(DD).forEach(([date, stores]) => {
+          const ym = date.substring(0, 7); // "YYYY-MM"
+          Object.entries(stores).forEach(([rawStore, vals]) => {
+            const store = canonicalName(rawStore);
+            if (!ddMonthlyByStore[store]) ddMonthlyByStore[store] = {};
+            ddMonthlyByStore[store][ym] = (ddMonthlyByStore[store][ym] || 0) + (vals.fat || 0);
+          });
+        });
+
+        return [ytdResult, mtdResult, ddMonthlyByStore];
       })();
 
       // Merge MTD April data into momStoreRows for sorting
@@ -2343,7 +2354,7 @@ return {
 
               {/* ── Mix de Categorias + Métricas Operacionais + Heatmap ── */}
               {(() => {
-                const CAT_COLORS = {'Bebidas':'#3b82f6','Chocolates/Doces':'#f59e0b','Sorvetes/Gelatos':'#ec4899','Snacks/Salgadinhos':'#10b981','Padaria/Pães':'#f97316','Congelados/Refeições':'#8b5cf6','Laticínios/Frios':'#06b6d4','Tabaco':'#ef4444','Mercearia':'#84cc16','Limpeza/Higiene':'#6366f1','Outros':'#64748b','Não Mapeado':'#475569','PROJAC':'#a855f7'};
+                const CAT_COLORS = {'Bebidas':'#3b82f6','Chocolates/Doces':'#f59e0b','Sorvetes/Gelatos':'#ec4899','Snacks/Salgadinhos':'#10b981','Padaria/Pães':'#f97316','Congelados/Refeições':'#8b5cf6','Laticínios/Frios':'#06b6d4','Tabaco':'#ef4444','Mercearia':'#84cc16','Limpeza/Higiene':'#6366f1','Outros':'#64748b','Não Mapeado':'#475569','PROJAC':'#a855f7','Não Rastreado':'#94a3b8'};
                 const mc = selData.monthlyCategories;
                 const mm = selData.monthlyMetrics;
 
@@ -2392,8 +2403,10 @@ return {
                 // "PROJAC" = PROJAC - Sanca Lev revenue (only in consolidated, from BI daily data)
                 const biRecon = PM.biReconciliation || {};
                 const showBIRecon = mixStore === '__all__' && !isCardSelected;
+                // Per-store BI reconciliation: show gap between DAILY_DATA and PRODUCT_MIX
+                const showStoreRecon = mixStore !== '__all__' && !isCardSelected && ddMonthlyByStore;
 
-                const chartCats = [...top6cats, 'Outros', 'Não Mapeado', ...(showBIRecon ? ['PROJAC'] : [])];
+                const chartCats = [...top6cats, 'Outros', 'Não Mapeado', ...((showBIRecon ? ['PROJAC'] : [])), ...((showStoreRecon ? ['Não Rastreado'] : []))];
                 const buildMixData = () => {
                   if (!mcForChart) return [];
                   const data = [];
@@ -2411,12 +2424,21 @@ return {
                     row['Não Mapeado_25'] = cats25['Não Mapeado'] || 0;
                     row['Não Mapeado_26'] = cats26['Não Mapeado'] || 0;
                     if (showBIRecon) {
-                      // Use biRecon delta as PROJAC bar value so cats + PROJAC = BI exactly
-                      // Delta ≈ PROJAC revenue (absorbs small pipeline rounding too)
                       const br25 = biRecon['2025-'+m];
                       row['PROJAC_25'] = (br25 && br25.delta > 0 && br25.cashless > br25.bi * 0.9) ? br25.delta : 0;
                       const br26 = biRecon['2026-'+m];
                       row['PROJAC_26'] = (br26 && br26.delta > 0 && br26.cashless > br26.bi * 0.9) ? br26.delta : 0;
+                    }
+                    if (showStoreRecon) {
+                      const ddStore = ddMonthlyByStore[mixStore] || {};
+                      const pmMetrics = PM.byStore[mixStore]?.monthlyMetrics || {};
+                      ['25','26'].forEach(yr => {
+                        const ym = '20'+yr+'-'+m;
+                        const ddRev = ddStore[ym] || 0;
+                        const pmRev = pmMetrics[ym]?.revenue || 0;
+                        const gap = ddRev - pmRev;
+                        row['Não Rastreado_'+yr] = gap > 0.5 ? gap : 0;
+                      });
                     }
                     data.push(row);
                   });
@@ -2439,6 +2461,17 @@ return {
                     rowMTD['PROJAC_25'] = (br25m && br25m.delta > 0 && br25m.cashless > br25m.bi * 0.9) ? br25m.delta : 0;
                     const br26m = biRecon['2026-'+nextMonth];
                     rowMTD['PROJAC_26'] = (br26m && br26m.delta > 0 && br26m.cashless > br26m.bi * 0.9) ? br26m.delta : 0;
+                  }
+                  if (showStoreRecon) {
+                    const ddStore = ddMonthlyByStore[mixStore] || {};
+                    const pmMetrics = PM.byStore[mixStore]?.monthlyMetrics || {};
+                    ['25','26'].forEach(yr => {
+                      const ym = '20'+yr+'-'+nextMonth;
+                      const ddRev = ddStore[ym] || 0;
+                      const pmRev = pmMetrics[ym]?.revenue || 0;
+                      const gap = ddRev - pmRev;
+                      rowMTD['Não Rastreado_'+yr] = gap > 0.5 ? gap : 0;
+                    });
                   }
                   data.push(rowMTD);
                   return data;
