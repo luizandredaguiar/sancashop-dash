@@ -3039,6 +3039,72 @@ return {
                   </div>
                 )}
 
+                {/* Mix de Categorias chart when client is selected and has linked card */}
+                {clientDetail && clientDetail.cards && clientDetail.cards.length > 0 && (() => {
+                  const PM = window.PRODUCT_MIX || {};
+                  const cardId = clientDetail.cards[0].card;
+                  const cardData = PM.byCard && PM.byCard[cardId];
+                  if (!cardData || !cardData.monthlyCategories) return null;
+
+                  const mc = cardData.monthlyCategories;
+                  const CAT_COLORS = {'Bebidas':'#3b82f6','Chocolates/Doces':'#f59e0b','Sorvetes/Gelatos':'#ec4899','Snacks/Salgadinhos':'#10b981','Padaria/Pães':'#f97316','Congelados/Refeições':'#8b5cf6','Laticínios/Frios':'#06b6d4','Tabaco':'#ef4444','Mercearia':'#84cc16','Limpeza/Higiene':'#6366f1','Outros':'#64748b','Não Mapeado':'#475569'};
+
+                  // Get all categories across all months
+                  const allCats = {};
+                  Object.values(mc).forEach(cats => {
+                    Object.entries(cats).forEach(([cat, val]) => { allCats[cat] = (allCats[cat] || 0) + val; });
+                  });
+                  const sortedCats = Object.entries(allCats).sort((a,b) => b[1] - a[1]).map(c => c[0]).slice(0, 8);
+
+                  // Build chart data
+                  const months2026 = Object.keys(mc).filter(k => k.startsWith('2026-')).sort();
+                  const months2025 = Object.keys(mc).filter(k => k.startsWith('2025-')).sort();
+                  const allMonths = [...new Set([...months2025, ...months2026].map(k => k.substring(5)))].sort();
+
+                  const chartData = allMonths.map(m => {
+                    const row = { month: MESES[parseInt(m) - 1] };
+                    const c25 = mc['2025-' + m] || {};
+                    const c26 = mc['2026-' + m] || {};
+                    sortedCats.forEach(cat => {
+                      row[cat + '_25'] = c25[cat] || 0;
+                      row[cat + '_26'] = c26[cat] || 0;
+                    });
+                    return row;
+                  });
+
+                  const fmtR = v => 'R$' + (v || 0).toLocaleString('pt-BR', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+
+                  return (
+                    <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+                      <h3 className="text-sm font-semibold text-white mb-1">Mix de Categorias — {clientDetail.name}</h3>
+                      <p className="text-xs text-slate-400 mb-3">Cartão: {cardId} | Total: {fmtR(cardData.totalSpend)} em {cardData.txns} compras</p>
+                      <ResponsiveContainer width="100%" height={320}>
+                        <BarChart data={chartData} margin={{top: 10, right: 10, left: 0, bottom: 0}}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                          <XAxis dataKey="month" tick={{fill:'#94a3b8', fontSize:11}} />
+                          <YAxis tick={{fill:'#94a3b8', fontSize:11}} tickFormatter={v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v} />
+                          <Tooltip contentStyle={{background:'#1e293b', border:'1px solid #475569', borderRadius:8}} labelStyle={{color:'#fff'}} formatter={(v, name) => [fmtR(v), name.replace('_25', ' 2025').replace('_26', ' 2026')]} />
+                          {sortedCats.map(cat => (
+                            <React.Fragment key={cat}>
+                              <Bar dataKey={cat + '_25'} stackId="2025" fill={CAT_COLORS[cat] || '#64748b'} opacity={0.4} name={cat + ' 2025'} />
+                              <Bar dataKey={cat + '_26'} stackId="2026" fill={CAT_COLORS[cat] || '#64748b'} name={cat + ' 2026'} />
+                            </React.Fragment>
+                          ))}
+                        </BarChart>
+                      </ResponsiveContainer>
+                      <div className="flex flex-wrap gap-3 mt-2 justify-center">
+                        {sortedCats.map(cat => (
+                          <span key={cat} className="flex items-center gap-1 text-xs text-slate-400">
+                            <span style={{width:10, height:10, borderRadius:2, background: CAT_COLORS[cat] || '#64748b', display:'inline-block'}}></span>
+                            {cat}
+                          </span>
+                        ))}
+                        <span className="text-xs text-slate-500 ml-2">| opaco = 2025, sólido = 2026</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
