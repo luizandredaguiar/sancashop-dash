@@ -2615,7 +2615,11 @@ return {
                 {/* Card filter moved above Chart A */}
 
               {/* ── Top 20 Products Table (below Mix de Categorias) ── */}
-              <Card title="Top 20 Produtos (2026)" subtitle="Produtos com maior receita">
+              <Card>
+                <div className="mb-3">
+                  <h3 className="text-white font-semibold text-base">Top 20 Produtos por Receita</h3>
+                  <p className="text-slate-400 text-sm">Jan/2026 – {(() => { const d = PM.__all__?.monthlyMetrics ? Object.keys(PM.__all__.monthlyMetrics).filter(m=>m.startsWith('2026')).sort().pop() : '2026-04'; const [y,m] = d.split('-'); const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; return meses[parseInt(m)-1]+'/'+y; })()}{mixStore !== '__all__' ? (' — ' + mixStore) : ' — Consolidado'}</p>
+                </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -2624,7 +2628,6 @@ return {
                         <th className="px-3 py-2 text-left">Produto</th>
                         <th className="px-3 py-2 text-right">Receita (R$)</th>
                         <th className="px-3 py-2 text-right">Qtd</th>
-                        <th className="px-3 py-2 text-right">Transações</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2634,7 +2637,6 @@ return {
                           <td className="px-3 py-2 text-white">{p.name}</td>
                           <td className="px-3 py-2 text-right text-emerald-400 font-medium">{fmtR(p.revenue)}</td>
                           <td className="px-3 py-2 text-right text-slate-300">{fmtK(p.qty)}</td>
-                          <td className="px-3 py-2 text-right text-slate-300">{fmtK(p.txns)}</td>
                         </tr>
                       ))}
                     </tbody>
