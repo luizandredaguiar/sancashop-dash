@@ -2523,6 +2523,49 @@ return {
                   {isCardSelected && <span className="ml-2 text-xs text-slate-400">(Filtro aplicado a todos os gráficos abaixo)</span>}
                 </div>
 
+                {/* ── Client Info Card (from Cadastro data) ── */}
+                {isCardSelected && (() => {
+                  const CD = window.CLIENT_DATA || [];
+                  const linkedClient = CD.find(c => c.cards && c.cards.some(x => x.card === mixCardFilter));
+                  if (!linkedClient) return null;
+                  const fmtCpf = (cpf) => cpf ? cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '';
+                  const fmtPhone = (ph) => {
+                    if (!ph) return '';
+                    if (ph.length === 11) return '(' + ph.substring(0,2) + ') ' + ph.substring(2,7) + '-' + ph.substring(7);
+                    return ph;
+                  };
+                  const fmtDob = (dob) => {
+                    if (!dob) return '';
+                    const parts = dob.split('-');
+                    return parts.length === 3 ? parts[2] + '/' + parts[1] + '/' + parts[0] : dob;
+                  };
+                  return (
+                    <div className="bg-slate-800/50 rounded-lg p-4 border border-blue-500/30 mb-4">
+                      <h4 className="text-white font-semibold text-sm mb-2">👤 Cliente Cadastrado</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        <div><span className="text-slate-400">Nome:</span> <span className="text-white">{linkedClient.name}</span></div>
+                        <div><span className="text-slate-400">Email:</span> <span className="text-white">{linkedClient.email}</span></div>
+                        <div><span className="text-slate-400">CPF:</span> <span className="text-white">{fmtCpf(linkedClient.cpf)}</span></div>
+                        <div><span className="text-slate-400">Telefone:</span> <span className="text-white">{fmtPhone(linkedClient.phone)}</span></div>
+                        <div><span className="text-slate-400">Nascimento:</span> <span className="text-white">{fmtDob(linkedClient.dob)}</span></div>
+                        <div><span className="text-slate-400">Primeiro acesso:</span> <span className="text-white">{linkedClient.firstAccess?.substring(0,10)}</span></div>
+                        <div><span className="text-slate-400">Último acesso:</span> <span className="text-white">{linkedClient.lastAccess?.substring(0,10)}</span></div>
+                        <div><span className="text-slate-400">Total acessos:</span> <span className="text-white">{linkedClient.totalAccesses}</span></div>
+                      </div>
+                      {linkedClient.stores.length > 1 && (
+                        <div className="mt-2">
+                          <span className="text-slate-400 text-xs">Lojas frequentadas:</span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {linkedClient.stores.map(s => (
+                              <span key={s.store} className="bg-slate-700 text-white text-xs px-2 py-0.5 rounded">{s.store.replace(/^(Cond\.|Ed\.) ?/, '')} ({s.count})</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {/* ── Chart A: Mix de Categorias — Comparativo Mensal ── */}
                 <Card>
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
@@ -3121,7 +3164,7 @@ return {
                       </tr>
                     </thead>
                     <tbody>
-                      {filtered.slice(0, 100).map(c => (
+                      {filtered.map(c => (
                         <tr key={c.email} className="border-b border-slate-800 hover:bg-slate-800/50 cursor-pointer" onClick={() => setCadastroClient(c.email)}>
                           <td className="px-3 py-2 text-white">{c.name}</td>
                           <td className="px-3 py-2 text-slate-300 text-xs">{c.email}</td>
@@ -3136,7 +3179,7 @@ return {
                       ))}
                     </tbody>
                   </table>
-                  {filtered.length > 100 && <p className="text-slate-500 text-xs mt-2 text-center">Mostrando 100 de {filtered.length} clientes</p>}
+                  <p className="text-slate-500 text-xs mt-2 text-center">{filtered.length} clientes</p>
                 </div>
               </div>
             );
