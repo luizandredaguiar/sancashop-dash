@@ -2526,7 +2526,9 @@ return {
                 {/* ── Client Info Card (from Cadastro data) ── */}
                 {isCardSelected && (() => {
                   const CD = window.CLIENT_DATA || [];
-                  const linkedClient = CD.find(c => c.cards && c.cards.some(x => x.card === mixCardFilter));
+                  const normCard = (card) => { const d = (card||'').replace(/\*/g,''); return d.length >= 8 ? d.substring(0,4)+'****'+d.substring(d.length-4) : card; };
+                  const selectedNorm = normCard(mixCardFilter);
+                  const linkedClient = CD.find(c => c.cards && c.cards.some(x => normCard(x.card) === selectedNorm));
                   if (!linkedClient) return null;
                   const fmtCpf = (cpf) => cpf ? cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : '';
                   const fmtPhone = (ph) => {
@@ -3085,7 +3087,9 @@ return {
                 {/* Mix de Categorias chart when client is selected and has linked card */}
                 {clientDetail && clientDetail.cards && clientDetail.cards.length > 0 && (() => {
                   const PM = window.PRODUCT_MIX || {};
-                  const cardId = clientDetail.cards[0].card;
+                  const rawCardId = clientDetail.cards[0].card;
+                  const normCadCard = (card) => { const d = (card||'').replace(/\*/g,''); return d.length >= 8 ? d.substring(0,4)+'****'+d.substring(d.length-4) : card; };
+                  const cardId = normCadCard(rawCardId);
                   const cardData = PM.byCard && PM.byCard[cardId];
                   if (!cardData || !cardData.monthlyCategories) return null;
 
