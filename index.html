@@ -2279,7 +2279,8 @@ return {
             // Category data for charts
             const catEntries2026 = Object.entries(selData.categories2026 || {}).map(([name, d]) => ({name, revenue: d.revenue, pct: d.pct})).sort((a,b) => b.revenue - a.revenue);
             // Top 20 products
-            const topProds = (selData.topProducts2026 || []).slice(0, 20);
+            const isCardSelectedEarly = mixCardFilter !== '__all__' && PM.byCard && PM.byCard[mixCardFilter];
+            const topProds = (isCardSelectedEarly && PM.byCard[mixCardFilter]?.topProducts) ? PM.byCard[mixCardFilter].topProducts.slice(0, 20) : (selData.topProducts2026 || []).slice(0, 20);
 
             // byCard for selected store
             const cardData = mixStore !== '__all__' && PM.byCard
@@ -2674,7 +2675,7 @@ return {
               <Card>
                 <div className="mb-3">
                   <h3 className="text-white font-semibold text-base">Top 20 Produtos por Receita</h3>
-                  <p className="text-slate-400 text-sm">Jan/2026 – {(() => { const d = PM.__all__?.monthlyMetrics ? Object.keys(PM.__all__.monthlyMetrics).filter(m=>m.startsWith('2026')).sort().pop() : '2026-04'; const [y,m] = d.split('-'); const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; return meses[parseInt(m)-1]+'/'+y; })()}{mixStore !== '__all__' ? (' — ' + mixStore) : ' — Consolidado'}</p>
+                  <p className="text-slate-400 text-sm">Jan/2026 – {(() => { const d = PM.__all__?.monthlyMetrics ? Object.keys(PM.__all__.monthlyMetrics).filter(m=>m.startsWith('2026')).sort().pop() : '2026-04'; const [y,m] = d.split('-'); const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; return meses[parseInt(m)-1]+'/'+y; })()}{isCardSelectedEarly ? (' — ' + mixCardFilter) : mixStore !== '__all__' ? (' — ' + mixStore) : ' — Consolidado'}</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -2691,7 +2692,7 @@ return {
                         <tr key={i} className={`border-b border-slate-700/50 ${i % 2 === 0 ? 'bg-slate-800/30' : ''}`}>
                           <td className="px-3 py-2 text-slate-500">{i+1}</td>
                           <td className="px-3 py-2 text-white">{p.name}</td>
-                          <td className="px-3 py-2 text-right text-emerald-400 font-medium">{fmtR(p.revenue)}</td>
+                          <td className="px-3 py-2 text-right text-emerald-400 font-medium">{fmtR(p.revenue || p.spend || 0)}</td>
                           <td className="px-3 py-2 text-right text-slate-300">{fmtK(p.qty)}</td>
                         </tr>
                       ))}
@@ -2806,9 +2807,11 @@ return {
                   const payTypes = ['Crédito','Débito','PIX','Voucher','N/A'];
                   // Get monthlyPayments from selected store or __all__
                   const mpSrc = (() => {
+                    // byCard doesn't have monthlyPayments — fall back to store/consolidated
                     if (mixStore === '__all__') return PM.__all__?.monthlyPayments || {};
                     return PM.byStore?.[mixStore]?.monthlyPayments || {};
                   })();
+                  const payCardNote = isCardSelected;
 
                   // Build chart data
                   const buildPayData = () => {
@@ -2862,7 +2865,7 @@ return {
                       <div>
                         <h3 className="text-white font-semibold text-base">Mix de Pagamentos — Comparativo Mensal</h3>
                         <p className="text-slate-400 text-sm">
-                          2025 vs 2026 — tipo de pagamento lado a lado
+                          2025 vs 2026 — tipo de pagamento lado a lado{payCardNote ? ' (dados da loja — não disponível por cartão)' : ''}
                           {(() => {
                             const has25 = payData.some(d => !d.isSpacer && payTypes.some(pt => d[pt+'_25'] > 0));
                             const has26 = payData.some(d => !d.isSpacer && payTypes.some(pt => d[pt+'_26'] > 0));
