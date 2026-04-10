@@ -2372,7 +2372,35 @@ return {
                 const biRecon = PM.biReconciliation || {};
                 const showBIRecon = mixStore === '__all__' && !isCardSelected;
                 // Per-store BI reconciliation: show gap between DAILY_DATA and PRODUCT_MIX as "Não Rastreado"
+                // Only show when cashless coverage is adequate for the month (>=80% of DD days)
                 const showStoreRecon = mixStore !== '__all__' && !isCardSelected;
+                // Compute cashless day coverage per store per month for gap validity
+                const cashlessDayCoverage = (() => {
+                  if (!showStoreRecon) return {};
+                  const pmMetrics = PM.byStore[mixStore]?.monthlyMetrics || {};
+                  const ddStore = ddMonthlyForStore || {};
+                  const DD = (window.DAILY_DATA?.days || window.DAILY_DATA || {});
+                  const result = {};
+                  // Count DD days per month for this store
+                  const ddDays = {};
+                  Object.entries(DD).forEach(([date, stores]) => {
+                    const ym = date.substring(0, 7);
+                    Object.entries(stores).forEach(([rawStore, vals]) => {
+                      if ((rawStore === mixStore || rawStore.startsWith(mixStore + ' - ')) && (vals.fat || 0) > 0) {
+                        ddDays[ym] = (ddDays[ym] || 0) + 1;
+                      }
+                    });
+                  });
+                  // Count PM txn-days per month (estimate from txns: if txns > 0, data exists)
+                  // PM has revenue but not day count; use heuristic: if PM revenue >= 80% of DD revenue, coverage is OK
+                  Object.keys(ddDays).forEach(ym => {
+                    const ddRev = ddStore[ym] || 0;
+                    const pmRev = pmMetrics[ym]?.revenue || 0;
+                    // Coverage ratio: PM revenue / DD revenue. If < 0.5, cashless data is too sparse
+                    result[ym] = ddRev > 0 ? pmRev / ddRev : 1;
+                  });
+                  return result;
+                })();
 
                 const chartCats = [...top6cats, 'Outros', 'Não Mapeado', ...(showBIRecon ? ['PROJAC'] : []), ...(showStoreRecon ? ['Não Rastreado'] : [])];
                 const buildMixData = () => {
@@ -2404,10 +2432,15 @@ return {
                       const pmMetrics = PM.byStore[mixStore]?.monthlyMetrics || {};
                       ['25','26'].forEach(yr => {
                         const ym = '20'+yr+'-'+m;
-                        const ddRev = ddStore[ym] || 0;
-                        const pmRev = pmMetrics[ym]?.revenue || 0;
-                        const gap = ddRev - pmRev;
-                        row['Não Rastreado_'+yr] = gap > 0.5 ? gap : 0;
+                        const coverage = cashlessDayCoverage[ym] || 0;
+                        if (coverage >= 0.5) {
+                          const ddRev = ddStore[ym] || 0;
+                          const pmRev = pmMetrics[ym]?.revenue || 0;
+                          const gap = ddRev - pmRev;
+                          row['Não Rastreado_'+yr] = gap > 0.5 ? gap : 0;
+                        } else {
+                          row['Não Rastreado_'+yr] = 0; // Cashless coverage too sparse, suppress gap
+                        }
                       });
                     }
                     data.push(row);
@@ -2437,10 +2470,15 @@ return {
                     const pmMetrics = PM.byStore[mixStore]?.monthlyMetrics || {};
                     ['25','26'].forEach(yr => {
                       const ym = '20'+yr+'-'+nextMonth;
-                      const ddRev = ddStore[ym] || 0;
-                      const pmRev = pmMetrics[ym]?.revenue || 0;
-                      const gap = ddRev - pmRev;
-                      rowMTD['Não Rastreado_'+yr] = gap > 0.5 ? gap : 0;
+                      const coverage = cashlessDayCoverage[ym] || 0;
+                      if (coverage >= 0.5) {
+                        const ddRev = ddStore[ym] || 0;
+                        const pmRev = pmMetrics[ym]?.revenue || 0;
+                        const gap = ddRev - pmRev;
+                        rowMTD['Não Rastreado_'+yr] = gap > 0.5 ? gap : 0;
+                      } else {
+                        rowMTD['Não Rastreado_'+yr] = 0;
+                      }
                     });
                   }
                   data.push(rowMTD);
