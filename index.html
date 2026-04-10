@@ -238,7 +238,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
     const [mixStore, setMixStore] = useState('__all__');
     const [mixView, setMixView] = useState('absolute');
     const [mixCardFilter, setMixCardFilter] = useState('__all__');
-    const [opMetric, setOpMetric] = useState('revenue');
+    const [opMetric, setOpMetric] = useState('txns');
     const [payView, setPayView] = useState('absolute');
     const [cadastroStore, setCadastroStore] = useState('__all__');
     const [cadastroClient, setCadastroClient] = useState('');
@@ -2310,29 +2310,20 @@ return {
 
                 // ── DD monthly revenue for selected store (computed locally, no canonicalName dependency) ──
                 const ddMonthlyForStore = (() => {
+                  if (mixStore === '__all__') return null;
                   const DD = (window.DAILY_DATA?.days || window.DAILY_DATA || {});
                   const result = {};
-                  if (mixStore === '__all__') {
-                    // Consolidated: aggregate all stores from BI
-                    Object.entries(DD).forEach(([date, stores]) => {
-                      const ym = date.substring(0, 7);
-                      Object.entries(stores).forEach(([rawStore, vals]) => {
+                  // Match DD store names to PM store names: exact or sub-store match (e.g., "Paradiso - Playground" starts with "Paradiso - ")
+                  // Using ' - ' (space-dash-space) prevents "Bosque Freguesia 2" from matching "Bosque Freguesia"
+                  Object.entries(DD).forEach(([date, stores]) => {
+                    const ym = date.substring(0, 7);
+                    Object.entries(stores).forEach(([rawStore, vals]) => {
+                      if (rawStore === mixStore || rawStore.startsWith(mixStore + ' - ')) {
                         result[ym] = (result[ym] || 0) + (vals.fat || 0);
-                      });
+                      }
                     });
-                  } else {
-                    // Match DD store names to PM store names: exact or sub-store match (e.g., "Paradiso - Playground" starts with "Paradiso - ")
-                    // Using ' - ' (space-dash-space) prevents "Bosque Freguesia 2" from matching "Bosque Freguesia"
-                    Object.entries(DD).forEach(([date, stores]) => {
-                      const ym = date.substring(0, 7);
-                      Object.entries(stores).forEach(([rawStore, vals]) => {
-                        if (rawStore === mixStore || rawStore.startsWith(mixStore + ' - ')) {
-                          result[ym] = (result[ym] || 0) + (vals.fat || 0);
-                        }
-                      });
-                    });
-                  }
-                  return Object.keys(result).length > 0 ? result : null;
+                  });
+                  return result;
                 })();
 
                 // Build card options for subordinate filter
@@ -2477,37 +2468,9 @@ return {
 
                 // ── Chart B data: operational metrics ──
                 const buildOpData = () => {
-                  // Revenue metric: use BI (DAILY_DATA) when a specific store is selected (not card-filtered)
-                  if (opMetric === 'revenue') {
-                    const useBI = !isCardSelected && ddMonthlyForStore;
-                    const pmSrc = isCardSelected ? PM.byCard[mixCardFilter]?.monthlyMetrics : mm;
-                    const data = [];
-                    fullMonths.forEach(m => {
-                      let v25, v26;
-                      if (useBI) {
-                        v25 = ddMonthlyForStore['2025-'+m] || 0;
-                        v26 = ddMonthlyForStore['2026-'+m] || 0;
-                      } else {
-                        v25 = pmSrc?.['2025-'+m]?.revenue || pmSrc?.['2025-'+m]?.spend || 0;
-                        v26 = pmSrc?.['2026-'+m]?.revenue || pmSrc?.['2026-'+m]?.spend || 0;
-                      }
-                      data.push({ month: MESES[parseInt(m)-1], '2025': v25, '2026': v26 });
-                    });
-                    data.push({ month: ' ', isSpacer: true });
-                    let v25a, v26a;
-                    if (useBI) {
-                      v25a = ddMonthlyForStore['2025-'+nextMonth] || 0;
-                      v26a = ddMonthlyForStore['2026-'+nextMonth] || 0;
-                    } else {
-                      v25a = pmSrc?.['2025-'+nextMonth]?.revenue || pmSrc?.['2025-'+nextMonth]?.spend || 0;
-                      v26a = pmSrc?.['2026-'+nextMonth]?.revenue || pmSrc?.['2026-'+nextMonth]?.spend || 0;
-                    }
-                    data.push({ month: MESES[parseInt(nextMonth)-1] + ' MTD', '2025': v25a, '2026': v26a });
-                    return data;
-                  }
                   const src = isCardSelected ? PM.byCard[mixCardFilter]?.monthlyMetrics : mm;
                   if (!src) return [];
-                  const allMs = fullMonths;
+                  const allMs = ['01','02','03'];
                   const data = [];
                   const metricKey = opMetric === 'txns' ? 'txns' : opMetric === 'ticket' ? 'ticket' : 'itemsPerTx';
                   allMs.forEach(m => {
@@ -2524,7 +2487,7 @@ return {
                 };
 
                 const opData = buildOpData();
-                const opLabels = { revenue: 'Receita (R$)', txns: 'Transações', ticket: 'Ticket Médio (R$)', itemsPerTx: 'Itens/Transação' };
+                const opLabels = { txns: 'Transações', ticket: 'Ticket Médio (R$)', itemsPerTx: 'Itens/Transação' };
 
                 // ── Chart C: heatmap ──
                 const hm = (isCardSelected && PM.byCard?.[mixCardFilter]?.heatmap2026) || selData.heatmap2026;
@@ -2647,8 +2610,7 @@ return {
                               const fmtVal = (v) => mixView === 'percent' ? (v*100).toFixed(1)+'%' : fmtR(v);
                               const total25 = items25.reduce((s, it) => s + it.value, 0);
                               const total26 = items26.reduce((s, it) => s + it.value, 0);
-                              const catLabel = (dk, suffix) => { const c = dk.replace(suffix,''); return c === 'PROJAC' ? 'PROJAC' : c === 'Não Rastreado' ? 'Não Rastreado (cashless gap)' : c; };
-                              const biLabel = showStoreRecon ? ' (BI)' : showBIRecon ? ' (BI)' : '';
+                              const catLabel = (dk, suffix) => { const c = dk.replace(suffix,''); return c === 'PROJAC' ? 'PROJAC' : c; };
                               const isMobile = window.innerWidth < 640;
                               // On mobile: single column, smaller font; on desktop: two columns
                               const fs = isMobile ? 10 : 11;
@@ -2663,19 +2625,19 @@ return {
                                   {useTwoCols ? (
                                     <div style={{display:'flex',gap:10}}>
                                       <div style={{minWidth:0}}>
-                                        <p style={{color:'#94a3b8',fontWeight:600,marginBottom:1,opacity:0.7}}>2025{biLabel}: {fmtVal(total25)}</p>
+                                        <p style={{color:'#94a3b8',fontWeight:600,marginBottom:1,opacity:0.7}}>2025: {fmtVal(total25)}</p>
                                         {renderItems(items25, '_25', 0.7)}
                                       </div>
                                       <div style={{minWidth:0}}>
-                                        <p style={{color:'#94a3b8',fontWeight:600,marginBottom:1}}>2026{biLabel}: {fmtVal(total26)}</p>
+                                        <p style={{color:'#94a3b8',fontWeight:600,marginBottom:1}}>2026: {fmtVal(total26)}</p>
                                         {renderItems(items26, '_26')}
                                       </div>
                                     </div>
                                   ) : (
                                     <div>
-                                      {items25.length > 0 && <p style={{color:'#94a3b8',fontWeight:600,marginBottom:1,opacity:0.7}}>2025{biLabel}: {fmtVal(total25)}</p>}
+                                      {items25.length > 0 && <p style={{color:'#94a3b8',fontWeight:600,marginBottom:1,opacity:0.7}}>2025: {fmtVal(total25)}</p>}
                                       {renderItems(items25, '_25', 0.7)}
-                                      {items26.length > 0 && <p style={{color:'#94a3b8',fontWeight:600,marginTop:2,marginBottom:1}}>2026{biLabel}: {fmtVal(total26)}</p>}
+                                      {items26.length > 0 && <p style={{color:'#94a3b8',fontWeight:600,marginTop:2,marginBottom:1}}>2026: {fmtVal(total26)}</p>}
                                       {renderItems(items26, '_26')}
                                     </div>
                                   )}
@@ -2745,7 +2707,6 @@ return {
                       <h3 className="text-white font-semibold text-base">Métricas Operacionais — Comparativo Mensal</h3>
                       <p className="text-slate-400 text-sm">
                         2025 vs 2026 — {opLabels[opMetric]}
-                        {opMetric === 'revenue' && !isCardSelected && ddMonthlyForStore ? ' (fonte: BI)' : opMetric === 'revenue' && isCardSelected ? ' (fonte: cashless)' : ''}
                         {(() => {
                           const has2025 = opData.some(d => !d.isSpacer && d['2025'] > 0);
                           const has2026 = opData.some(d => !d.isSpacer && d['2026'] > 0);
@@ -2757,7 +2718,6 @@ return {
                       </p>
                     </div>
                     <div className="flex gap-1 mt-2 sm:mt-0 bg-slate-700/50 rounded-lg p-1 shrink-0">
-                      <button onClick={() => setOpMetric('revenue')} className={`px-2 sm:px-3 py-1.5 rounded text-xs font-medium transition-colors ${opMetric === 'revenue' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}>Receita</button>
                       <button onClick={() => setOpMetric('txns')} className={`px-2 sm:px-3 py-1.5 rounded text-xs font-medium transition-colors ${opMetric === 'txns' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}>Transações</button>
                       <button onClick={() => setOpMetric('ticket')} className={`px-2 sm:px-3 py-1.5 rounded text-xs font-medium transition-colors ${opMetric === 'ticket' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}>Ticket Médio</button>
                       <button onClick={() => setOpMetric('itemsPerTx')} className={`px-2 sm:px-3 py-1.5 rounded text-xs font-medium transition-colors ${opMetric === 'itemsPerTx' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}>Itens/Tx</button>
@@ -2769,12 +2729,12 @@ return {
                       <BarChart data={opData} margin={{top:10,right:10,left:10,bottom:0}} barCategoryGap="20%">
                         <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                         <XAxis dataKey="month" stroke="#94a3b8" tick={{fontSize:12}} tickFormatter={v => v === ' ' ? '' : v} />
-                        <YAxis stroke="#94a3b8" domain={[0, 'auto']} tickFormatter={v => opMetric === 'revenue' ? (v >= 1000 ? (v/1000).toFixed(0)+'k' : v.toFixed(0)) : opMetric === 'ticket' ? (v >= 1000 ? (v/1000).toFixed(1)+'k' : v.toFixed(2)) : opMetric === 'itemsPerTx' ? v.toFixed(2) : (v >= 1000 ? (v/1000).toFixed(0)+'k' : v.toFixed(0))} />
+                        <YAxis stroke="#94a3b8" domain={[0, 'auto']} tickFormatter={v => opMetric === 'ticket' ? (v >= 1000 ? (v/1000).toFixed(1)+'k' : v.toFixed(2)) : opMetric === 'itemsPerTx' ? v.toFixed(2) : (v >= 1000 ? (v/1000).toFixed(0)+'k' : v.toFixed(0))} />
                         <Tooltip
                           contentStyle={{backgroundColor:'#1e293b',border:'1px solid #334155',borderRadius:8}}
                           labelStyle={{color:'#f1f5f9'}}
                           formatter={(v, name) => {
-                            const fmt = opMetric === 'revenue' ? fmtR(v) : opMetric === 'ticket' ? fmtR(v) : opMetric === 'itemsPerTx' ? v.toFixed(2) : Number(v).toLocaleString('pt-BR');
+                            const fmt = opMetric === 'ticket' ? fmtR(v) : opMetric === 'itemsPerTx' ? v.toFixed(2) : Number(v).toLocaleString('pt-BR');
                             return [fmt, name];
                           }}
                         />
