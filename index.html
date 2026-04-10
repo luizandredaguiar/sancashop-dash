@@ -2383,7 +2383,9 @@ return {
                 // Per-store BI reconciliation: show gap between DAILY_DATA and PRODUCT_MIX as "Não Rastreado"
                 const showStoreRecon = mixStore !== '__all__' && !isCardSelected;
 
-                const chartCats = [...top6cats, 'Outros', 'Não Mapeado', ...(showBIRecon ? ['PROJAC'] : []), ...(showStoreRecon ? ['Não Rastreado'] : [])];
+                // Only add 'Não Mapeado' as separate bar if it's NOT already in top6cats
+                const naoMapeadoInTop6 = top6cats.includes('Não Mapeado');
+                const chartCats = [...top6cats, 'Outros', ...(naoMapeadoInTop6 ? [] : ['Não Mapeado']), ...(showBIRecon ? ['PROJAC'] : []), ...(showStoreRecon ? ['Não Rastreado'] : [])];
                 const buildMixData = () => {
                   if (!mcForChart) return [];
                   const data = [];
@@ -2397,9 +2399,11 @@ return {
                     });
                     row['Outros_25'] = sumOthers(cats25);
                     row['Outros_26'] = sumOthers(cats26);
-                    // Always extract "Não Mapeado" from data (unmatched cashless txns within this store/card)
-                    row['Não Mapeado_25'] = cats25['Não Mapeado'] || 0;
-                    row['Não Mapeado_26'] = cats26['Não Mapeado'] || 0;
+                    // Extract "Não Mapeado" only if NOT already in top6 (avoids double-counting)
+                    if (!naoMapeadoInTop6) {
+                      row['Não Mapeado_25'] = cats25['Não Mapeado'] || 0;
+                      row['Não Mapeado_26'] = cats26['Não Mapeado'] || 0;
+                    }
                     if (showBIRecon) {
                       // Use biRecon delta as PROJAC bar value so cats + PROJAC = BI exactly
                       // Delta ≈ PROJAC revenue (absorbs small pipeline rounding too)
@@ -2423,8 +2427,15 @@ return {
                   });
                   // Always add spacer + MTD for next month (even with 0 values)
                   data.push({ month: ' ', isSpacer: true });
-                  const cats25mtd = mcForChart['2025-'+nextMonth] || {};
                   const cats26mtd = mcForChart['2026-'+nextMonth] || {};
+                  // For 2025 MTD: pro-rate to same # of days as 2026 MTD
+                  // mtdDayMax = last day of data in current partial month
+                  const raw25mtd = mcForChart['2025-'+nextMonth] || {};
+                  const mtdDayMax = parseInt((DATA.lastUpdate || '').substring(8, 10)) || 9;
+                  const daysInMonth25 = new Date(2025, parseInt(nextMonth), 0).getDate();
+                  const proRateFactor = (daysInMonth25 > 0 && mtdDayMax < daysInMonth25) ? mtdDayMax / daysInMonth25 : 1;
+                  const cats25mtd = {};
+                  Object.entries(raw25mtd).forEach(([cat, val]) => { cats25mtd[cat] = val * proRateFactor; });
                   const rowMTD = { month: MESES[parseInt(nextMonth)-1] + ' MTD' };
                   top6cats.forEach(cat => {
                     rowMTD[cat + '_25'] = cats25mtd[cat] || 0;
@@ -2432,9 +2443,10 @@ return {
                   });
                   rowMTD['Outros_25'] = sumOthers(cats25mtd);
                   rowMTD['Outros_26'] = sumOthers(cats26mtd);
-                  // Always extract "Não Mapeado" from data (unmatched cashless txns)
-                  rowMTD['Não Mapeado_25'] = cats25mtd['Não Mapeado'] || 0;
-                  rowMTD['Não Mapeado_26'] = cats26mtd['Não Mapeado'] || 0;
+                  if (!naoMapeadoInTop6) {
+                    rowMTD['Não Mapeado_25'] = cats25mtd['Não Mapeado'] || 0;
+                    rowMTD['Não Mapeado_26'] = cats26mtd['Não Mapeado'] || 0;
+                  }
                   if (showBIRecon) {
                     const br25m = biRecon['2025-'+nextMonth];
                     rowMTD['PROJAC_25'] = (br25m && br25m.delta > 0 && br25m.cashless > br25m.bi * 0.9) ? br25m.delta : 0;
