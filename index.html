@@ -2313,10 +2313,27 @@ return {
                   if (mixStore === '__all__') return null;
                   const DD = (window.DAILY_DATA?.days || window.DAILY_DATA || {});
                   const result = {};
+                  // Find the max day per YYYY-MM in the CURRENT year (2026) to limit prior year MTD
+                  const maxDayByMonth2026 = {};
+                  Object.keys(DD).forEach(date => {
+                    if (typeof date === 'string' && date.startsWith('2026-')) {
+                      const ym = date.substring(0, 7);
+                      const day = parseInt(date.substring(8, 10));
+                      maxDayByMonth2026[ym.substring(5)] = Math.max(maxDayByMonth2026[ym.substring(5)] || 0, day);
+                    }
+                  });
                   // Match DD store names to PM store names: exact or sub-store match (e.g., "Paradiso - Playground" starts with "Paradiso - ")
                   // Using ' - ' (space-dash-space) prevents "Bosque Freguesia 2" from matching "Bosque Freguesia"
                   Object.entries(DD).forEach(([date, stores]) => {
+                    if (typeof date !== 'string' || date.length < 10) return;
                     const ym = date.substring(0, 7);
+                    const mm = date.substring(5, 7);
+                    const day = parseInt(date.substring(8, 10));
+                    // For prior year months: limit to same max day as current year
+                    // e.g., if 2026-04 has data up to day 9, only count 2025-04 days 1-9
+                    if (date.startsWith('2025-') && maxDayByMonth2026[mm]) {
+                      if (day > maxDayByMonth2026[mm]) return; // skip days beyond current year's MTD
+                    }
                     Object.entries(stores).forEach(([rawStore, vals]) => {
                       if (rawStore === mixStore || rawStore.startsWith(mixStore + ' - ')) {
                         result[ym] = (result[ym] || 0) + (vals.fat || 0);
@@ -2372,35 +2389,7 @@ return {
                 const biRecon = PM.biReconciliation || {};
                 const showBIRecon = mixStore === '__all__' && !isCardSelected;
                 // Per-store BI reconciliation: show gap between DAILY_DATA and PRODUCT_MIX as "Não Rastreado"
-                // Only show when cashless coverage is adequate for the month (>=80% of DD days)
                 const showStoreRecon = mixStore !== '__all__' && !isCardSelected;
-                // Compute cashless day coverage per store per month for gap validity
-                const cashlessDayCoverage = (() => {
-                  if (!showStoreRecon) return {};
-                  const pmMetrics = PM.byStore[mixStore]?.monthlyMetrics || {};
-                  const ddStore = ddMonthlyForStore || {};
-                  const DD = (window.DAILY_DATA?.days || window.DAILY_DATA || {});
-                  const result = {};
-                  // Count DD days per month for this store
-                  const ddDays = {};
-                  Object.entries(DD).forEach(([date, stores]) => {
-                    const ym = date.substring(0, 7);
-                    Object.entries(stores).forEach(([rawStore, vals]) => {
-                      if ((rawStore === mixStore || rawStore.startsWith(mixStore + ' - ')) && (vals.fat || 0) > 0) {
-                        ddDays[ym] = (ddDays[ym] || 0) + 1;
-                      }
-                    });
-                  });
-                  // Count PM txn-days per month (estimate from txns: if txns > 0, data exists)
-                  // PM has revenue but not day count; use heuristic: if PM revenue >= 80% of DD revenue, coverage is OK
-                  Object.keys(ddDays).forEach(ym => {
-                    const ddRev = ddStore[ym] || 0;
-                    const pmRev = pmMetrics[ym]?.revenue || 0;
-                    // Coverage ratio: PM revenue / DD revenue. If < 0.5, cashless data is too sparse
-                    result[ym] = ddRev > 0 ? pmRev / ddRev : 1;
-                  });
-                  return result;
-                })();
 
                 const chartCats = [...top6cats, 'Outros', 'Não Mapeado', ...(showBIRecon ? ['PROJAC'] : []), ...(showStoreRecon ? ['Não Rastreado'] : [])];
                 const buildMixData = () => {
@@ -2432,15 +2421,10 @@ return {
                       const pmMetrics = PM.byStore[mixStore]?.monthlyMetrics || {};
                       ['25','26'].forEach(yr => {
                         const ym = '20'+yr+'-'+m;
-                        const coverage = cashlessDayCoverage[ym] || 0;
-                        if (coverage >= 0.5) {
-                          const ddRev = ddStore[ym] || 0;
-                          const pmRev = pmMetrics[ym]?.revenue || 0;
-                          const gap = ddRev - pmRev;
-                          row['Não Rastreado_'+yr] = gap > 0.5 ? gap : 0;
-                        } else {
-                          row['Não Rastreado_'+yr] = 0; // Cashless coverage too sparse, suppress gap
-                        }
+                        const ddRev = ddStore[ym] || 0;
+                        const pmRev = pmMetrics[ym]?.revenue || 0;
+                        const gap = ddRev - pmRev;
+                        row['Não Rastreado_'+yr] = gap > 0.5 ? gap : 0;
                       });
                     }
                     data.push(row);
@@ -2465,21 +2449,12 @@ return {
                     const br26m = biRecon['2026-'+nextMonth];
                     rowMTD['PROJAC_26'] = (br26m && br26m.delta > 0 && br26m.cashless > br26m.bi * 0.9) ? br26m.delta : 0;
                   }
+                  // MTD month: do NOT show Não Rastreado — partial months always have
+                  // timing differences between BI and cashless that are not meaningful.
+                  // Não Rastreado only adds value for full closed months (where gap ≈ 0 already).
                   if (showStoreRecon) {
-                    const ddStore = ddMonthlyForStore || {};
-                    const pmMetrics = PM.byStore[mixStore]?.monthlyMetrics || {};
-                    ['25','26'].forEach(yr => {
-                      const ym = '20'+yr+'-'+nextMonth;
-                      const coverage = cashlessDayCoverage[ym] || 0;
-                      if (coverage >= 0.5) {
-                        const ddRev = ddStore[ym] || 0;
-                        const pmRev = pmMetrics[ym]?.revenue || 0;
-                        const gap = ddRev - pmRev;
-                        rowMTD['Não Rastreado_'+yr] = gap > 0.5 ? gap : 0;
-                      } else {
-                        rowMTD['Não Rastreado_'+yr] = 0;
-                      }
-                    });
+                    rowMTD['Não Rastreado_25'] = 0;
+                    rowMTD['Não Rastreado_26'] = 0;
                   }
                   data.push(rowMTD);
                   return data;
