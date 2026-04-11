@@ -2347,6 +2347,9 @@ return {
 
                 const isCardSelected = mixCardFilter !== '__all__' && PM.byCard && PM.byCard[mixCardFilter];
 
+                // Helper: label for current filter selection
+                const filterLabel = isCardSelected ? ('Cartão ' + mixCardFilter) : (mixStore !== '__all__' ? mixStore : 'Consolidado');
+
                 // ── Determine months with data in both years ──
                 // Dynamic: full months from the Mensal tab's monthRange
                 const fullMonths = (computed.monthRange || [1,2,3]).map(m => String(m).padStart(2, '0')).filter(m => {
@@ -2597,8 +2600,7 @@ return {
                     <div>
                       <h3 className="text-white font-semibold text-base">Mix de Categorias — Comparativo Mensal {!showBIRecon && <span className="text-slate-500 text-xs font-normal">(excl. PROJAC - Sanca Lev)</span>}</h3>
                       <p className="text-slate-400 text-sm">
-                        2025 vs 2026 — top categorias lado a lado
-                        {isCardSelected && ' (cartão selecionado)'}
+                        2025 vs 2026 — {filterLabel}
                         {(() => {
                           const hasMix25 = mixData.some(d => !d.isSpacer && chartCats.some(c => d[c+'_25'] > 0));
                           const hasMix26 = mixData.some(d => !d.isSpacer && chartCats.some(c => d[c+'_26'] > 0));
@@ -2693,10 +2695,18 @@ return {
                 {/* Card filter moved above Chart A */}
 
               {/* ── Top 20 Products Table (below Mix de Categorias) ── */}
+              {(() => {
+                // Use card-level top products when card is selected
+                const cardProds = isCardSelected && PM.byCard[mixCardFilter]?.topProducts
+                  ? PM.byCard[mixCardFilter].topProducts.map(p => ({name: p.name, revenue: p.spend || p.revenue, qty: p.qty}))
+                  : null;
+                const displayProds = (cardProds || topProds).slice(0, 20);
+                const periodLabel = (() => { const d = PM.__all__?.monthlyMetrics ? Object.keys(PM.__all__.monthlyMetrics).filter(m=>m.startsWith('2026')).sort().pop() : '2026-04'; const [y,m] = d.split('-'); const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; return meses[parseInt(m)-1]+'/'+y; })();
+                return (
               <Card>
                 <div className="mb-3">
-                  <h3 className="text-white font-semibold text-base">Top 20 Produtos por Receita</h3>
-                  <p className="text-slate-400 text-sm">Jan/2026 – {(() => { const d = PM.__all__?.monthlyMetrics ? Object.keys(PM.__all__.monthlyMetrics).filter(m=>m.startsWith('2026')).sort().pop() : '2026-04'; const [y,m] = d.split('-'); const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; return meses[parseInt(m)-1]+'/'+y; })()}{mixStore !== '__all__' ? (' — ' + mixStore) : ' — Consolidado'}</p>
+                  <h3 className="text-white font-semibold text-base">Top {displayProds.length} Produtos por Receita</h3>
+                  <p className="text-slate-400 text-sm">Jan/2026 – {periodLabel} — {filterLabel}</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -2709,7 +2719,7 @@ return {
                       </tr>
                     </thead>
                     <tbody>
-                      {topProds.map((p, i) => (
+                      {displayProds.map((p, i) => (
                         <tr key={i} className={`border-b border-slate-700/50 ${i % 2 === 0 ? 'bg-slate-800/30' : ''}`}>
                           <td className="px-3 py-2 text-slate-500">{i+1}</td>
                           <td className="px-3 py-2 text-white">{p.name}</td>
@@ -2721,6 +2731,8 @@ return {
                   </table>
                 </div>
               </Card>
+                );
+              })()}
 
                 {/* ── Chart B: Métricas Operacionais — Comparativo Mensal ── */}
                 <Card>
@@ -2728,7 +2740,7 @@ return {
                     <div>
                       <h3 className="text-white font-semibold text-base">Métricas Operacionais — Comparativo Mensal</h3>
                       <p className="text-slate-400 text-sm">
-                        2025 vs 2026 — {opLabels[opMetric]}
+                        2025 vs 2026 — {filterLabel} — {opLabels[opMetric]}
                         {opMetric === 'revenue' && !isCardSelected && ddMonthlyForStore ? ' (fonte: BI)' : opMetric === 'revenue' && isCardSelected ? ' (fonte: cashless)' : ''}
                         {(() => {
                           const has2025 = opData.some(d => !d.isSpacer && d['2025'] > 0);
@@ -2777,7 +2789,7 @@ return {
                 <Card>
                   <div className="mb-4">
                     <h3 className="text-white font-semibold text-base">Mapa de Calor — Faturamento por Horário e Dia</h3>
-                    <p className="text-slate-400 text-sm">Distribuição percentual da receita 2026 por dia da semana e hora</p>
+                    <p className="text-slate-400 text-sm">Distribuição percentual da receita 2026 — {filterLabel}</p>
                   </div>
                   <div className="overflow-x-auto">
                     <table style={{borderCollapse:'collapse',width:'100%',fontSize:11}}>
@@ -2905,7 +2917,7 @@ return {
                       <div>
                         <h3 className="text-white font-semibold text-base">Mix de Pagamentos — Comparativo Mensal {!showBIReconPay && <span className="text-slate-500 text-xs font-normal">(excl. PROJAC - Sanca Lev)</span>}</h3>
                         <p className="text-slate-400 text-sm">
-                          2025 vs 2026 — tipo de pagamento lado a lado
+                          2025 vs 2026 — {filterLabel}
                           {(() => {
                             const has25 = payData.some(d => !d.isSpacer && payTypes.some(pt => d[pt+'_25'] > 0));
                             const has26 = payData.some(d => !d.isSpacer && payTypes.some(pt => d[pt+'_26'] > 0));
