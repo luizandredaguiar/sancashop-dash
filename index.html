@@ -2304,7 +2304,7 @@ return {
 
               {/* ── Mix de Categorias + Métricas Operacionais + Heatmap ── */}
               {(() => {
-                const CAT_COLORS = {'Bebidas':'#3b82f6','Chocolates/Doces':'#f59e0b','Sorvetes/Gelatos':'#ec4899','Snacks/Salgadinhos':'#10b981','Padaria/Pães':'#f97316','Congelados/Refeições':'#8b5cf6','Laticínios/Frios':'#06b6d4','Tabaco':'#ef4444','Mercearia':'#84cc16','Limpeza/Higiene':'#6366f1','Outros':'#64748b','Não Mapeado':'#475569','PROJAC':'#a855f7','Não Rastreado':'#94a3b8'};
+                const CAT_COLORS = {'Bebidas':'#3b82f6','Chocolates/Doces':'#f59e0b','Sorvetes/Gelatos':'#ec4899','Snacks/Salgadinhos':'#10b981','Padaria/Pães':'#f97316','Congelados/Refeições':'#8b5cf6','Laticínios/Frios':'#06b6d4','Tabaco':'#ef4444','Mercearia':'#84cc16','Limpeza/Higiene':'#6366f1','Outros':'#64748b','Não Mapeado':'#475569','PROJAC':'#a855f7'};
                 const mc = selData.monthlyCategories;
                 const mm = selData.monthlyMetrics;
 
@@ -2380,12 +2380,9 @@ return {
                 // "PROJAC" = PROJAC - Sanca Lev revenue (only in consolidated, from BI daily data)
                 const biRecon = PM.biReconciliation || {};
                 const showBIRecon = mixStore === '__all__' && !isCardSelected;
-                // Per-store BI reconciliation: show gap between DAILY_DATA and PRODUCT_MIX as "Não Rastreado"
-                const showStoreRecon = mixStore !== '__all__' && !isCardSelected;
-
                 // Only add 'Não Mapeado' as separate bar if it's NOT already in top6cats
                 const naoMapeadoInTop6 = top6cats.includes('Não Mapeado');
-                const chartCats = [...top6cats, 'Outros', ...(naoMapeadoInTop6 ? [] : ['Não Mapeado']), ...(showBIRecon ? ['PROJAC'] : []), ...(showStoreRecon ? ['Não Rastreado'] : [])];
+                const chartCats = [...top6cats, 'Outros', ...(naoMapeadoInTop6 ? [] : ['Não Mapeado']), ...(showBIRecon ? ['PROJAC'] : [])];
                 const buildMixData = () => {
                   if (!mcForChart) return [];
                   const data = [];
@@ -2411,17 +2408,6 @@ return {
                       row['PROJAC_25'] = (br25 && br25.delta > 0 && br25.cashless > br25.bi * 0.9) ? br25.delta : 0;
                       const br26 = biRecon['2026-'+m];
                       row['PROJAC_26'] = (br26 && br26.delta > 0 && br26.cashless > br26.bi * 0.9) ? br26.delta : 0;
-                    }
-                    if (showStoreRecon) {
-                      const ddStore = ddMonthlyForStore || {};
-                      const pmMetrics = PM.byStore[mixStore]?.monthlyMetrics || {};
-                      ['25','26'].forEach(yr => {
-                        const ym = '20'+yr+'-'+m;
-                        const ddRev = ddStore[ym] || 0;
-                        const pmRev = pmMetrics[ym]?.revenue || 0;
-                        const gap = ddRev - pmRev;
-                        row['Não Rastreado_'+yr] = gap > 0.5 ? gap : 0;
-                      });
                     }
                     data.push(row);
                   });
@@ -2451,17 +2437,6 @@ return {
                     rowMTD['PROJAC_25'] = (br25m && br25m.delta > 0 && br25m.cashless > br25m.bi * 0.9) ? br25m.delta : 0;
                     const br26m = biRecon['2026-'+nextMonth];
                     rowMTD['PROJAC_26'] = (br26m && br26m.delta > 0 && br26m.cashless > br26m.bi * 0.9) ? br26m.delta : 0;
-                  }
-                  if (showStoreRecon) {
-                    const ddStore = ddMonthlyForStore || {};
-                    const pmMetrics = PM.byStore[mixStore]?.monthlyMetrics || {};
-                    ['25','26'].forEach(yr => {
-                      const ym = '20'+yr+'-'+nextMonth;
-                      const ddRev = ddStore[ym] || 0;
-                      const pmRev = pmMetrics[ym]?.revenue || 0;
-                      const gap = ddRev - pmRev;
-                      rowMTD['Não Rastreado_'+yr] = gap > 0.5 ? gap : 0;
-                    });
                   }
                   data.push(rowMTD);
                   return data;
@@ -2658,7 +2633,7 @@ return {
                               const fmtVal = (v) => mixView === 'percent' ? (v*100).toFixed(1)+'%' : fmtR(v);
                               const total25 = items25.reduce((s, it) => s + it.value, 0);
                               const total26 = items26.reduce((s, it) => s + it.value, 0);
-                              const catLabel = (dk, suffix) => { const c = dk.replace(suffix,''); return c === 'PROJAC' ? 'PROJAC' : c === 'Não Rastreado' ? 'Não Rastreado (cashless gap)' : c; };
+                              const catLabel = (dk, suffix) => { const c = dk.replace(suffix,''); return c === 'PROJAC' ? 'PROJAC' : c; };
                               const biLabel = showStoreRecon ? ' (BI)' : showBIRecon ? ' (BI)' : '';
                               const isMobile = window.innerWidth < 640;
                               // On mobile: single column, smaller font; on desktop: two columns
