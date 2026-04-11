@@ -2917,7 +2917,7 @@ return {
                       <div>
                         <h3 className="text-white font-semibold text-base">Mix de Pagamentos — Comparativo Mensal {!showBIReconPay && <span className="text-slate-500 text-xs font-normal">(excl. PROJAC - Sanca Lev)</span>}</h3>
                         <p className="text-slate-400 text-sm">
-                          2025 vs 2026 — {filterLabel}
+                          2025 vs 2026 — {mixStore !== '__all__' ? mixStore : 'Consolidado'}{isCardSelected && ' (nível loja — mix por cartão n/a)'}
                           {(() => {
                             const has25 = payData.some(d => !d.isSpacer && payTypes.some(pt => d[pt+'_25'] > 0));
                             const has26 = payData.some(d => !d.isSpacer && payTypes.some(pt => d[pt+'_26'] > 0));
