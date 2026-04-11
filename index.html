@@ -2420,7 +2420,7 @@ return {
                     PM.__all__?.mtdCategories || {};
                   const cats26mtd = mtdCatSource['2026-'+nextMonth] || {};
                   const cats25mtd = mtdCatSource['2025-'+nextMonth] || {};
-                  const mtdDayMax = parseInt((DATA.lastUpdate || '').substring(8, 10)) || PM.mtdInfo?.dayMax || 9;
+                  const mtdDayMax = PM.mtdInfo?.dayMax || parseInt((DATA.lastUpdate || '').substring(8, 10)) || 9;
                   const rowMTD = { month: MESES[parseInt(nextMonth)-1] + ' MTD (d1-d' + mtdDayMax + ')' };
                   top6cats.forEach(cat => {
                     rowMTD[cat + '_25'] = cats25mtd[cat] || 0;
@@ -2856,7 +2856,7 @@ return {
                     })();
                     const p25mtd = mtdPaySrc['2025-'+nextMonth] || {};
                     const p26mtd = mtdPaySrc['2026-'+nextMonth] || {};
-                    const mtdDayMax = parseInt((DATA.lastUpdate || '').substring(8, 10)) || PM.mtdInfo?.dayMax || 9;
+                    const mtdDayMax = PM.mtdInfo?.dayMax || parseInt((DATA.lastUpdate || '').substring(8, 10)) || 9;
                     const rowMTD = { month: MESES[parseInt(nextMonth)-1] + ' MTD (d1-d' + mtdDayMax + ')' };
                     payTypes.forEach(pt => {
                       rowMTD[pt + '_25'] = p25mtd[pt] || 0;
