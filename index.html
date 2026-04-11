@@ -2595,7 +2595,7 @@ return {
                 <Card>
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                     <div>
-                      <h3 className="text-white font-semibold text-base">Mix de Categorias — Comparativo Mensal</h3>
+                      <h3 className="text-white font-semibold text-base">Mix de Categorias — Comparativo Mensal {!showBIRecon && <span className="text-slate-500 text-xs font-normal">(excl. PROJAC - Sanca Lev)</span>}</h3>
                       <p className="text-slate-400 text-sm">
                         2025 vs 2026 — top categorias lado a lado
                         {isCardSelected && ' (cartão selecionado)'}
@@ -2826,8 +2826,10 @@ return {
 
                 {/* ── Chart D: Mix de Pagamentos — Comparativo Mensal ── */}
                 {(() => {
-                  const PAY_COLORS = {'Débito':'#3b82f6','Crédito':'#10b981','PIX':'#a855f7','Voucher':'#f59e0b','N/A':'#94a3b8','PicPay':'#a855f7','Indefinido':'#64748b','':'#94a3b8'};
-                  const payTypes = ['Crédito','Débito','PIX','Voucher','N/A'];
+                  const PAY_COLORS = {'Débito':'#3b82f6','Crédito':'#10b981','PIX':'#a855f7','Voucher':'#f59e0b','N/A':'#94a3b8','PicPay':'#a855f7','Indefinido':'#64748b','':'#94a3b8','PROJAC':'#f97316'};
+                  const biReconPay = PM.biReconciliation || {};
+                  const showBIReconPay = mixStore === '__all__' && !isCardSelected;
+                  const payTypes = showBIReconPay ? ['Crédito','Débito','PIX','Voucher','N/A','PROJAC'] : ['Crédito','Débito','PIX','Voucher','N/A'];
                   // Get monthlyPayments from selected store or __all__
                   const mpSrc = (() => {
                     if (mixStore === '__all__') return PM.__all__?.monthlyPayments || {};
@@ -2842,10 +2844,16 @@ return {
                       const p25 = mpSrc['2025-'+m] || {};
                       const p26 = mpSrc['2026-'+m] || {};
                       const row = { month: MESES[parseInt(m)-1] };
-                      payTypes.forEach(pt => {
+                      ['Crédito','Débito','PIX','Voucher','N/A'].forEach(pt => {
                         row[pt + '_25'] = p25[pt] || 0;
                         row[pt + '_26'] = p26[pt] || 0;
                       });
+                      if (showBIReconPay) {
+                        const br25 = biReconPay['2025-'+m];
+                        row['PROJAC_25'] = (br25 && br25.delta > 0 && br25.cashless > br25.bi * 0.9) ? br25.delta : 0;
+                        const br26 = biReconPay['2026-'+m];
+                        row['PROJAC_26'] = (br26 && br26.delta > 0 && br26.cashless > br26.bi * 0.9) ? br26.delta : 0;
+                      }
                       data.push(row);
                     });
                     // Spacer + MTD (use mtdPayments for first-N-days data, not full month)
@@ -2858,10 +2866,16 @@ return {
                     const p26mtd = mtdPaySrc['2026-'+nextMonth] || {};
                     const mtdDayMax = PM.mtdInfo?.dayMax || parseInt((DATA.lastUpdate || '').substring(8, 10)) || 9;
                     const rowMTD = { month: MESES[parseInt(nextMonth)-1] + ' MTD (d1-d' + mtdDayMax + ')' };
-                    payTypes.forEach(pt => {
+                    ['Crédito','Débito','PIX','Voucher','N/A'].forEach(pt => {
                       rowMTD[pt + '_25'] = p25mtd[pt] || 0;
                       rowMTD[pt + '_26'] = p26mtd[pt] || 0;
                     });
+                    if (showBIReconPay) {
+                      const br25m = biReconPay['2025-'+nextMonth];
+                      rowMTD['PROJAC_25'] = (br25m && br25m.delta > 0 && br25m.cashless > br25m.bi * 0.9) ? br25m.delta : 0;
+                      const br26m = biReconPay['2026-'+nextMonth];
+                      rowMTD['PROJAC_26'] = (br26m && br26m.delta > 0 && br26m.cashless > br26m.bi * 0.9) ? br26m.delta : 0;
+                    }
                     data.push(rowMTD);
                     return data;
                   };
@@ -2889,7 +2903,7 @@ return {
                   <Card>
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                       <div>
-                        <h3 className="text-white font-semibold text-base">Mix de Pagamentos — Comparativo Mensal</h3>
+                        <h3 className="text-white font-semibold text-base">Mix de Pagamentos — Comparativo Mensal {!showBIReconPay && <span className="text-slate-500 text-xs font-normal">(excl. PROJAC - Sanca Lev)</span>}</h3>
                         <p className="text-slate-400 text-sm">
                           2025 vs 2026 — tipo de pagamento lado a lado
                           {(() => {
