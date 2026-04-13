@@ -3418,6 +3418,7 @@ return {
                 }
               } else {
                 // No granular filter — use DAILY_DATA (BI source, same as other tabs)
+                // NOTE: Do NOT filter CLOSED_STORES here — match Comparativo Mensal behavior
                 const dd = window.DAILY_DATA;
                 if (dd && dd.days) {
                   for (const d of allDates) {
@@ -3427,7 +3428,6 @@ return {
                     if (!dayStores) continue;
                     for (const [storeName, v] of Object.entries(dayStores)) {
                       if (storeName === 'CD Sancashop') continue;
-                      if (CLOSED_STORES.has(storeName) || CLOSED_STORES.has(cleanStore(storeName))) continue;
                       if (cleanedStoreFilter && cleanStore(storeName) !== cleanedStoreFilter) continue;
                       if (!result.byStore[storeName]) result.byStore[storeName] = {fat:0, vendas:0};
                       result.byStore[storeName].fat += v.fat || 0;
@@ -3445,11 +3445,13 @@ return {
             }
 
             // Payment mix aggregation
+            // Uses PAYMENT_DAILY (cashless source). Calculates "Não Rastreado" delta vs DAILY_DATA (BI).
             function aggregatePaymentMix(startDate, endDate, storeFilter) {
               const PD = window.PAYMENT_DAILY;
               if (!PD || !PD.daily || !PD.payTypes) return null;
-              const payTypes = PD.payTypes;
+              const payTypes = [...PD.payTypes];
               const mix = payTypes.map(() => ({fat: 0, count: 0}));
+              const cleanedSF = storeFilter ? cleanStore(storeFilter) : null;
               for (const d of allDates) {
                 if (d < startDate || d > endDate) continue;
                 const dayData = PD.daily[d];
@@ -3457,8 +3459,8 @@ return {
                 for (const [siStr, ptMap] of Object.entries(dayData)) {
                   const si = parseInt(siStr);
                   const storeName = PD.stores[si];
-                  if (!storeName || CLOSED_STORES.has(storeName)) continue;
-                  if (storeFilter && storeName !== storeFilter) continue;
+                  if (!storeName || storeName === 'CD Sancashop') continue;
+                  if (cleanedSF && cleanStore(storeName) !== cleanedSF) continue;
                   for (const [ptStr, vals] of Object.entries(ptMap)) {
                     const pt = parseInt(ptStr);
                     if (pt < mix.length) {
@@ -3466,6 +3468,27 @@ return {
                       mix[pt].count += vals[1];
                     }
                   }
+                }
+              }
+              // Calculate "Não Rastreado" (BI total minus cashless total, includes PROJAC-Sanca Lev etc)
+              const dd = window.DAILY_DATA;
+              if (dd && dd.days && !hasGranularFilter) {
+                let biFat = 0;
+                for (const d of allDates) {
+                  if (d < startDate || d > endDate) continue;
+                  const dayStores = dd.days[d];
+                  if (!dayStores) continue;
+                  for (const [sn, v] of Object.entries(dayStores)) {
+                    if (sn === 'CD Sancashop') continue;
+                    if (cleanedSF && cleanStore(sn) !== cleanedSF) continue;
+                    biFat += v.fat || 0;
+                  }
+                }
+                const cashlessFat = mix.reduce((s, m) => s + m.fat, 0);
+                const delta = biFat - cashlessFat;
+                if (delta > 100) {
+                  payTypes.push('Não Rastreado');
+                  mix.push({fat: delta, count: 0});
                 }
               }
               return {payTypes, mix};
@@ -3501,7 +3524,7 @@ return {
 
             // Per-store table
             const allStoreKeys = new Set([...Object.keys(p1.byStore), ...Object.keys(p2.byStore)]);
-            const storeRows = [...allStoreKeys].filter(s => !CLOSED_STORES.has(s) && !CLOSED_STORES.has(cleanStore(s))).map(name => {
+            const storeRows = [...allStoreKeys].map(name => {
               const s1 = p1.byStore[name] || {fat:0,vendas:0,ticket:0};
               const s2 = p2.byStore[name] || {fat:0,vendas:0,ticket:0};
               return {
@@ -3741,7 +3764,7 @@ return {
                   const pm1 = aggregatePaymentMix(customPeriod1Start, customPeriod1End, customStore || null);
                   const pm2 = aggregatePaymentMix(customPeriod2Start, customPeriod2End, customStore || null);
                   if (!pm1 || !pm2) return null;
-                  const PAY_COLORS = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B'];
+                  const PAY_COLORS = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#64748b'];
                   const PayBar = ({data, label, payTypes}) => {
                     const total = data.reduce((s, d) => s + d.fat, 0);
                     if (total === 0) return <p className="text-slate-500 text-xs text-center">Sem dados</p>;
