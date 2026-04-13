@@ -242,6 +242,14 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
     const [payView, setPayView] = useState('absolute');
     const [cadastroStore, setCadastroStore] = useState('__all__');
     const [cadastroClient, setCadastroClient] = useState('');
+    // Custom comparison tab state
+    const [customStore, setCustomStore] = useState('');
+    const [customPeriod1Start, setCustomPeriod1Start] = useState('');
+    const [customPeriod1End, setCustomPeriod1End] = useState('');
+    const [customPeriod2Start, setCustomPeriod2Start] = useState('');
+    const [customPeriod2End, setCustomPeriod2End] = useState('');
+    const [customSortCol, setCustomSortCol] = useState('fat1');
+    const [customSortDir, setCustomSortDir] = useState('desc');
     const [cadastroSearch, setCadastroSearch] = useState('');
     const [cadastroSort, setCadastroSort] = useState({col:'totalAccesses', dir:'desc'});
 
@@ -1302,6 +1310,12 @@ return {
               >
                 Cadastro
               </button>
+              <button
+                className={`pb-3 px-1 text-sm transition-colors whitespace-nowrap ${activeTab === 'custom' ? 'tab-active' : 'tab-inactive'}`}
+                onClick={() => setActiveTab('custom')}
+              >
+                Comparativo Personalizado
+              </button>
             </div>
             <div className="tab-scroll-fade"></div>
           </div>
@@ -1310,7 +1324,7 @@ return {
           <div className="flex justify-end gap-2 mb-3">
             <button
               onClick={() => {
-                const tabNames = {yoy:'Comparativo Anual',mom:'Comparativo Mensal',daily:'Comparativo Diário',trends:'Tendências',clients:'Clientes',mix:'Detalhes',cadastro:'Cadastro'};
+                const tabNames = {yoy:'Comparativo Anual',mom:'Comparativo Mensal',daily:'Comparativo Diário',trends:'Tendências',clients:'Clientes',mix:'Detalhes',cadastro:'Cadastro',custom:'Comparativo Personalizado'};
                 const el = document.getElementById('tab-content');
                 const opt = {
                   margin: [5,5,5,5],
@@ -3239,6 +3253,279 @@ return {
                   <p className="text-slate-500 text-xs mt-2 text-center">{filtered.length} clientes</p>
                 </div>
               </div>
+            );
+          })()}
+
+          {/* ============ COMPARATIVO PERSONALIZADO TAB ============ */}
+          {activeTab === 'custom' && (() => {
+            const ddDays = window.DAILY_DATA?.days || {};
+            const allDates = Object.keys(ddDays).sort();
+            const minDate = allDates[0] || '2025-01-01';
+            const maxDate = allDates[allDates.length - 1] || '2026-04-12';
+
+            // Initialize defaults on first render
+            if (!customPeriod1Start && allDates.length > 0) {
+              // Default period 1: last 30 days
+              const end1 = maxDate;
+              const sd1 = new Date(end1 + 'T12:00:00');
+              sd1.setDate(sd1.getDate() - 29);
+              const start1 = sd1.toISOString().split('T')[0];
+              // Default period 2: same 30 days one year ago
+              const sd2 = new Date(start1 + 'T12:00:00');
+              sd2.setFullYear(sd2.getFullYear() - 1);
+              const ed2 = new Date(end1 + 'T12:00:00');
+              ed2.setFullYear(ed2.getFullYear() - 1);
+              setTimeout(() => {
+                setCustomPeriod1Start(start1 < minDate ? minDate : start1);
+                setCustomPeriod1End(end1);
+                setCustomPeriod2Start(sd2.toISOString().split('T')[0]);
+                setCustomPeriod2End(ed2.toISOString().split('T')[0]);
+              }, 0);
+              return <Card><p className="text-slate-400 text-center py-4">Carregando...</p></Card>;
+            }
+
+            // Collect all store names
+            const allStoresSet = new Set();
+            Object.values(ddDays).forEach(stores => {
+              if (typeof stores === 'object' && stores !== null) Object.keys(stores).forEach(s => allStoresSet.add(s));
+            });
+            const storeNames = [...allStoresSet].filter(s => !CLOSED_STORES.has(s)).sort((a,b) => a.localeCompare(b,'pt-BR'));
+
+            // Aggregate data for a period
+            function aggregatePeriod(startDate, endDate, storeFilter) {
+              const result = { total: {fat:0, vendas:0}, byStore: {} };
+              let days = 0;
+              for (const d of allDates) {
+                if (d < startDate || d > endDate) continue;
+                days++;
+                const stores = ddDays[d];
+                if (!stores) continue;
+                Object.entries(stores).forEach(([name, data]) => {
+                  if (storeFilter && name !== storeFilter) return;
+                  if (!result.byStore[name]) result.byStore[name] = {fat:0, vendas:0};
+                  result.byStore[name].fat += data.fat || 0;
+                  result.byStore[name].vendas += data.vendas || 0;
+                  result.total.fat += data.fat || 0;
+                  result.total.vendas += data.vendas || 0;
+                });
+              }
+              result.days = days;
+              result.total.ticket = result.total.vendas > 0 ? result.total.fat / result.total.vendas : 0;
+              Object.values(result.byStore).forEach(s => { s.ticket = s.vendas > 0 ? s.fat / s.vendas : 0; });
+              return result;
+            }
+
+            const p1 = aggregatePeriod(customPeriod1Start, customPeriod1End, customStore || null);
+            const p2 = aggregatePeriod(customPeriod2Start, customPeriod2End, customStore || null);
+
+            const varFat = p2.total.fat > 0 ? ((p1.total.fat / p2.total.fat) - 1) * 100 : null;
+            const varVendas = p2.total.vendas > 0 ? ((p1.total.vendas / p2.total.vendas) - 1) * 100 : null;
+            const varTicket = p2.total.ticket > 0 ? ((p1.total.ticket / p2.total.ticket) - 1) * 100 : null;
+
+            // Format date label
+            const fmtPeriod = (s, e) => {
+              if (!s || !e) return '—';
+              const fmt = d => { const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
+              return `${fmt(s)} a ${fmt(e)}`;
+            };
+            const label1 = fmtPeriod(customPeriod1Start, customPeriod1End);
+            const label2 = fmtPeriod(customPeriod2Start, customPeriod2End);
+
+            // Chart data — grouped bars for Fat, Vendas, Ticket
+            const chartData = [
+              { metric: 'Faturamento', v1: p1.total.fat, v2: p2.total.fat },
+              { metric: 'Vendas', v1: p1.total.vendas, v2: p2.total.vendas },
+              { metric: 'Ticket Médio', v1: p1.total.ticket, v2: p2.total.ticket },
+            ];
+
+            // Per-store table
+            const allStoreKeys = new Set([...Object.keys(p1.byStore), ...Object.keys(p2.byStore)]);
+            const storeRows = [...allStoreKeys].filter(s => !CLOSED_STORES.has(s)).map(name => {
+              const s1 = p1.byStore[name] || {fat:0,vendas:0,ticket:0};
+              const s2 = p2.byStore[name] || {fat:0,vendas:0,ticket:0};
+              return {
+                name,
+                fat1: s1.fat, fat2: s2.fat,
+                varFat: s2.fat > 0 ? ((s1.fat/s2.fat)-1)*100 : null,
+                vendas1: s1.vendas, vendas2: s2.vendas,
+                varVendas: s2.vendas > 0 ? ((s1.vendas/s2.vendas)-1)*100 : null,
+                ticket1: s1.ticket, ticket2: s2.ticket,
+                varTicket: s2.ticket > 0 ? ((s1.ticket/s2.ticket)-1)*100 : null,
+              };
+            });
+
+            // Sort
+            const sorted = [...storeRows].sort((a,b) => {
+              const va = a[customSortCol] ?? -Infinity;
+              const vb = b[customSortCol] ?? -Infinity;
+              if (typeof va === 'string') return customSortDir === 'asc' ? va.localeCompare(vb,'pt-BR') : vb.localeCompare(va,'pt-BR');
+              return customSortDir === 'asc' ? va - vb : vb - va;
+            });
+
+            const CustomSortHeader = ({ col, label, align }) => (
+              <th className={`px-3 py-2 text-${align||'left'} text-xs font-medium text-slate-400 cursor-pointer select-none`}
+                onClick={() => { setCustomSortCol(col); setCustomSortDir(customSortCol === col && customSortDir === 'desc' ? 'asc' : 'desc'); }}>
+                {label} {customSortCol === col ? (customSortDir === 'asc' ? '↑' : '↓') : ''}
+              </th>
+            );
+
+            const varCell = (v) => (
+              <td className={`px-3 py-2 text-right font-medium whitespace-nowrap ${v === null ? 'text-slate-600' : v >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {v !== null ? `${v >= 0 ? '+' : ''}${v.toFixed(1)}%` : '—'}
+              </td>
+            );
+
+            return (
+              <React.Fragment>
+                {/* Filters */}
+                <Card>
+                  <h3 className="text-lg font-semibold text-white mb-4">Comparativo Personalizado</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-slate-400 text-xs block mb-1">Período de Análise</label>
+                      <div className="flex gap-2 items-center">
+                        <input type="date" value={customPeriod1Start} min={minDate} max={maxDate}
+                          onChange={e => setCustomPeriod1Start(e.target.value)}
+                          className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm flex-1" />
+                        <span className="text-slate-500 text-sm">a</span>
+                        <input type="date" value={customPeriod1End} min={minDate} max={maxDate}
+                          onChange={e => setCustomPeriod1End(e.target.value)}
+                          className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm flex-1" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-slate-400 text-xs block mb-1">Período de Comparação</label>
+                      <div className="flex gap-2 items-center">
+                        <input type="date" value={customPeriod2Start} min={minDate} max={maxDate}
+                          onChange={e => setCustomPeriod2Start(e.target.value)}
+                          className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm flex-1" />
+                        <span className="text-slate-500 text-sm">a</span>
+                        <input type="date" value={customPeriod2End} min={minDate} max={maxDate}
+                          onChange={e => setCustomPeriod2End(e.target.value)}
+                          className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm flex-1" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-slate-400 text-xs block mb-1">Loja</label>
+                      <select value={customStore} onChange={e => setCustomStore(e.target.value)}
+                        className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full">
+                        <option value="">Consolidado (todas as lojas)</option>
+                        {storeNames.map(name => <option key={name} value={name}>{name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <p className="text-slate-500 text-xs mt-3">
+                    Análise: {label1} ({p1.days} dias) vs Comparação: {label2} ({p2.days} dias)
+                    {customStore ? ` • ${customStore}` : ' • Todas as lojas'}
+                  </p>
+                </Card>
+
+                {/* KPI Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                  <MetricCard title="Faturamento (Análise)" value={formatR$(p1.total.fat)}
+                    subtitle={`Comp: ${formatR$(p2.total.fat)} | Var: ${varFat !== null ? (varFat >= 0 ? '+' : '') + varFat.toFixed(1) + '%' : '—'}`}
+                    icon="📊" color={varFat !== null && varFat >= 0 ? 'green' : 'amber'} />
+                  <MetricCard title="Vendas (Análise)" value={p1.total.vendas.toLocaleString('pt-BR')}
+                    subtitle={`Comp: ${p2.total.vendas.toLocaleString('pt-BR')} | Var: ${varVendas !== null ? (varVendas >= 0 ? '+' : '') + varVendas.toFixed(1) + '%' : '—'}`}
+                    icon="🛒" color={varVendas !== null && varVendas >= 0 ? 'green' : 'amber'} />
+                  <MetricCard title="Ticket Médio (Análise)" value={`R$ ${p1.total.ticket.toFixed(2)}`}
+                    subtitle={`Comp: R$ ${p2.total.ticket.toFixed(2)} | Var: ${varTicket !== null ? (varTicket >= 0 ? '+' : '') + varTicket.toFixed(1) + '%' : '—'}`}
+                    icon="🎫" color={varTicket !== null && varTicket >= 0 ? 'green' : 'amber'} />
+                </div>
+
+                {/* Charts — 3 side by side */}
+                <Card>
+                  <h3 className="text-lg font-semibold text-white mb-2">Comparativo Visual</h3>
+                  <p className="text-slate-400 text-xs mb-4">
+                    <span className="inline-block w-3 h-3 rounded mr-1" style={{backgroundColor:'#22c55e'}}></span> Análise ({label1})
+                    <span className="inline-block w-3 h-3 rounded mr-1 ml-4" style={{backgroundColor:'#8b5cf6'}}></span> Comparação ({label2})
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {[{title:'Faturamento', v1:p1.total.fat, v2:p2.total.fat, fmt:v=>formatR$(v), tickFmt:v=>v>=1000?`R$${(v/1000).toFixed(0)}k`:`R$${v.toFixed(0)}`},
+                      {title:'Vendas', v1:p1.total.vendas, v2:p2.total.vendas, fmt:v=>v.toLocaleString('pt-BR'), tickFmt:v=>v>=1000?`${(v/1000).toFixed(1)}k`:String(v)},
+                      {title:'Ticket Médio', v1:p1.total.ticket, v2:p2.total.ticket, fmt:v=>`R$ ${v.toFixed(2)}`, tickFmt:v=>`R$${v.toFixed(0)}`}
+                    ].map(({title, v1, v2, fmt, tickFmt}) => {
+                      const pct = v2 > 0 ? ((v1/v2)-1)*100 : null;
+                      const data = [{name:'Análise',value:v1},{name:'Comparação',value:v2}];
+                      return (
+                        <div key={title}>
+                          <p className="text-slate-300 text-sm font-medium text-center mb-1">{title}</p>
+                          {pct !== null && <p className={`text-center text-xs font-medium mb-2 ${pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>{pct >= 0 ? '+' : ''}{pct.toFixed(1)}%</p>}
+                          <ResponsiveContainer width="100%" height={220}>
+                            <BarChart data={data} barCategoryGap="30%">
+                              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                              <XAxis dataKey="name" stroke="#94a3b8" tick={{fontSize:10}} />
+                              <YAxis stroke="#94a3b8" tickFormatter={tickFmt} tick={{fontSize:10}} domain={[0, dm => Math.ceil(dm * 1.15)]} />
+                              <Tooltip content={({active,payload}) => {
+                                if (!active || !payload?.length) return null;
+                                return <div className="bg-slate-800 border border-slate-600 rounded-lg p-2 shadow-xl text-sm"><p style={{color:payload[0].fill}}>{payload[0].payload.name}: {fmt(payload[0].value)}</p></div>;
+                              }} />
+                              <Bar dataKey="value" radius={[4,4,0,0]}>
+                                <Cell fill="#22c55e" />
+                                <Cell fill="#8b5cf6" />
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+
+                {/* Per-store table */}
+                {!customStore && (
+                <Card>
+                  <h3 className="text-lg font-semibold text-white mb-4">Comparativo por Loja</h3>
+                  <div className="table-scroll">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-700">
+                          <CustomSortHeader col="name" label="Loja" />
+                          <CustomSortHeader col="fat1" label="Fat. Análise" align="right" />
+                          <CustomSortHeader col="fat2" label="Fat. Comp." align="right" />
+                          <CustomSortHeader col="varFat" label="Var Fat" align="right" />
+                          <CustomSortHeader col="vendas1" label="Vendas An." align="right" />
+                          <CustomSortHeader col="vendas2" label="Vendas Comp." align="right" />
+                          <CustomSortHeader col="varVendas" label="Var Vendas" align="right" />
+                          <CustomSortHeader col="ticket1" label="Ticket An." align="right" />
+                          <CustomSortHeader col="ticket2" label="Ticket Comp." align="right" />
+                          <CustomSortHeader col="varTicket" label="Var Ticket" align="right" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {/* Totals row */}
+                        <tr className="border-b border-slate-600 bg-slate-700/50">
+                          <td className="px-3 py-2 text-white font-semibold">TOTAL</td>
+                          <td className="px-3 py-2 text-white font-bold text-right whitespace-nowrap">{formatR$(p1.total.fat)}</td>
+                          <td className="px-3 py-2 text-slate-200 text-right whitespace-nowrap">{formatR$(p2.total.fat)}</td>
+                          {varCell(varFat)}
+                          <td className="px-3 py-2 text-white font-bold text-right whitespace-nowrap">{p1.total.vendas.toLocaleString('pt-BR')}</td>
+                          <td className="px-3 py-2 text-slate-200 text-right whitespace-nowrap">{p2.total.vendas.toLocaleString('pt-BR')}</td>
+                          {varCell(varVendas)}
+                          <td className="px-3 py-2 text-white font-bold text-right whitespace-nowrap">R$ {p1.total.ticket.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-slate-200 text-right whitespace-nowrap">R$ {p2.total.ticket.toFixed(2)}</td>
+                          {varCell(varTicket)}
+                        </tr>
+                        {sorted.map((s, i) => (
+                          <tr key={s.name} className={`border-b border-slate-700/50 ${i % 2 === 0 ? 'bg-slate-800/30' : ''}`}>
+                            <td className="px-3 py-2 text-white font-medium whitespace-nowrap">{s.name}</td>
+                            <td className="px-3 py-2 text-white text-right whitespace-nowrap">{s.fat1 > 0 ? formatR$(s.fat1) : '—'}</td>
+                            <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.fat2 > 0 ? formatR$(s.fat2) : '—'}</td>
+                            {varCell(s.varFat)}
+                            <td className="px-3 py-2 text-white text-right whitespace-nowrap">{s.vendas1 > 0 ? s.vendas1.toLocaleString('pt-BR') : '—'}</td>
+                            <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.vendas2 > 0 ? s.vendas2.toLocaleString('pt-BR') : '—'}</td>
+                            {varCell(s.varVendas)}
+                            <td className="px-3 py-2 text-white text-right whitespace-nowrap">{s.ticket1 > 0 ? `R$ ${s.ticket1.toFixed(2)}` : '—'}</td>
+                            <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.ticket2 > 0 ? `R$ ${s.ticket2.toFixed(2)}` : '—'}</td>
+                            {varCell(s.varTicket)}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+                )}
+              </React.Fragment>
             );
           })()}
 
