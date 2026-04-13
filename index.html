@@ -3336,9 +3336,14 @@ return {
             // Build client card set for filtering
             const clientCardSet = customClients.length > 0 ? new Set(customClients) : null;
 
+            // Check if any granular filter is active (needs CATEGORY_DAILY / product-daily / CARD_DAILY)
+            const hasGranularFilter = customCategories.length > 0 || customProducts.length > 0 || customClients.length > 0;
+
             function aggregatePeriod(startDate, endDate, storeFilter) {
               const result = { total: {fat:0, vendas:0}, byStore: {} };
               let days = 0;
+              // Clean store filter for DAILY_DATA matching (raw names from dropdown → cleaned for BI data)
+              const cleanedStoreFilter = storeFilter ? cleanStore(storeFilter) : null;
 
               // If client filter active, use CARD_DAILY
               if (clientCardSet && window.CARD_DAILY && window.CARD_DAILY.daily) {
@@ -3387,9 +3392,9 @@ return {
                   }
                 }
                 for (const d of allDates) { if (d >= startDate && d <= endDate) days++; }
-              } else {
-                // Category-level or all aggregation from CATEGORY_DAILY
-                const activeCatSet = customCategories.length > 0 ? new Set(customCategories) : null;
+              } else if (customCategories.length > 0) {
+                // Category filter active — use CATEGORY_DAILY
+                const activeCatSet = new Set(customCategories);
                 for (const d of allDates) {
                   if (d < startDate || d > endDate) continue;
                   days++;
@@ -3402,12 +3407,33 @@ return {
                     if (storeFilter && storeName !== storeFilter) continue;
                     for (const [ciStr, vals] of Object.entries(catMap)) {
                       const ci = parseInt(ciStr);
-                      if (activeCatSet && !activeCatSet.has(ci)) continue;
+                      if (!activeCatSet.has(ci)) continue;
                       if (!result.byStore[storeName]) result.byStore[storeName] = {fat:0, vendas:0};
                       result.byStore[storeName].fat += vals[0];
                       result.byStore[storeName].vendas += vals[1];
                       result.total.fat += vals[0];
                       result.total.vendas += vals[1];
+                    }
+                  }
+                }
+              } else {
+                // No granular filter — use DAILY_DATA (BI source, same as other tabs)
+                const dd = window.DAILY_DATA;
+                if (dd && dd.days) {
+                  for (const d of allDates) {
+                    if (d < startDate || d > endDate) continue;
+                    days++;
+                    const dayStores = dd.days[d];
+                    if (!dayStores) continue;
+                    for (const [storeName, v] of Object.entries(dayStores)) {
+                      if (storeName === 'CD Sancashop') continue;
+                      if (CLOSED_STORES.has(storeName) || CLOSED_STORES.has(cleanStore(storeName))) continue;
+                      if (cleanedStoreFilter && cleanStore(storeName) !== cleanedStoreFilter) continue;
+                      if (!result.byStore[storeName]) result.byStore[storeName] = {fat:0, vendas:0};
+                      result.byStore[storeName].fat += v.fat || 0;
+                      result.byStore[storeName].vendas += v.vendas || 0;
+                      result.total.fat += v.fat || 0;
+                      result.total.vendas += v.vendas || 0;
                     }
                   }
                 }
