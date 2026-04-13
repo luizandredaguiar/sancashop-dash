@@ -3048,7 +3048,7 @@ return {
           {/* ============ CADASTRO TAB ============ */}
           {activeTab === 'cadastro' && (() => {
             const clientData = window.CLIENT_DATA || [];
-            const allStores = [...new Set(clientData.flatMap(c => c.stores.map(s => s.store)))].sort();
+            const allStores = [...new Set(clientData.flatMap(c => c.stores.map(s => s.store)))].sort((a,b) => cleanStore(a).localeCompare(cleanStore(b), 'pt-BR'));
 
             let filtered = clientData;
             if (cadastroStore !== '__all__') {
