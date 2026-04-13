@@ -269,6 +269,7 @@ window.CATEGORY_DAILY = {"stores":["Cond. Presidente Médici","Cond. Costa Verde
     const [cadastroSort, setCadastroSort] = useState({col:'totalAccesses', dir:'desc'});
 
     const CLOSED_STORES = new Set(['Adorabile Tijuca', 'Gávea IV', 'John F. Kennedy', 'Reserva das Arvores', 'Reserva Árvores 2']);
+    const cleanStore = (n) => { if (!n) return n; if (n.startsWith('Cond. ')) return n.substring(6); if (n.startsWith('Ed. ')) return n.substring(4); if (n.startsWith('Ed.')) return n.substring(3); return n; };
 
     const SA = window.STORE_ANALYTICS;
     const PM = window.PRODUCT_MIX;
@@ -2614,7 +2615,7 @@ return {
                           <span className="text-slate-400 text-xs">Lojas frequentadas:</span>
                           <div className="flex flex-wrap gap-1 mt-1">
                             {linkedClient.stores.map(s => (
-                              <span key={s.store} className="bg-slate-700 text-white text-xs px-2 py-0.5 rounded">{s.store.replace(/^(Cond\.|Ed\.) ?/, '')} ({s.count})</span>
+                              <span key={s.store} className="bg-slate-700 text-white text-xs px-2 py-0.5 rounded">{cleanStore(s.store)} ({s.count})</span>
                             ))}
                           </div>
                         </div>
@@ -3103,7 +3104,7 @@ return {
                     <select value={cadastroStore} onChange={e => { setCadastroStore(e.target.value); setCadastroClient(''); }}
                       className="bg-slate-800 text-white text-sm rounded px-3 py-2 border border-slate-600">
                       <option value="__all__">Consolidado (todas as lojas)</option>
-                      {allStores.map(s => <option key={s} value={s}>{s}</option>)}
+                      {allStores.map(s => <option key={s} value={s}>{cleanStore(s)}</option>)}
                     </select>
                   </div>
                   <div>
@@ -3136,7 +3137,7 @@ return {
                   </div>
                   <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
                     <p className="text-slate-400 text-xs mb-1">{cadastroStore === '__all__' ? 'Lojas com Cadastro' : 'Loja Selecionada'}</p>
-                    <p className="text-2xl font-bold text-white">{cadastroStore === '__all__' ? Object.keys(storeCounts).length : cadastroStore.replace(/^(Cond\.|Ed\.) ?/, '')}</p>
+                    <p className="text-2xl font-bold text-white">{cadastroStore === '__all__' ? Object.keys(storeCounts).length : cleanStore(cadastroStore)}</p>
                     <p className="text-slate-400 text-xs">{cadastroStore === '__all__' ? 'lojas ativas' : totalClients + ' clientes'}</p>
                   </div>
                 </div>
@@ -3159,7 +3160,7 @@ return {
                       <span className="text-slate-400 text-xs">Lojas frequentadas:</span>
                       <div className="flex flex-wrap gap-2 mt-1">
                         {clientDetail.stores.map(s => (
-                          <span key={s.store} className="bg-slate-700 text-white text-xs px-2 py-1 rounded">{s.store.replace(/^(Cond\.|Ed\.) ?/, '')} ({s.count})</span>
+                          <span key={s.store} className="bg-slate-700 text-white text-xs px-2 py-1 rounded">{cleanStore(s.store)} ({s.count})</span>
                         ))}
                       </div>
                     </div>
@@ -3306,7 +3307,7 @@ return {
             }
 
             // Store names from CATEGORY_DAILY
-            const storeNames = cdStores.filter(s => !CLOSED_STORES.has(s)).map((s,i) => ({name:s, idx:i})).sort((a,b) => a.name.localeCompare(b.name,'pt-BR'));
+            const storeNames = cdStores.filter(s => !CLOSED_STORES.has(s) && !CLOSED_STORES.has(cleanStore(s))).map((s,i) => ({name:s, idx:i})).sort((a,b) => cleanStore(a.name).localeCompare(cleanStore(b.name),'pt-BR'));
 
             // Category & product lists
             const categoryNames = cdCats.filter(c => c !== 'Outros');
@@ -3474,7 +3475,7 @@ return {
 
             // Per-store table
             const allStoreKeys = new Set([...Object.keys(p1.byStore), ...Object.keys(p2.byStore)]);
-            const storeRows = [...allStoreKeys].filter(s => !CLOSED_STORES.has(s)).map(name => {
+            const storeRows = [...allStoreKeys].filter(s => !CLOSED_STORES.has(s) && !CLOSED_STORES.has(cleanStore(s))).map(name => {
               const s1 = p1.byStore[name] || {fat:0,vendas:0,ticket:0};
               const s2 = p2.byStore[name] || {fat:0,vendas:0,ticket:0};
               return {
@@ -3544,7 +3545,7 @@ return {
                       <select value={customStore} onChange={e => setCustomStore(e.target.value)}
                         className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full">
                         <option value="">Consolidado (todas as lojas)</option>
-                        {storeNames.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                        {storeNames.map(s => <option key={s.name} value={s.name}>{cleanStore(s.name)}</option>)}
                       </select>
                     </div>
                   </div>
@@ -3651,7 +3652,7 @@ return {
                   )}
                   <p className="text-slate-500 text-xs mt-3">
                     Análise: {label1} ({p1.days} dias) vs Comparação: {label2} ({p2.days} dias)
-                    {customStore ? ` • ${customStore}` : ' • Todas as lojas'}
+                    {customStore ? ` • ${cleanStore(customStore)}` : ' • Todas as lojas'}
                     {customProducts.length > 0 ? ` • ${customProducts.length} produto(s)` : customCategories.length > 0 ? ` • ${customCategories.length} categoria(s)` : ''}
                     {customClients.length > 0 ? ` • ${customClients.length} cartão(ões) de cliente` : ''}
                   </p>
@@ -3788,7 +3789,7 @@ return {
                         </tr>
                         {sorted.map((s, i) => (
                           <tr key={s.name} className={`border-b border-slate-700/50 ${i % 2 === 0 ? 'bg-slate-800/30' : ''}`}>
-                            <td className="px-3 py-2 text-white font-medium whitespace-nowrap">{s.name}</td>
+                            <td className="px-3 py-2 text-white font-medium whitespace-nowrap">{cleanStore(s.name)}</td>
                             <td className="px-3 py-2 text-white text-right whitespace-nowrap">{s.fat1 > 0 ? formatR$(s.fat1) : '—'}</td>
                             <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{s.fat2 > 0 ? formatR$(s.fat2) : '—'}</td>
                             {varCell(s.varFat)}
