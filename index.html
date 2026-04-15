@@ -3471,18 +3471,24 @@ return {
                 }
               }
               if (!hasGranularFilter && !cleanedSF) {
-                let reconDelta = 0;
-                const biRecon = window.PRODUCT_MIX?.biReconciliation || {};
-                const startMonth = startDate ? startDate.slice(0, 7) : '';
-                const endMonth = endDate ? endDate.slice(0, 7) : '';
-                Object.entries(biRecon).forEach(([ym, br]) => {
-                  if (ym < startMonth || ym > endMonth) return;
-                  const delta = br?.delta || 0;
-                  if (delta > 0) reconDelta += delta;
-                });
-                if (reconDelta > 0) {
+                const dd = window.DAILY_DATA;
+                let biFat = 0;
+                if (dd && dd.days) {
+                  for (const d of allDates) {
+                    if (d < startDate || d > endDate) continue;
+                    const dayStores = dd.days[d];
+                    if (!dayStores) continue;
+                    for (const [sn, v] of Object.entries(dayStores)) {
+                      if (sn === 'CD Sancashop') continue;
+                      biFat += v.fat || 0;
+                    }
+                  }
+                }
+                const cashlessFat = mix.reduce((s, m) => s + m.fat, 0);
+                const delta = Math.round((biFat - cashlessFat) * 100) / 100;
+                if (delta > 0) {
                   payTypes.push('PROJAC');
-                  mix.push({fat: Math.round(reconDelta * 100) / 100, count: 0});
+                  mix.push({fat: delta, count: 0});
                 }
               }
               return {payTypes, mix};
