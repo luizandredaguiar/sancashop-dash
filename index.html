@@ -3514,6 +3514,7 @@ return {
               const PD = window.PAYMENT_DAILY;
               if (!PD || !PD.daily || !PD.payTypes) return null;
               const cleanedSF = storeFilter ? cleanStore(storeFilter) : null;
+              const localMtdDayMax = PM.mtdInfo?.dayMax || parseInt((window.DATA?.lastUpdate || '').substring(8, 10)) || 28;
               const buildMixResult = (bucket = {}, recon = null) => {
                 const payTypes = [...PD.payTypes];
                 const mix = payTypes.map(pt => ({ fat: Number(bucket[pt]) || 0, count: 0 }));
@@ -3589,7 +3590,7 @@ return {
                 if (endDay === lastDay) {
                   return buildMixResult(sources.monthly[startYm] || {}, getAlignedRecon(startYm, false));
                 }
-                if (endDay === mtdDayMax) {
+                if (endDay === localMtdDayMax) {
                   return buildMixResult(sources.mtd[startYm] || {}, getAlignedRecon(startYm, true));
                 }
                 return null;
