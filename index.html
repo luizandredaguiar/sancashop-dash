@@ -3589,9 +3589,8 @@ return {
 
             if (!customPeriod1Start) {
               const end1 = maxDate;
-              const sd1 = new Date(end1 + 'T12:00:00');
-              sd1.setDate(sd1.getDate() - 29);
-              const start1 = sd1 < new Date(minDate + 'T12:00:00') ? minDate : sd1.toISOString().split('T')[0];
+              const monthStart1 = `${end1.slice(0, 8)}01`;
+              const start1 = monthStart1 < minDate ? minDate : monthStart1;
               const sd2 = new Date(start1 + 'T12:00:00');
               sd2.setFullYear(sd2.getFullYear() - 1);
               const ed2 = new Date(end1 + 'T12:00:00');
@@ -3817,8 +3816,19 @@ return {
               const fmt = d => { const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
               return `${fmt(s)} a ${fmt(e)}`;
             };
+            const formatCustomPeriodVisualLabel = (startDate, endDate) => {
+              if (!startDate || !endDate) return '—';
+              const [startYear, startMonth, startDay] = String(startDate).split('-').map(Number);
+              const [endYear, endMonth, endDay] = String(endDate).split('-').map(Number);
+              if (startYear === endYear && startMonth === endMonth && startDay === 1) {
+                return `${MESES[startMonth - 1]} MTD (d1-d${endDay})`;
+              }
+              return fmtPeriod(startDate, endDate);
+            };
             const label1 = fmtPeriod(customPeriod1Start, customPeriod1End);
             const label2 = fmtPeriod(customPeriod2Start, customPeriod2End);
+            const label1Visual = formatCustomPeriodVisualLabel(customPeriod1Start, customPeriod1End);
+            const label2Visual = formatCustomPeriodVisualLabel(customPeriod2Start, customPeriod2End);
             const storeRows = [...new Set([...Object.keys(p1.byStore), ...Object.keys(p2.byStore)])].map(name => {
               const s1 = p1.byStore[name] || { fat: 0, transacoes: 0, itens: 0, ticket: 0 };
               const s2 = p2.byStore[name] || { fat: 0, transacoes: 0, itens: 0, ticket: 0 };
@@ -4042,8 +4052,8 @@ return {
                 <Card>
                   <h3 className="text-lg font-semibold text-white mb-2">Comparativo Visual</h3>
                   <p className="text-slate-400 text-xs mb-4">
-                    <span className="inline-block w-3 h-3 rounded mr-1" style={{backgroundColor:'#22c55e'}}></span> Análise ({label1})
-                    <span className="inline-block w-3 h-3 rounded mr-1 ml-4" style={{backgroundColor:'#8b5cf6'}}></span> Comparação ({label2})
+                    <span className="inline-block w-3 h-3 rounded mr-1" style={{backgroundColor:'#22c55e'}}></span> Análise ({label1Visual})
+                    <span className="inline-block w-3 h-3 rounded mr-1 ml-4" style={{backgroundColor:'#8b5cf6'}}></span> Comparação ({label2Visual})
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {[{title:'Faturamento', v1:p1.total.fat, v2:p2.total.fat, fmt:v=>formatR$(v), tickFmt:v=>v>=1000?`R$${(v/1000).toFixed(0)}k`:`R$${v.toFixed(0)}`},
@@ -4080,8 +4090,8 @@ return {
                 <Card>
                   <h3 className="text-lg font-semibold text-white mb-4">Mix de Pagamentos</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <PayBar data={pm1.mix} label={'Análise'} payTypes={pm1.payTypes} />
-                    <PayBar data={pm2.mix} label={'Comparação'} payTypes={pm2.payTypes} />
+                    <PayBar data={pm1.mix} label={`Análise (${label1Visual})`} payTypes={pm1.payTypes} />
+                    <PayBar data={pm2.mix} label={`Comparação (${label2Visual})`} payTypes={pm2.payTypes} />
                   </div>
                 </Card>
 
