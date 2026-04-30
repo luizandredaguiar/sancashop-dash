@@ -3402,12 +3402,50 @@ return {
 
             // Check if any granular filter is active (needs CATEGORY_DAILY / product-daily / CARD_DAILY)
             const hasGranularFilter = customCategories.length > 0 || customProducts.length > 0 || customClients.length > 0;
+            const biReconBase = PM.biReconciliation || {};
+            const mtdBiReconBase = PM.mtdBiReconciliation || {};
+            const customMtdDayMax = PM.mtdInfo?.dayMax || parseInt((window.DATA?.lastUpdate || '').substring(8, 10)) || 28;
+            const sumBucketValues = (bucket) => Object.values(bucket || {}).reduce((s, v) => s + (Number(v) || 0), 0);
+            const buildCustomScopedRecon = (storeName, monthlySource = {}, mtdSource = {}) => {
+              if (!storeName) return { monthly: biReconBase, mtd: mtdBiReconBase };
+              const ddMonthlyForStore = {};
+              const scopedBiMtd = {};
+              for (const [date, stores] of Object.entries(window.DAILY_DATA?.days || {})) {
+                const day = parseInt(date.slice(8, 10), 10);
+                for (const [rawStore, vals] of Object.entries(stores || {})) {
+                  if (rawStore === 'CD Sancashop') continue;
+                  if (cleanStore(rawStore) !== cleanStore(storeName)) continue;
+                  const ym = date.slice(0, 7);
+                  ddMonthlyForStore[ym] = (ddMonthlyForStore[ym] || 0) + (Number(vals?.fat) || 0);
+                  if (day <= customMtdDayMax) {
+                    scopedBiMtd[ym] = (scopedBiMtd[ym] || 0) + (Number(vals?.fat) || 0);
+                  }
+                }
+              }
+              const monthly = {};
+              const mtd = {};
+              const monthlyKeys = new Set([...Object.keys(ddMonthlyForStore), ...Object.keys(monthlySource || {})]);
+              [...monthlyKeys].sort().forEach(ym => {
+                const bi = Math.round((ddMonthlyForStore[ym] || 0) * 100) / 100;
+                const cashless = Math.round(sumBucketValues((monthlySource || {})[ym]) * 100) / 100;
+                const delta = Math.round((bi - cashless) * 100) / 100;
+                if (Math.abs(delta) > 0.01) monthly[ym] = { bi, cashless, delta, projac: 0, residual: delta };
+              });
+              const mtdKeys = new Set([...Object.keys(scopedBiMtd), ...Object.keys(mtdSource || {})]);
+              [...mtdKeys].sort().forEach(ym => {
+                const bi = Math.round((scopedBiMtd[ym] || 0) * 100) / 100;
+                const cashless = Math.round(sumBucketValues((mtdSource || {})[ym]) * 100) / 100;
+                const delta = Math.round((bi - cashless) * 100) / 100;
+                if (Math.abs(delta) > 0.01) mtd[ym] = { bi, cashless, delta, projac: 0, residual: delta };
+              });
+              return { monthly, mtd };
+            };
 
             function aggregatePeriod(startDate, endDate, storeFilter) {
               const result = { total: {fat:0, vendas:0}, byStore: {} };
               let days = 0;
               const cleanedStoreFilter = storeFilter ? cleanStore(storeFilter) : null;
-              const mtdDayMaxLocal = PM.mtdInfo?.dayMax || parseInt((window.DATA?.lastUpdate || '').substring(8, 10)) || 28;
+              const mtdDayMaxLocal = customMtdDayMax;
               const isMonthAlignedRange = (() => {
                 if (!startDate || !endDate) return false;
                 const startYm = startDate.slice(0, 7);
@@ -3471,9 +3509,9 @@ return {
                 if (isMonthAlignedRange && alignedYm) {
                   const useMtd = parseInt(endDate.slice(8, 10), 10) === mtdDayMaxLocal;
                   const categorySource = (storeFilter ? PM.byStore?.[storeFilter] : PM.__all__) || {};
-                  const scopedRecon = !clientCardSet && storeFilter
-                    ? buildScopedRecon(categorySource.monthlyCategories || {}, categorySource.mtdCategories || {})
-                    : { monthly: biReconBase, mtd: mtdBiReconBase };
+                  const scopedRecon = !clientCardSet
+                    ? buildCustomScopedRecon(storeFilter, categorySource.monthlyCategories || {}, categorySource.mtdCategories || {})
+                    : { monthly: {}, mtd: {} };
                   const bucket = useMtd
                     ? (categorySource.mtdCategories?.[alignedYm] || {})
                     : (categorySource.monthlyCategories?.[alignedYm] || {});
@@ -3549,7 +3587,52 @@ return {
               const PD = window.PAYMENT_DAILY;
               if (!PD || !PD.daily || !PD.payTypes) return null;
               const cleanedSF = storeFilter ? cleanStore(storeFilter) : null;
-              const localMtdDayMax = PM.mtdInfo?.dayMax || parseInt((window.DATA?.lastUpdate || '').substring(8, 10)) || 28;
+              const localMtdDayMax = typeof customMtdDayMax !== 'undefined'
+                ? customMtdDayMax
+                : (PM.mtdInfo?.dayMax || parseInt((window.DATA?.lastUpdate || '').substring(8, 10)) || 28);
+              const resolveScopedRecon = (monthlySource = {}, mtdSource = {}) => {
+                if (typeof buildCustomScopedRecon === 'function') {
+                  return buildCustomScopedRecon(storeFilter, monthlySource, mtdSource);
+                }
+                if (!storeFilter) {
+                  return { monthly: PM.biReconciliation || {}, mtd: PM.mtdBiReconciliation || {} };
+                }
+                if (typeof buildScopedRecon === 'function') {
+                  return buildScopedRecon(monthlySource, mtdSource);
+                }
+                const ddMonthlyForStore = {};
+                const scopedBiMtd = {};
+                for (const [date, stores] of Object.entries(window.DAILY_DATA?.days || {})) {
+                  const day = parseInt(date.slice(8, 10), 10);
+                  for (const [rawStore, vals] of Object.entries(stores || {})) {
+                    if (rawStore === 'CD Sancashop') continue;
+                    if (cleanStore(rawStore) !== cleanStore(storeFilter)) continue;
+                    const ym = date.slice(0, 7);
+                    ddMonthlyForStore[ym] = (ddMonthlyForStore[ym] || 0) + (Number(vals?.fat) || 0);
+                    if (day <= localMtdDayMax) {
+                      scopedBiMtd[ym] = (scopedBiMtd[ym] || 0) + (Number(vals?.fat) || 0);
+                    }
+                  }
+                }
+                const sumVals = bucket => Object.values(bucket || {}).reduce((s, v) => s + (Number(v) || 0), 0);
+                const monthly = {};
+                const mtd = {};
+                const monthlyKeys = new Set([...Object.keys(ddMonthlyForStore), ...Object.keys(monthlySource || {})]);
+                [...monthlyKeys].sort().forEach(ym => {
+                  const bi = Math.round((ddMonthlyForStore[ym] || 0) * 100) / 100;
+                  const cashless = Math.round(sumVals((monthlySource || {})[ym]) * 100) / 100;
+                  const delta = Math.round((bi - cashless) * 100) / 100;
+                  if (Math.abs(delta) > 0.01) monthly[ym] = { bi, cashless, delta, projac: 0, residual: delta };
+                });
+                const mtdKeys = new Set([...Object.keys(scopedBiMtd), ...Object.keys(mtdSource || {})]);
+                [...mtdKeys].sort().forEach(ym => {
+                  const bi = Math.round((scopedBiMtd[ym] || 0) * 100) / 100;
+                  const cashless = Math.round(sumVals((mtdSource || {})[ym]) * 100) / 100;
+                  const delta = Math.round((bi - cashless) * 100) / 100;
+                  if (Math.abs(delta) > 0.01) mtd[ym] = { bi, cashless, delta, projac: 0, residual: delta };
+                });
+                return { monthly, mtd };
+              };
               const buildMixResult = (bucket = {}, recon = null) => {
                 const payTypes = [...PD.payTypes];
                 const mix = payTypes.map(pt => ({ fat: Number(bucket[pt]) || 0, count: 0 }));
@@ -3590,7 +3673,7 @@ return {
                   return base[ym] || null;
                 }
                 const sources = getScopedPaymentSources();
-                const scoped = buildScopedRecon(sources.monthly, sources.mtd);
+                const scoped = resolveScopedRecon(sources.monthly, sources.mtd);
                 return (useMtd ? scoped.mtd : scoped.monthly)[ym] || null;
               };
               if (clientCardSet && window.CARD_DAILY && window.CARD_DAILY.daily) {
