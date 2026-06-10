@@ -272,6 +272,11 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
     const [cadastroSort, setCadastroSort] = useState({col:'totalAccesses', dir:'desc'});
 
     const CLOSED_STORES = new Set(['Adorabile Tijuca', 'Gávea IV', 'John F. Kennedy', 'Reserva das Arvores', 'Reserva Árvores 2']);
+    // Stores with reliable BI revenue (DATA.stores/HISTORICAL/DAILY_DATA) but untrusted/excluded cashless
+    // (shared terminal — see build-product-mix.js isExcludedFromAnalytics). Single source of truth for
+    // dashboard components: revenue views fall back to BI for these stores; composition views (categorias,
+    // pagamentos, produtos, heatmap) show a placeholder instead of cashless data.
+    const UNTRUSTED_CASHLESS_STORES = new Set(['PROJAC - Sanca Lev']);
     const cleanStore = (n) => { if (!n) return n; if (n.startsWith('Cond. ')) return n.substring(6); if (n.startsWith('Ed. ')) return n.substring(4); if (n.startsWith('Ed.')) return n.substring(3); return n; };
     const normalizeCardMask = (rawCard) => {
       const digits = String(rawCard || '').replace(/\D/g, '');
@@ -2391,7 +2396,13 @@ return {
                 <h2 className="text-xl font-bold text-white">Clientes — {storeKey === '__all__' ? 'Consolidado' : storeKey === '__same__' ? 'Mesmas lojas (base 2025)' : storeKey}</h2>
                 <ClientStoreFilter value={clientStore} onChange={setClientStore} />
               </div>
-              
+
+              {UNTRUSTED_CASHLESS_STORES.has(storeKey) && (
+                <div className="mb-4 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-amber-200 text-sm">
+                  Métricas de clientes desta loja derivam de cashless não confiável (terminal compartilhado) — interpretar com cautela.
+                </div>
+              )}
+
               {/* KPI Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Card>
@@ -2507,8 +2518,9 @@ return {
 
           {/* ============ MIX DE PRODUTOS TAB ============ */}
           {activeTab === 'mix' && (() => {
-            const storeKeys = Object.keys(PM.byStore || {}).sort();
-            const selData = mixStore === '__all__' ? PM.__all__ : PM.byStore[mixStore];
+            const storeKeys = [...new Set([...Object.keys(DATA.stores).filter(s => s !== 'CD Sancashop'), ...Object.keys(PM.byStore || {})])].sort((a,b) => a.localeCompare(b, 'pt-BR'));
+            const isUntrustedCashless = mixStore !== '__all__' && UNTRUSTED_CASHLESS_STORES.has(mixStore);
+            const selData = mixStore === '__all__' ? PM.__all__ : (PM.byStore[mixStore] || (isUntrustedCashless ? {} : null));
             if (!selData) return <div className="text-slate-400">Nenhum dado disponível.</div>;
 
             const fmtR = (v) => 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -2840,7 +2852,11 @@ return {
                     });
                     data.push({ month: ' ', isSpacer: true });
                     let v25a, v26a;
-                    {
+                    if (isUntrustedCashless) {
+                      // No reliable cashless MTD for this store — use BI (DAILY_DATA), like the monthly bars above
+                      v25a = scopedBiMtd['2025-'+nextMonth] || 0;
+                      v26a = scopedBiMtd['2026-'+nextMonth] || 0;
+                    } else {
                       // MTD bar always uses cashless (PM.mtdMetrics) to match Mix de Categorias/Pagamentos
                       const revenueMtdSrc = isRegisteredClientSelected ? clientMtdMetrics : isCardSelected ? selectedCardScope?.mtdMetrics : selData.mtdMetrics || pmSrc;
                       v25a = revenueMtdSrc?.['2025-'+nextMonth]?.revenue || revenueMtdSrc?.['2025-'+nextMonth]?.spend || 0;
@@ -2906,6 +2922,7 @@ return {
 
                 return (
                 <React.Fragment>
+                {!isUntrustedCashless && <>
                 {/* Client filter dropdown — above charts, controls Charts B and C only */}
                 <div className="mb-4 space-y-2">
                   <input
@@ -2965,8 +2982,18 @@ return {
                     </div>
                   );
                 })()}
+                </>}
 
                 {/* ── Chart A: Mix de Categorias — Comparativo Mensal ── */}
+                {isUntrustedCashless ? (
+                <Card>
+                  <h3 className="text-white font-semibold text-base mb-2">Mix de Categorias — Comparativo Mensal</h3>
+                  <p className="text-slate-400 text-sm">
+                    Composição indisponível para esta loja: dados cashless não confiáveis (terminal compartilhado), excluídos das analytics.
+                    Faturamento disponível nas abas Comparativo Anual/Mensal.
+                  </p>
+                </Card>
+                ) : (
                 <Card>
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                     <div>
@@ -3063,11 +3090,12 @@ return {
                       </div>
                     </div>
                 </Card>
+                )}
 
                 {/* Card filter moved above Chart A */}
 
               {/* ── Top 20 Products Table (below Mix de Categorias) ── */}
-              {(() => {
+              {!isUntrustedCashless && (() => {
                 // Use card-level top products when card is selected
                 const cardProds = isRegisteredClientSelected
                   ? selectedPmScopes.flatMap(scope => (scope?.topProducts || []).map(p => ({ name: p.name, revenue: p.spend || p.revenue, qty: p.qty || 0 })))
@@ -3123,7 +3151,7 @@ return {
                       <h3 className="text-white font-semibold text-base">Métricas Operacionais — Comparativo Mensal</h3>
                       <p className="text-slate-400 text-sm">
                         2025 vs 2026 — {filterLabel} — {opLabels[opMetric]}
-                        {opMetric === 'revenue' && !isCardSelected && ddMonthlyForStore ? ' (meses fechados: BI)' : opMetric === 'revenue' && isCardSelected ? ' (fonte: cashless)' : ''}
+                        {opMetric === 'revenue' && isUntrustedCashless ? ' (fonte: BI — cashless desta loja não confiável)' : opMetric === 'revenue' && !isCardSelected && ddMonthlyForStore ? ' (meses fechados: BI)' : opMetric === 'revenue' && isCardSelected ? ' (fonte: cashless)' : ''}
                         {(() => {
                           const has2025 = opData.some(d => !d.isSpacer && d['2025'] > 0);
                           const has2026 = opData.some(d => !d.isSpacer && d['2026'] > 0);
@@ -3687,10 +3715,11 @@ return {
             const clientLabel = (clientId) => factsMeta.clients?.[clientId]?.label || '';
             const productLabel = (productId) => factsMeta.products?.[productId]?.[0] || '';
             const categoryLabel = (categoryId) => factsMeta.categories?.[categoryId] || '';
-            const visibleStores = (factsMeta.stores || [])
+            const visibleStores = [...new Set([...(factsMeta.stores || []), ...UNTRUSTED_CASHLESS_STORES])]
               .filter(name => name && name !== 'CD Sancashop' && !CLOSED_STORES.has(name) && !CLOSED_STORES.has(cleanStore(name)))
               .map(name => ({ name }))
               .sort((a, b) => cleanStore(a.name).localeCompare(cleanStore(b.name), 'pt-BR'));
+            const isUntrustedCashless = UNTRUSTED_CASHLESS_STORES.has(customStore);
             const allFactsRows = customFactsRows.filter(row => {
               const storeName = storeLabel(row.storeId);
               return storeName && storeName !== 'CD Sancashop' && !CLOSED_STORES.has(storeName) && !CLOSED_STORES.has(cleanStore(storeName));
@@ -4130,6 +4159,14 @@ return {
                   <p className="text-slate-500 text-xs mt-1">Itens filtrados: {p1.total.itens.toLocaleString('pt-BR')} na análise • {p2.total.itens.toLocaleString('pt-BR')} na comparação</p>
                 </Card>
 
+                {isUntrustedCashless ? (
+                <Card>
+                  <p className="text-slate-400 text-sm">
+                    Composição indisponível para esta loja: dados cashless não confiáveis (terminal compartilhado), excluídos das analytics.
+                    Faturamento disponível nas abas Comparativo Anual/Mensal.
+                  </p>
+                </Card>
+                ) : <>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                   <MetricCard title="Faturamento (Análise)" value={formatR$(p1.total.fat)}
                     subtitle={`Comp: ${formatR$(p2.total.fat)} | Var: ${varFat !== null ? (varFat >= 0 ? '+' : '') + varFat.toFixed(1) + '%' : '—'}`}
@@ -4239,6 +4276,7 @@ return {
                   </div>
                 </Card>
                 )}
+                </>}
               </React.Fragment>
             );
           })()}
