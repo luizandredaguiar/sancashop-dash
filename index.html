@@ -1123,6 +1123,17 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
         const mtdYM25 = '2025-' + mtdMonthStr;
 
         const mtdStoreRows = stores2026.map(name => {
+          if (UNTRUSTED_CASHLESS_STORES.has(name)) {
+            // Cashless desta loja não é confiável (terminal compartilhado, excluído do
+            // PRODUCT_MIX) — usar BI (DAILY_DATA via mtdPerStore) como fonte do MTD,
+            // mesmo fallback da aba Detalhes (Fix W).
+            const bi = mtdPerStore[name] || {};
+            const fatAbr26 = bi.fat26 || 0;
+            const fatAbr25Raw = bi.fat25 || 0;
+            const fatAbr25 = fatAbr25Raw > 0 ? fatAbr25Raw : null;
+            const varAbr = (fatAbr25 && fatAbr26) ? ((fatAbr26 / fatAbr25) - 1) * 100 : null;
+            return { name, fatAbr26, fatAbr25, varAbr, isBIFallback: true };
+          }
           const s = pmByStore[name] || {};
           const fatAbr26 = s.mtdMetrics?.[mtdYM26]?.revenue || 0;
           const fatAbr25Raw = s.mtdMetrics?.[mtdYM25]?.revenue || 0;
@@ -1141,10 +1152,19 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
 
         const buildMTDChartData = (storeFilter) => {
           if (storeFilter === '__consolidated__') {
-            return {
-              fatAbr25: pmAll.mtdMetrics?.[mtdYM25]?.revenue || 0,
-              fatAbr26: pmAll.mtdMetrics?.[mtdYM26]?.revenue || 0,
-            };
+            // PM.__all__ exclui as lojas em UNTRUSTED_CASHLESS_STORES (cashless não
+            // confiável, ver build-product-mix.js isExcludedFromAnalytics) — somar o BI
+            // (mtdPerStore) dessas lojas ao total "todas as lojas" sem dupla contagem.
+            let fatAbr25 = pmAll.mtdMetrics?.[mtdYM25]?.revenue || 0;
+            let fatAbr26 = pmAll.mtdMetrics?.[mtdYM26]?.revenue || 0;
+            const biFallbackStores = [];
+            UNTRUSTED_CASHLESS_STORES.forEach(name => {
+              const bi = mtdPerStore[name] || {};
+              if ((bi.fat26 || 0) > 0 || (bi.fat25 || 0) > 0) biFallbackStores.push(name);
+              fatAbr25 += bi.fat25 || 0;
+              fatAbr26 += bi.fat26 || 0;
+            });
+            return { fatAbr25, fatAbr26, biFallbackStores };
           }
           let relevantStores;
           if (!storeFilter) relevantStores = mtdStoreRows.filter(s => allYearsStores.find(r => r.name === s.name));
@@ -1168,6 +1188,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
         row.fatMTD25 = mtd ? mtd.fatAbr25 : null;
         row.fatMTD26 = mtd ? mtd.fatAbr26 : 0;
         row.varMTD = mtd ? mtd.varAbr : null;
+        row.mtdBISource = mtd ? !!mtd.isBIFallback : false;
       });
 
       // Override storeRows fat/vendas/ticket with DAILY_DATA YTD (single source of truth)
@@ -1237,6 +1258,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
       momSummaryAllFinal.fatMTD25 = momSummaryAllMtd.fatAbr25 || null;
       momSummaryAllFinal.fatMTD26 = momSummaryAllMtd.fatAbr26 || 0;
       momSummaryAllFinal.varMTD = momSummaryAllMtd.fatAbr25 ? ((momSummaryAllMtd.fatAbr26 / momSummaryAllMtd.fatAbr25) - 1) * 100 : null;
+      momSummaryAllFinal.mtdBiFallbackStores = momSummaryAllMtd.biFallbackStores || [];
       momSummarySameFinal.fatMTD25 = momSummarySameMtd.fatAbr25 || null;
       momSummarySameFinal.fatMTD26 = momSummarySameMtd.fatAbr26 || 0;
       momSummarySameFinal.varMTD = momSummarySameMtd.fatAbr25 ? ((momSummarySameMtd.fatAbr26 / momSummarySameMtd.fatAbr25) - 1) * 100 : null;
@@ -1322,9 +1344,15 @@ return {
         ? 'px-3 py-2 text-white font-bold text-right whitespace-nowrap'
         : 'px-3 py-2 text-white font-medium text-right whitespace-nowrap';
       const varClass = `px-3 py-2 text-right font-${isSummary ? 'bold' : 'medium'} whitespace-nowrap ${varValue == null ? 'text-slate-600' : varValue >= 0 ? 'text-green-400' : 'text-red-400'}`;
+      // MTD source badges: per-store BI fallback (PROJAC) and consolidated mixed source
+      const mtdSourceBadge = col.kind === 'mtd' && row.mtdBISource
+        ? <span className="text-slate-500 font-normal"> (BI)</span>
+        : col.kind === 'mtd' && row.mtdBiFallbackStores?.length
+        ? <span className="text-slate-500 font-normal"> (cashless + BI {row.mtdBiFallbackStores.join(', ')})</span>
+        : null;
       return (
         <React.Fragment key={`${row.name}-${col.fatCol}`}>
-          <td className={fatClass}>{formatR$(fatValue)}</td>
+          <td className={fatClass}>{formatR$(fatValue)}{mtdSourceBadge}</td>
           <td className={varClass}>
             {varValue != null ? `${varValue >= 0 ? '+' : ''}${varValue.toFixed(1)}%` : '—'}
           </td>
