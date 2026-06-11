@@ -2835,8 +2835,14 @@ return {
                     rowMTD['Não Mapeado_25'] = cats25mtd['Não Mapeado'] || 0;
                     rowMTD['Não Mapeado_26'] = cats26mtd['Não Mapeado'] || 0;
                   }
-                  // MTD bar always uses pure cashless (mtdCategories) — no AJUSTE BI/PROJAC,
-                  // to match buildMTDChartData/buildOpData (Fix T) for both 2025 and 2026.
+                  if (showBIRecon) {
+                    // PROJAC (BI de loja untrusted) empilha no MTD pra bater com o consolidado
+                    // do Comparativo Mensal (W2); AJUSTE BI (resíduo estrutural) não empilha (T2).
+                    const mtdBr25 = mtdBiRecon['2025-'+nextMonth];
+                    const mtdBr26 = mtdBiRecon['2026-'+nextMonth];
+                    rowMTD['PROJAC_25'] = (mtdBr25 && mtdBr25.projac > 0) ? mtdBr25.projac : 0;
+                    rowMTD['PROJAC_26'] = (mtdBr26 && mtdBr26.projac > 0) ? mtdBr26.projac : 0;
+                  }
                   data.push(rowMTD);
                   return data;
                 };
@@ -3123,7 +3129,12 @@ return {
                 {/* Card filter moved above Chart A */}
 
               {/* ── Top 20 Products Table (below Mix de Categorias) ── */}
-              {!isUntrustedCashless && (() => {
+              {isUntrustedCashless ? (
+              <Card>
+                <h3 className="text-white font-semibold text-base mb-2">Top 20 Produtos por Receita</h3>
+                <p className="text-slate-400 text-sm">Composição indisponível para esta loja: dados cashless não confiáveis (terminal compartilhado), excluídos das analytics. Faturamento disponível nas abas Comparativo Anual/Mensal.</p>
+              </Card>
+              ) : (() => {
                 // Use card-level top products when card is selected
                 const cardProds = isRegisteredClientSelected
                   ? selectedPmScopes.flatMap(scope => (scope?.topProducts || []).map(p => ({ name: p.name, revenue: p.spend || p.revenue, qty: p.qty || 0 })))
@@ -3223,7 +3234,12 @@ return {
                 </Card>
 
                 {/* ── Chart C: Mapa de Calor — Faturamento por Horário e Dia ── */}
-                {hm && (
+                {isUntrustedCashless ? (
+                <Card>
+                  <h3 className="text-white font-semibold text-base mb-2">Mapa de Calor — Faturamento por Horário e Dia</h3>
+                  <p className="text-slate-400 text-sm">Horários indisponíveis: dados cashless desta loja não confiáveis (terminal compartilhado), excluídos das analytics.</p>
+                </Card>
+                ) : hm && (
                 <Card>
                   <div className="mb-4">
                     <h3 className="text-white font-semibold text-base">Mapa de Calor — Faturamento por Horário e Dia</h3>
@@ -3334,8 +3350,14 @@ return {
                       rowMTD[pt + '_25'] = p25mtd[pt] || 0;
                       rowMTD[pt + '_26'] = p26mtd[pt] || 0;
                     });
-                    // MTD bar always uses pure cashless (mtdPayments) — no AJUSTE BI/PROJAC,
-                    // to match buildMTDChartData/buildOpData (Fix T) for both 2025 and 2026.
+                    if (showBIReconPay) {
+                      // PROJAC (BI de loja untrusted) empilha no MTD pra bater com o consolidado
+                      // do Comparativo Mensal (W2); AJUSTE BI (resíduo estrutural) não empilha (T2).
+                      const mtdBr25 = mtdBiReconPay['2025-'+nextMonth];
+                      const mtdBr26 = mtdBiReconPay['2026-'+nextMonth];
+                      rowMTD['PROJAC_25'] = (mtdBr25 && mtdBr25.projac > 0) ? mtdBr25.projac : 0;
+                      rowMTD['PROJAC_26'] = (mtdBr26 && mtdBr26.projac > 0) ? mtdBr26.projac : 0;
+                    }
                     data.push(rowMTD);
                     return data;
                   };
@@ -3357,7 +3379,15 @@ return {
                     });
                   }
 
-                  if (payData.length === 0) return null;
+                  if (payData.length === 0) {
+                    if (isUntrustedCashless) return (
+                      <Card>
+                        <h3 className="text-white font-semibold text-base mb-2">Mix de Pagamentos — Comparativo Mensal</h3>
+                        <p className="text-slate-400 text-sm">Composição indisponível para esta loja: dados cashless não confiáveis (terminal compartilhado), excluídos das analytics. Faturamento disponível nas abas Comparativo Anual/Mensal.</p>
+                      </Card>
+                    );
+                    return null;
+                  }
 
                   return (
                   <Card>
