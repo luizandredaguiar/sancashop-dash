@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-07T11:55:54.047Z",
+  "generatedAt": "2026-07-07T11:58:48.438Z",
   "periodMin": "2025-01-01",
   "periodMax": "2026-07-06",
   "stores": [
@@ -632242,9 +632242,9 @@
     "2026-07"
   ],
   "coverage": {
-    "transactions": 737519,
-    "matchedTransactions": 733676,
-    "matchedRevenue": 13222003.44,
+    "transactions": 737523,
+    "matchedTransactions": 733680,
+    "matchedRevenue": 13222046,
     "unmatchedRevenue": 53342.45,
     "matchedRevenuePct": 99.6
   }
