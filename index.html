@@ -248,6 +248,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
     const [cadastroClient, setCadastroClient] = useState('');
     // Custom comparison tab state
     const [customStore, setCustomStore] = useState('');
+    const [customMachine, setCustomMachine] = useState('');
     const [customPeriod1Start, setCustomPeriod1Start] = useState('');
     const [customPeriod1End, setCustomPeriod1End] = useState('');
     const [customPeriod2Start, setCustomPeriod2Start] = useState('');
@@ -3778,6 +3779,7 @@ return {
               .map(name => ({ name }))
               .sort((a, b) => cleanStore(a.name).localeCompare(cleanStore(b.name), 'pt-BR'));
             const isUntrustedCashless = UNTRUSTED_CASHLESS_STORES.has(customStore);
+            const machineOf = (row) => ((row.txnId || '').split('|')[3] || '');
             const allFactsRows = customFactsRows.filter(row => {
               const storeName = storeLabel(row.storeId);
               return storeName && storeName !== 'CD Sancashop' && !CLOSED_STORES.has(storeName) && !CLOSED_STORES.has(cleanStore(storeName));
@@ -3786,8 +3788,21 @@ return {
               if (!customStore) return true;
               return storeLabel(row.storeId) === customStore;
             });
-            const clientOptionMap = new Map();
+            const machineOptionMap = new Map();
             rowsInStoreScope.forEach(row => {
+              const m = machineOf(row);
+              if (!m) return;
+              machineOptionMap.set(m, (machineOptionMap.get(m) || 0) + 1);
+            });
+            const machineOptions = [...machineOptionMap.entries()]
+              .sort((a, b) => b[1] - a[1])
+              .map(([name]) => name);
+            const validCustomMachine = machineOptions.includes(customMachine) ? customMachine : '';
+            const rowsInMachineScope = rowsInStoreScope.filter(row =>
+              !validCustomMachine || machineOf(row) === validCustomMachine
+            );
+            const clientOptionMap = new Map();
+            rowsInMachineScope.forEach(row => {
               const client = factsMeta.clients?.[row.clientId];
               if (!client) return;
               if (!clientOptionMap.has(row.clientId)) {
@@ -3813,7 +3828,7 @@ return {
             const isAllVisibleClientsSelected = visibleCustomClientCardIds.length > 0 && sameNumberSet(scopedCustomClients, visibleCustomClientCardIds);
             const effectiveCustomClients = isAllVisibleClientsSelected ? [] : scopedCustomClients;
             const effectiveClientCardSet = effectiveCustomClients.length ? new Set(effectiveCustomClients) : null;
-            const rowsInClientScope = rowsInStoreScope.filter(row => {
+            const rowsInClientScope = rowsInMachineScope.filter(row => {
               if (!effectiveClientCardSet) return true;
               return effectiveClientCardSet.has(row.cardId);
             });
@@ -3872,7 +3887,7 @@ return {
               return { included: revenue > 0, revenue: roundMoney(revenue), itemQty };
             };
 
-            function aggregateUnifiedPeriod({ startDate, endDate, store, clientCards, categoryIds, productIds }) {
+            function aggregateUnifiedPeriod({ startDate, endDate, store, machine, clientCards, categoryIds, productIds }) {
               const storeId = store ? factsMeta.stores.indexOf(store) : -1;
               const clientCardSet = (clientCards || []).length ? new Set(clientCards) : null;
               const normalizedCategoryIds = categoryIds || [];
@@ -3883,6 +3898,7 @@ return {
                 if (!storeName) return;
                 if (row.date < startDate || row.date > endDate) return;
                 if (storeId !== -1 && row.storeId !== storeId) return;
+                if (machine && machineOf(row) !== machine) return;
                 if (clientCardSet && !clientCardSet.has(row.cardId)) return;
                 const filtered = filterRowRevenue(row, normalizedCategoryIds, normalizedProductIds);
                 if (!filtered.included) return;
@@ -3903,7 +3919,7 @@ return {
               return result;
             }
 
-            function aggregateUnifiedPaymentMix({ startDate, endDate, store, clientCards, categoryIds, productIds }) {
+            function aggregateUnifiedPaymentMix({ startDate, endDate, store, machine, clientCards, categoryIds, productIds }) {
               const storeId = store ? factsMeta.stores.indexOf(store) : -1;
               const clientCardSet = (clientCards || []).length ? new Set(clientCards) : null;
               const normalizedCategoryIds = categoryIds || [];
@@ -3912,6 +3928,7 @@ return {
               allFactsRows.forEach(row => {
                 if (row.date < startDate || row.date > endDate) return;
                 if (storeId !== -1 && row.storeId !== storeId) return;
+                if (machine && machineOf(row) !== machine) return;
                 if (clientCardSet && !clientCardSet.has(row.cardId)) return;
                 const filtered = filterRowRevenue(row, normalizedCategoryIds, normalizedProductIds);
                 if (!filtered.included) return;
@@ -3927,6 +3944,7 @@ return {
 
             const aggregationFilters = {
               store: customStore || null,
+              machine: validCustomMachine || null,
               clientCards: effectiveCustomClients,
               categoryIds: effectiveCustomCategories,
               productIds: effectiveCustomProducts,
@@ -4077,7 +4095,7 @@ return {
               <React.Fragment>
                 <Card>
                   <h3 className="text-lg font-semibold text-white mb-4" onClick={() => { setCustomCatOpen(false); setCustomProdOpen(false); setCustomClientOpen(false); }}>Comparativo Personalizado</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                       <label className="text-slate-400 text-xs block mb-1">Período de Análise</label>
                       <div className="flex gap-2 items-center">
@@ -4108,6 +4126,14 @@ return {
                         className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full">
                         <option value="">Consolidado (todas as lojas)</option>
                         {visibleStores.map(s => <option key={s.name} value={s.name}>{cleanStore(s.name)}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-slate-400 text-xs block mb-1">Máquina</label>
+                      <select value={validCustomMachine} onChange={e => setCustomMachine(e.target.value)}
+                        className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full">
+                        <option value="">Todas as máquinas</option>
+                        {machineOptions.map(m => <option key={m} value={m}>{m}</option>)}
                       </select>
                     </div>
                   </div>
@@ -4210,6 +4236,7 @@ return {
                   <p className="text-slate-500 text-xs mt-3">
                     Análise: {label1} ({p1.days} dias) vs Comparação: {label2} ({p2.days} dias)
                     {customStore ? ` • ${cleanStore(customStore)}` : ' • Todas as lojas'}
+                    {validCustomMachine ? ` • Máquina: ${validCustomMachine}` : ''}
                     {effectiveCustomCategories.length > 0 ? ` • ${effectiveCustomCategories.length} categoria(s)` : ''}
                     {effectiveCustomProducts.length > 0 ? ` • ${effectiveCustomProducts.length} produto(s)` : ''}
                     {effectiveCustomClients.length > 0 ? ` • ${selectedCustomClientOption?.label || `${effectiveCustomClients.length} cartão(ões)`}` : ''}
