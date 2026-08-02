@@ -233,6 +233,8 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
     const [sortDir, setSortDir] = useState('desc');
     const [chartStore, setChartStore] = useState('');
     const [activeTab, setActiveTab] = useState('yoy');
+    const [bridgePairIdx, setBridgePairIdx] = useState(2);
+    const [bridgeMomMonthIdx, setBridgeMomMonthIdx] = useState(99);
     const [momChartStore, setMomChartStore] = useState('');
     const [momSortCol, setMomSortCol] = useState('fatCurrent26');
     const [momSortDir, setMomSortDir] = useState('desc');
@@ -450,11 +452,13 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
 
       const storeRows = stores2026.map(name => {
         const d2026 = DATA.stores[name]?.['2026'] || {};
-        let fat2026 = 0, vendas2026 = 0;
+        let fat2026 = 0, vendas2026 = 0, hasAll2026 = true;
         monthRange.forEach(m => {
           if (d2026[m]) {
             fat2026 += d2026[m].valor;
             vendas2026 += d2026[m].vendas;
+          } else {
+            hasAll2026 = false;
           }
         });
         const ticket2026 = vendas2026 > 0 ? fat2026 / vendas2026 : 0;
@@ -484,7 +488,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
         const varVendasYoY = (vendas2025 && vendas2026) ? ((vendas2026 / vendas2025) - 1) * 100 : null;
 
         return {
-          name, fat2026, vendas2026, ticket2026,
+          name, fat2026, vendas2026, ticket2026, hasAll2026,
           fat2023: yearData[2023]?.fat || null,
           fat2024: yearData[2024]?.fat || null,
           fat2025,
@@ -499,7 +503,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
         };
       });
 
-      const comparableStores = storeRows.filter(s => s.fat2025 !== null && s.fat2026 > 0);
+      const comparableStores = storeRows.filter(s => s.fat2025 !== null && s.hasAll2026);
       const totalFat2026 = comparableStores.reduce((s, r) => s + r.fat2026, 0);
       const totalFat2025 = comparableStores.reduce((s, r) => s + r.fat2025, 0);
       const varTotal = totalFat2025 > 0 ? ((totalFat2026 / totalFat2025) - 1) * 100 : 0;
@@ -1274,6 +1278,63 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
       applyMomCurrentMetrics(momSummaryAllFinal);
       applyMomCurrentMetrics(momSummarySameFinal);
 
+// ─── PONTE DE CRESCIMENTO ──────────────────────────────────────────────────
+      const _bHistRev = (name, year, win) => {
+        const hYear = HISTORICAL[name]?.[String(year)];
+        if (!hYear) return { rev: 0, mwd: 0 };
+        let rev = 0, mwd = 0;
+        win.forEach(m => { const md = hYear[String(m)]; if (md && md.valor > 0) { rev += md.valor; mwd++; } });
+        return { rev, mwd };
+      };
+      const _bCompute = (lbl, names, win, getN1, getN) => {
+        const W = win.length;
+        const rows = names.map(nm => {
+          const n1 = getN1(nm), n = getN(nm);
+          return { nm, revN1: n1.rev, revN: n.rev, isSSS: n1.mwd === W && n.mwd === W };
+        });
+        const sss = rows.filter(r => r.isSSS), nonSSS = rows.filter(r => !r.isSSS);
+        const cN1 = rows.reduce((a, r) => a + r.revN1, 0);
+        const cN  = rows.reduce((a, r) => a + r.revN, 0);
+        const sN1 = sss.reduce((a, r) => a + r.revN1, 0), sN = sss.reduce((a, r) => a + r.revN, 0);
+        const newRev = nonSSS.filter(r => r.revN > 0).reduce((a, r) => a + r.revN, 0);
+        const closedRev = nonSSS.filter(r => r.revN1 > 0).reduce((a, r) => a + r.revN1, 0);
+        return { label: lbl, cN1, cN, grow: cN - cN1, growPct: cN1 > 0 ? (cN / cN1 - 1) * 100 : 0,
+                 sssCount: sss.length, sN1, sN, dSss: sN - sN1,
+                 newCount: nonSSS.filter(r => r.revN > 0).length, newRev,
+                 closedCount: nonSSS.filter(r => r.revN1 > 0).length, closedRev };
+      };
+      const _fy = [1,2,3,4,5,6,7,8,9,10,11,12];
+      const _ytdNames = [...new Set([...stores2026, ...allHistStoreNames.filter(n => !stores2026Set.has(n))])];
+      const growthBridge = [
+        _bCompute('2024 vs 2023 (ano cheio)', allHistStoreNames, _fy,
+          n => _bHistRev(n, 2023, _fy), n => _bHistRev(n, 2024, _fy)),
+        _bCompute('2025 vs 2024 (ano cheio)', allHistStoreNames, _fy,
+          n => _bHistRev(n, 2024, _fy), n => _bHistRev(n, 2025, _fy)),
+        _bCompute(`${_currentYear} YTD ${periodLabel} vs ${_prevYear}`, _ytdNames, monthRange,
+          n => _bHistRev(n, _prevYear, monthRange),
+          n => {
+            if (!stores2026Set.has(n)) return { rev: 0, mwd: 0 };
+            const d = DATA.stores[n]?.['2026'] || {};
+            let rev = 0, mwd = 0;
+            monthRange.forEach(m => { if (d[m]) { rev += d[m].valor; mwd++; } });
+            return { rev, mwd };
+          }),
+      ];
+      // ─── fim PONTE ──────────────────────────────────────────────────────────
+
+      const growthBridgeMom = monthRange.map(m =>
+        _bCompute(
+          `${MESES[m-1]}/${_currentYear} vs ${MESES[m-1]}/${_prevYear}`,
+          _ytdNames, [m],
+          n => _bHistRev(n, _prevYear, [m]),
+          n => {
+            if (!stores2026Set.has(n)) return { rev: 0, mwd: 0 };
+            const d = DATA.stores[n]?.['2026'] || {};
+            return d[m] ? { rev: d[m].valor, mwd: 1 } : { rev: 0, mwd: 0 };
+          }
+        )
+      );
+
 return {
         storeRows, comparableStores, totalFat2026, totalFat2025, varTotal,
         consolidatedChart, consolidatedAllChart, allYearsStores, storeChartData, storeNames2026,
@@ -1289,6 +1350,9 @@ return {
         dailyComputed,
         // YTD/MTD data
         computeYTD, computeMTD,
+        // Growth bridge
+        growthBridge,
+        growthBridgeMom,
       };
     }, []);
 
@@ -1806,6 +1870,109 @@ return {
                   </table>
                 </div>
               </Card>
+
+              {/* ============ PONTE DE CRESCIMENTO ============ */}
+              {(() => {
+                const bridge = computed.growthBridge;
+                if (!bridge) return null;
+                const pair = bridge[bridgePairIdx];
+                const fmtR = v => 'R$ ' + Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                const fmtPct = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+                const fmtPP = v => (v >= 0 ? '+' : '') + v.toFixed(2) + ' p.p.';
+
+                // Waterfall data
+                const wfItems = [
+                  { name: pair.label.split(' ')[0], val: pair.cN1, base: 0, type: 'total' },
+                  { name: 'ΔSSS', val: pair.dSss, base: pair.dSss >= 0 ? pair.cN1 : pair.cN1 + pair.dSss, type: pair.dSss >= 0 ? 'pos' : 'neg' },
+                  { name: '+Novas', val: pair.newRev, base: pair.cN1 + pair.dSss, type: 'pos' },
+                  { name: '−Fech.', val: pair.closedRev, base: pair.cN1 + pair.dSss + pair.newRev - pair.closedRev, type: 'neg' },
+                  { name: pair.label.split(' ')[2] || String(pair.label.split(' ')[0] - -1), val: pair.cN, base: 0, type: 'total' },
+                ];
+                const wfData = wfItems.map(it => ({ name: it.name, invisible: it.base, delta: Math.abs(it.val), type: it.type }));
+
+                const WF_COLOR = { total: '#6366f1', pos: '#22c55e', neg: '#ef4444' };
+
+                return (
+                  <Card>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">Ponte de Crescimento</h3>
+                        <p className="text-slate-400 text-xs mt-1">Decomposição SSS · Novas lojas · Lojas fechadas — definição estrita (todos os meses em ambos os anos)</p>
+                      </div>
+                      <select value={bridgePairIdx} onChange={e => setBridgePairIdx(Number(e.target.value))}
+                        className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full sm:w-auto">
+                        {bridge.map((p, i) => <option key={i} value={i}>{p.label}</option>)}
+                      </select>
+                    </div>
+
+                    {/* Waterfall */}
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={wfData} margin={{ top: 24, right: 8, bottom: 0, left: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                        <XAxis dataKey="name" stroke="#94a3b8" tick={{ fontSize: 12 }} />
+                        <YAxis stroke="#94a3b8" tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
+                        <Tooltip content={({ active, payload, label }) => {
+                          if (!active || !payload?.length) return null;
+                          const it = wfItems.find(w => w.name === label);
+                          if (!it) return null;
+                          const sign = it.type === 'neg' ? '−' : (it.type === 'pos' && it.val < 0 ? '−' : (it.type === 'pos' ? '+' : ''));
+                          return (
+                            <div className="bg-slate-800 border border-slate-600 rounded-lg p-3 text-sm shadow-xl">
+                              <p className="text-white font-semibold mb-1">{label}</p>
+                              <p style={{ color: WF_COLOR[it.type] }}>{sign}{fmtR(it.val)}</p>
+                            </div>
+                          );
+                        }} />
+                        <Bar dataKey="invisible" stackId="wf" fill="transparent" isAnimationActive={false} />
+                        <Bar dataKey="delta" stackId="wf" isAnimationActive={false} radius={[4,4,0,0]}>
+                          {wfData.map((entry, i) => <Cell key={i} fill={WF_COLOR[entry.type]} />)}
+                          <LabelList dataKey="delta" position="top" formatter={v => v > 0 ? `R$${(v/1000).toFixed(0)}k` : ''} style={{ fill: '#cbd5e1', fontSize: 11 }} />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+
+                    {/* Bridge table */}
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-slate-600">
+                            <th className="text-left px-3 py-2 text-slate-400 font-medium whitespace-nowrap">Par de Anos</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">Consol. N-1</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">Consol. N</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">Cresc.</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">SSS ({pair.sssCount} lj)</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">ΔSSS R$</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">ΔSSS p.p.</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">+Novas ({pair.newCount} lj)</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">+Novas p.p.</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">−Fech. ({pair.closedCount} lj)</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">−Fech. p.p.</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bridge.map((p, i) => (
+                            <tr key={i} onClick={() => setBridgePairIdx(i)}
+                              className={`border-b border-slate-700/50 cursor-pointer transition-colors ${i === bridgePairIdx ? 'bg-slate-700/60' : 'hover:bg-slate-700/30'}`}>
+                              <td className="px-3 py-2 text-white font-medium whitespace-nowrap">{p.label}</td>
+                              <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{fmtR(p.cN1)}</td>
+                              <td className="px-3 py-2 text-white font-semibold text-right whitespace-nowrap">{fmtR(p.cN)}</td>
+                              <td className={`px-3 py-2 font-bold text-right whitespace-nowrap ${p.grow >= 0 ? 'text-green-400' : 'text-red-400'}`}>{fmtPct(p.growPct)}</td>
+                              <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{p.sssCount} lojas</td>
+                              <td className={`px-3 py-2 text-right whitespace-nowrap ${p.dSss >= 0 ? 'text-green-400' : 'text-red-400'}`}>{(p.dSss >= 0 ? '+' : '') + fmtR(p.dSss)}</td>
+                              <td className={`px-3 py-2 text-right whitespace-nowrap ${p.dSss >= 0 ? 'text-green-400' : 'text-red-400'}`}>{fmtPP(p.cN1 > 0 ? p.dSss / p.cN1 * 100 : 0)}</td>
+                              <td className="px-3 py-2 text-green-400 text-right whitespace-nowrap">+{fmtR(p.newRev)}</td>
+                              <td className="px-3 py-2 text-green-400 text-right whitespace-nowrap">{fmtPP(p.cN1 > 0 ? p.newRev / p.cN1 * 100 : 0)}</td>
+                              <td className="px-3 py-2 text-red-400 text-right whitespace-nowrap">−{fmtR(p.closedRev)}</td>
+                              <td className="px-3 py-2 text-red-400 text-right whitespace-nowrap">{fmtPP(p.cN1 > 0 ? -p.closedRev / p.cN1 * 100 : 0)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="text-slate-500 text-xs mt-3">Clique em um par para ver o waterfall correspondente. Resíduo = R$0,00 em todos os pares (ponte fecha exata).</p>
+                  </Card>
+                );
+              })()}
             </React.Fragment>
           )}
 
@@ -1975,6 +2142,107 @@ return {
                   </table>
                 </div>
               </Card>
+
+              {/* ============ PONTE DE CRESCIMENTO — MoM ============ */}
+              {(() => {
+                const momBridge = computed.growthBridgeMom;
+                if (!momBridge || momBridge.length === 0) return null;
+                const momPairIdx = bridgeMomMonthIdx < momBridge.length ? bridgeMomMonthIdx : momBridge.length - 1;
+                const pair = momBridge[momPairIdx];
+                const fmtR = v => 'R$ ' + Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                const fmtPct = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+                const fmtPP = v => (v >= 0 ? '+' : '') + v.toFixed(2) + ' p.p.';
+
+                const parts = pair.label.split(' '); // ["Jul/2026", "vs", "Jul/2025"]
+                const wfItems = [
+                  { name: parts[2], val: pair.cN1, base: 0, type: 'total' },
+                  { name: 'ΔSSS', val: pair.dSss, base: pair.dSss >= 0 ? pair.cN1 : pair.cN1 + pair.dSss, type: pair.dSss >= 0 ? 'pos' : 'neg' },
+                  { name: '+Novas', val: pair.newRev, base: pair.cN1 + pair.dSss, type: 'pos' },
+                  { name: '−Fech.', val: pair.closedRev, base: pair.cN1 + pair.dSss + pair.newRev - pair.closedRev, type: 'neg' },
+                  { name: parts[0], val: pair.cN, base: 0, type: 'total' },
+                ];
+                const wfData = wfItems.map(it => ({ name: it.name, invisible: it.base, delta: Math.abs(it.val), type: it.type }));
+                const WF_COLOR = { total: '#6366f1', pos: '#22c55e', neg: '#ef4444' };
+
+                return (
+                  <Card>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">Ponte de Crescimento — Mensal</h3>
+                        <p className="text-slate-400 text-xs mt-1">Decomposição SSS · Novas lojas · Lojas fechadas — granularidade mensal (mês N vs mesmo mês N-1)</p>
+                      </div>
+                      <select value={momPairIdx} onChange={e => setBridgeMomMonthIdx(Number(e.target.value))}
+                        className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full sm:w-auto">
+                        {momBridge.map((p, i) => <option key={i} value={i}>{p.label}</option>)}
+                      </select>
+                    </div>
+
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={wfData} margin={{ top: 24, right: 8, bottom: 0, left: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                        <XAxis dataKey="name" stroke="#94a3b8" tick={{ fontSize: 12 }} />
+                        <YAxis stroke="#94a3b8" tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
+                        <Tooltip content={({ active, payload, label }) => {
+                          if (!active || !payload?.length) return null;
+                          const it = wfItems.find(w => w.name === label);
+                          if (!it) return null;
+                          const sign = it.type === 'neg' ? '−' : (it.type === 'pos' && it.val < 0 ? '−' : (it.type === 'pos' ? '+' : ''));
+                          return (
+                            <div className="bg-slate-800 border border-slate-600 rounded-lg p-3 text-sm shadow-xl">
+                              <p className="text-white font-semibold mb-1">{label}</p>
+                              <p style={{ color: WF_COLOR[it.type] }}>{sign}{fmtR(it.val)}</p>
+                            </div>
+                          );
+                        }} />
+                        <Bar dataKey="invisible" stackId="wf" fill="transparent" isAnimationActive={false} />
+                        <Bar dataKey="delta" stackId="wf" isAnimationActive={false} radius={[4,4,0,0]}>
+                          {wfData.map((entry, i) => <Cell key={i} fill={WF_COLOR[entry.type]} />)}
+                          <LabelList dataKey="delta" position="top" formatter={v => v > 0 ? `R$${(v/1000).toFixed(0)}k` : ''} style={{ fill: '#cbd5e1', fontSize: 11 }} />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-slate-600">
+                            <th className="text-left px-3 py-2 text-slate-400 font-medium whitespace-nowrap">Mês</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">Consol. N-1</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">Consol. N</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">Cresc.</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">SSS (lj)</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">ΔSSS R$</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">ΔSSS p.p.</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">+Novas (lj)</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">+Novas p.p.</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">−Fech. (lj)</th>
+                            <th className="text-right px-3 py-2 text-slate-400 font-medium whitespace-nowrap">−Fech. p.p.</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {momBridge.map((p, i) => (
+                            <tr key={i} onClick={() => setBridgeMomMonthIdx(i)}
+                              className={`border-b border-slate-700/50 cursor-pointer transition-colors ${i === momPairIdx ? 'bg-slate-700/60' : 'hover:bg-slate-700/30'}`}>
+                              <td className="px-3 py-2 text-white font-medium whitespace-nowrap">{p.label}</td>
+                              <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{fmtR(p.cN1)}</td>
+                              <td className="px-3 py-2 text-white font-semibold text-right whitespace-nowrap">{fmtR(p.cN)}</td>
+                              <td className={`px-3 py-2 font-bold text-right whitespace-nowrap ${p.grow >= 0 ? 'text-green-400' : 'text-red-400'}`}>{fmtPct(p.growPct)}</td>
+                              <td className="px-3 py-2 text-slate-300 text-right whitespace-nowrap">{p.sssCount} lj</td>
+                              <td className={`px-3 py-2 text-right whitespace-nowrap ${p.dSss >= 0 ? 'text-green-400' : 'text-red-400'}`}>{(p.dSss >= 0 ? '+' : '') + fmtR(p.dSss)}</td>
+                              <td className={`px-3 py-2 text-right whitespace-nowrap ${p.dSss >= 0 ? 'text-green-400' : 'text-red-400'}`}>{fmtPP(p.cN1 > 0 ? p.dSss / p.cN1 * 100 : 0)}</td>
+                              <td className="px-3 py-2 text-green-400 text-right whitespace-nowrap">+{fmtR(p.newRev)}</td>
+                              <td className="px-3 py-2 text-green-400 text-right whitespace-nowrap">{fmtPP(p.cN1 > 0 ? p.newRev / p.cN1 * 100 : 0)}</td>
+                              <td className="px-3 py-2 text-red-400 text-right whitespace-nowrap">−{fmtR(p.closedRev)}</td>
+                              <td className="px-3 py-2 text-red-400 text-right whitespace-nowrap">{fmtPP(p.cN1 > 0 ? -p.closedRev / p.cN1 * 100 : 0)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="text-slate-500 text-xs mt-3">Clique em um mês para ver o waterfall correspondente. Resíduo = R$0,00 em todos os meses (ponte fecha exata).</p>
+                  </Card>
+                );
+              })()}
             </React.Fragment>
           )}
 
