@@ -141,6 +141,9 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
   
     // Shared set: created once, reused by trends/revenue/daily computations
     const _sameStoresSet = new Set(window.STORE_ANALYTICS?.sameStores || []);
+    const _currentYear = parseInt((DATA?.lastUpdate || '2026').substring(0, 4));
+    const _prevYear = _currentYear - 1;
+    const _sameStoresLabel = `Mesmas lojas (${_currentYear} vs ${_prevYear})`;
 
     // ========== Trends computed from DAILY_DATA (auto-updated daily) ==========
     function computeTrendsFromDailyData(storeFilter, isSameFilter) {
@@ -1016,8 +1019,6 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
         const hStore = HISTORICAL[name];
         if (!hStore) return false;
         return momMonths.every(m =>
-          hStore['2023']?.[String(m)]?.valor &&
-          hStore['2024']?.[String(m)]?.valor &&
           hStore['2025']?.[String(m)]?.valor &&
           DATA.stores[name]?.['2026']?.[m]
         );
@@ -1235,7 +1236,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
       const allStoreRowsFull = [...storeRows, ...closedStoreRowsFull];
       // Rebuild yoySummaryAll with ALL stores (active + closed), after DAILY_DATA override
       const yoySummaryAllFinal = buildSummaryRow('Consolidado (todas as lojas)', allStoreRowsFull);
-      const yoySummarySameFinal = buildSummaryRow('Mesmas lojas (todos os anos)', allYearsStores);
+      const yoySummarySameFinal = buildSummaryRow(_sameStoresLabel, comparableStores);
 
       // MoM: rebuild with closed stores included for "Consolidado"
       // Add closed-store momStoreRow-like objects from HISTORICAL
@@ -1253,7 +1254,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
         }).filter(Boolean);
       const allMomStoreRows = [...momStoreRows, ...closedMomStoreRows];
       const momSummaryAllFinal = buildMomSummaryRow('Consolidado (todas as lojas)', allMomStoreRows);
-      const momSummarySameFinal = buildMomSummaryRow('Mesmas lojas (todos os anos)', momSameStores);
+      const momSummarySameFinal = buildMomSummaryRow(_sameStoresLabel, momSameStores);
       const momSummaryAllMtd = computeMTD.buildMTDChartData('__consolidated__');
       const momSummarySameMtd = computeMTD.buildMTDChartData('');
       momSummaryAllFinal.fatMTD25 = momSummaryAllMtd.fatAbr25 || null;
@@ -1692,7 +1693,7 @@ return {
                   </div>
                   <select value={chartStore} onChange={e => setChartStore(e.target.value)}
                     className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full sm:w-auto sm:min-w-[260px]">
-                    <option value="">Mesmas lojas (presentes em todos os anos)</option>
+                    <option value="">Histórico comparável (todos os anos)</option>
                     <option value="__consolidated__">Consolidado (todas as lojas)</option>
                     {computed.storeNames2026.filter(name => !CLOSED_STORES.has(name)).map(name => <option key={name} value={name}>{name}</option>)}
                   </select>
@@ -1851,7 +1852,7 @@ return {
                   </div>
                   <select value={momChartStore} onChange={e => setMomChartStore(e.target.value)}
                     className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full sm:w-auto sm:min-w-[260px]">
-                    <option value="">Mesmas lojas (presentes em todos os anos)</option>
+                    <option value="">Histórico comparável (todos os anos)</option>
                     <option value="__consolidated__">Consolidado (todas as lojas)</option>
                     {computed.storeNames2026.filter(name => !CLOSED_STORES.has(name)).map(name => <option key={name} value={name}>{name}</option>)}
                   </select>
@@ -2030,14 +2031,14 @@ return {
                   <div>
                     <h3 className="text-lg font-semibold text-white">Faturamento Diário — 2025 vs 2026</h3>
                     <p className="text-slate-400 text-xs mt-1">
-                      {!dailyStore ? `Consolidado — todas as lojas` : dailyStore === '__same__' ? 'Mesmas lojas (base 2025)' : dailyStore}
+                      {!dailyStore ? `Consolidado — todas as lojas` : dailyStore === '__same__' ? _sameStoresLabel : dailyStore}
                       {' '}• Linhas tracejadas = feriados
                     </p>
                   </div>
                   <select value={dailyStore} onChange={e => setDailyStore(e.target.value)}
                     className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full sm:w-auto sm:min-w-[260px]">
                     <option value="">Consolidado (todas as lojas)</option>
-                    <option value="__same__">Mesmas lojas (base 2025)</option>
+                    <option value="__same__">{_sameStoresLabel}</option>
                     {computed.dailyComputed.storeNames.filter(name => !CLOSED_STORES.has(name)).map(name => <option key={name} value={name}>{name}</option>)}
                   </select>
                 </div>
@@ -2095,7 +2096,7 @@ return {
               <Card>
                 <h3 className="text-lg font-semibold text-white mb-4">Média por Tipo de Dia</h3>
                 <p className="text-slate-400 text-xs mb-4">
-                  {!dailyStore ? 'Consolidado (todas as lojas)' : dailyStore === '__same__' ? 'Mesmas lojas (base 2025)' : dailyStore}
+                  {!dailyStore ? 'Consolidado (todas as lojas)' : dailyStore === '__same__' ? _sameStoresLabel : dailyStore}
                 </p>
                 <div className="table-scroll">
                   <table className="w-full text-sm">
@@ -2293,7 +2294,7 @@ return {
               <select value={value} onChange={e => onChange(e.target.value)}
                 className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm min-h-[44px] w-full sm:w-auto sm:min-w-[260px]">
                 <option value="__all__">Consolidado (todas as lojas)</option>
-                <option value="__same__">Mesmas lojas (base 2025)</option>
+                <option value="__same__">{_sameStoresLabel}</option>
                 {trendStoreNames.filter(name => !CLOSED_STORES.has(name)).map(name => <option key={name} value={name}>{name}</option>)}
               </select>
             );
@@ -2301,7 +2302,7 @@ return {
             return (
             <React.Fragment>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                <h2 className="text-xl font-bold text-white">Tendências — {storeKey === '__all__' ? 'Consolidado' : storeKey === '__same__' ? 'Mesmas lojas (base 2025)' : storeKey}</h2>
+                <h2 className="text-xl font-bold text-white">Tendências — {storeKey === '__all__' ? 'Consolidado' : storeKey === '__same__' ? _sameStoresLabel : storeKey}</h2>
                 <StoreFilter value={trendStore} onChange={setTrendStore} />
               </div>
               
@@ -2414,7 +2415,7 @@ return {
               <select value={value} onChange={e => onChange(e.target.value)}
                 className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm min-h-[44px] w-full sm:w-auto sm:min-w-[260px]">
                 <option value="__all__">Consolidado (todas as lojas)</option>
-                <option value="__same__">Mesmas lojas (base 2025)</option>
+                <option value="__same__">{_sameStoresLabel}</option>
                 {clientStoreNames.filter(name => !CLOSED_STORES.has(name)).map(name => <option key={name} value={name}>{name}</option>)}
               </select>
             );
@@ -2422,7 +2423,7 @@ return {
             return (
             <React.Fragment>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                <h2 className="text-xl font-bold text-white">Clientes — {storeKey === '__all__' ? 'Consolidado' : storeKey === '__same__' ? 'Mesmas lojas (base 2025)' : storeKey}</h2>
+                <h2 className="text-xl font-bold text-white">Clientes — {storeKey === '__all__' ? 'Consolidado' : storeKey === '__same__' ? _sameStoresLabel : storeKey}</h2>
                 <ClientStoreFilter value={clientStore} onChange={setClientStore} />
               </div>
 
