@@ -950,7 +950,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
     // (shared terminal — see build-product-mix.js isExcludedFromAnalytics). Single source of truth for
     // dashboard components: revenue views fall back to BI for these stores; composition views (categorias,
     // pagamentos, produtos, heatmap) show a placeholder instead of cashless data.
-    const UNTRUSTED_CASHLESS_STORES = new Set(['PROJAC - Sanca Lev']);
+    const UNTRUSTED_CASHLESS_STORES = new Set(['PROJAC - Sanca Lev', 'Fashion Mall']);
     const cleanStore = (n) => { if (!n) return n; if (n.startsWith('Cond. ')) return n.substring(6); if (n.startsWith('Ed. ')) return n.substring(4); if (n.startsWith('Ed.')) return n.substring(3); return n; };
     const normalizeCardMask = (rawCard) => {
       const digits = String(rawCard || '').replace(/\D/g, '');
@@ -3383,7 +3383,7 @@ return {
 
               {UNTRUSTED_CASHLESS_STORES.has(storeKey) && (
                 <div className="mb-4 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-amber-200 text-sm">
-                  Métricas de clientes desta loja derivam de cashless não confiável (terminal compartilhado) — interpretar com cautela.
+                  Esta loja não tem cashless confiável (terminal compartilhado ou POS próprio — Simpliza) — métricas de clientes indisponíveis/parciais.
                 </div>
               )}
 
