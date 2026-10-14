@@ -801,8 +801,115 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
   // MAIN APP
   // ============================================================================
   
-    // Shared set: created once, reused by trends/revenue/daily computations
-    const _sameStoresSet = new Set(window.STORE_ANALYTICS?.sameStores || []);
+    // ===== BASE ÚNICA DE FATURAMENTO (auditoria de consistência 14/10) =====
+    // Todo faturamento e nº de vendas de 2025 e 2026 vem do DAILY_DATA (VMPay BI + Simpliza/Fashion Mall),
+    // TODAS as lojas, inclusive o CD Sancashop e lojas já fechadas. DATA.stores (2026) e HISTORICAL (2025, só meses com todos os
+    // dias no diário) são reescritos a partir dele, para que TODAS as abas mostrem o mesmo número para o
+    // mesmo período. 2023–2024 continuam vindo do HISTORICAL (não existe diário desses anos).
+    // Nenhuma loja fica de fora (o CD Sancashop, antes excluído, entra em tudo — pedido do Luiz, 14/10).
+    const LOJA_EXCLUIDA = null;
+    const SANCA_EXCLUDED_STORES = new Set();
+    const canonicalStoreName = (() => {
+      const dataNames = new Set(Object.keys((window.DATA && window.DATA.stores) || {}));
+      const histNames = new Set(Object.keys(window.HISTORICAL || {}));
+      const known = [...new Set([...dataNames, ...histNames])].sort((a, b) => b.length - a.length);
+      const cache = {};
+      return (raw) => {
+        if (cache[raw] !== undefined) return cache[raw];
+        let out = raw;
+        if (!dataNames.has(raw) && !histNames.has(raw)) {
+          const m = known.find(k => raw.startsWith(k + ' - '));
+          if (m) out = m;
+        }
+        cache[raw] = out;
+        return out;
+      };
+    })();
+    const SANCA_BASE = (() => {
+      const info = { ok: false, removidos: [], criados: [], sameStores: null };
+      try {
+        const DD = (window.DAILY_DATA && (window.DAILY_DATA.days || window.DAILY_DATA)) || {};
+        const D = window.DATA, H = window.HISTORICAL;
+        if (!D || !D.stores || !H || !D.lastUpdate) return info;
+        const lastUpdate = D.lastUpdate;
+        const LM = parseInt(lastUpdate.substring(5, 7), 10), LD = parseInt(lastUpdate.substring(8, 10), 10);
+        const r2 = (v) => Math.round(v * 100) / 100;
+        const agg = {};        // loja canônica -> 'AAAA-M' -> { valor, vendas }
+        const dayCount = {};   // 'AAAA-M' -> nº de dias presentes no diário
+        const presence = {};   // loja canônica -> Set('AAAA-M') com faturamento na janela jan→hoje
+        const rawNames = new Set();
+        Object.keys(DD).forEach(date => {
+          const y = date.substring(0, 4);
+          if (y !== '2025' && y !== '2026') return;
+          if (y === '2026' && date > lastUpdate) return;
+          const m = parseInt(date.substring(5, 7), 10), d = parseInt(date.substring(8, 10), 10);
+          const key = y + '-' + m;
+          dayCount[key] = (dayCount[key] || 0) + 1;
+          const inWindow = m < LM || (m === LM && d <= LD);
+          const stores = DD[date] || {};
+          Object.keys(stores).forEach(raw => {
+            if (SANCA_EXCLUDED_STORES.has(raw)) return;
+            rawNames.add(raw);
+            const v = stores[raw] || {};
+            const fat = Number(v.fat) || 0;
+            const canon = canonicalStoreName(raw);
+            if (!agg[canon]) agg[canon] = {};
+            if (!agg[canon][key]) agg[canon][key] = { valor: 0, vendas: 0 };
+            agg[canon][key].valor += fat;
+            agg[canon][key].vendas += Number(v.vendas) || 0;
+            if (inWindow && fat > 0) (presence[canon] = presence[canon] || new Set()).add(key);
+          });
+        });
+        const daysIn = (y, m) => new Date(y, m, 0).getDate();
+        const covered = (y, m) => {
+          const n = dayCount[y + '-' + m] || 0;
+          return y === 2026 ? n > 0 : n >= daysIn(y, m);
+        };
+        const rewrite = (container, y) => {
+          const ys = String(y);
+          for (let m = 1; m <= 12; m++) {
+            if (!covered(y, m)) continue;
+            const key = y + '-' + m;
+            Object.keys(container).forEach(name => {
+              if (SANCA_EXCLUDED_STORES.has(name)) return;
+              const yr = container[name] && container[name][ys];
+              if (yr && yr[m] !== undefined && !(agg[name] && agg[name][key])) {
+                info.removidos.push({ loja: name, mes: key, valor: Number(yr[m] && yr[m].valor) || 0 });
+                delete yr[m];
+              }
+            });
+            Object.keys(agg).forEach(name => {
+              const a = agg[name][key];
+              if (!a) return;
+              if (!container[name]) { container[name] = {}; info.criados.push({ loja: name, ano: ys }); }
+              if (!container[name][ys]) container[name][ys] = {};
+              const prev = container[name][ys][m] || {};
+              const next = Object.assign({}, prev, { valor: r2(a.valor), vendas: a.vendas });
+              if ('ticket' in prev) next.ticket = a.vendas > 0 ? r2(a.valor / a.vendas) : 0;
+              container[name][ys][m] = next;
+            });
+          }
+        };
+        rewrite(D.stores, 2026);
+        rewrite(H, 2025);
+        // "Mesmas lojas": faturamento em TODOS os meses de jan até o mês atual (até o mesmo dia) em 2025 E 2026
+        const same = new Set();
+        Object.keys(presence).forEach(c => {
+          for (let m = 1; m <= LM; m++) {
+            if (!presence[c].has('2025-' + m) || !presence[c].has('2026-' + m)) return;
+          }
+          same.add(c);
+        });
+        rawNames.forEach(r => { if (same.has(canonicalStoreName(r))) same.add(r); });
+        info.sameStores = same;
+        info.ok = true;
+      } catch (e) {
+        console.warn('[SANCA] base única: falhou, mantendo dados originais', e);
+      }
+      return info;
+    })();
+    // Shared set: created once, reused by trends/revenue/daily/anual/mensal computations
+    const _sameStoresSet = (SANCA_BASE.sameStores && SANCA_BASE.sameStores.size) ? SANCA_BASE.sameStores : new Set(window.STORE_ANALYTICS?.sameStores || []);
     const _currentYear = parseInt((DATA?.lastUpdate || '2026').substring(0, 4));
     const _prevYear = _currentYear - 1;
     const _sameStoresLabel = `Mesmas lojas (${_currentYear} vs ${_prevYear})`;
@@ -822,6 +929,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
         Object.entries(stores).forEach(([store, vals]) => {
           if (storeFilter && storeFilter !== '__all__' && storeFilter !== '__same__' && store !== storeFilter) return;
           if (storeFilter === '__same__' && sameSet && !sameSet.has(store)) return;
+          if (store === LOJA_EXCLUIDA) return;
           
           if (!dayAgg[date]) dayAgg[date] = { fat: 0, vendas: 0 };
           dayAgg[date].fat += (vals.fat || 0);
@@ -877,6 +985,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
         Object.entries(stores).forEach(([store, vals]) => {
           if (storeFilter && storeFilter !== '__all__' && storeFilter !== '__same__' && store !== storeFilter) return;
           if (storeFilter === '__same__' && sameSet && !sameSet.has(store)) return;
+          if (store === LOJA_EXCLUIDA) return;
           
           if (date.startsWith('2026') && date <= lastUpdate) {
             rev2026 += (vals.fat || 0);
@@ -893,7 +1002,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
     const App = () => {
     const [sortCol, setSortCol] = useState('fat2026');
     const [sortDir, setSortDir] = useState('desc');
-    const [chartStore, setChartStore] = useState('');
+    const [chartStore, setChartStore] = useState('__consolidated__');
     const [activeTab, setActiveTab] = useState('yoy');
     const [retClientSeg, setRetClientSeg] = useState('cadastrados');
     const [retSearch, setRetSearch] = useState('');
@@ -903,7 +1012,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
     const [margemCat, setMargemCat] = useState('todas');
     const [bridgePairIdx, setBridgePairIdx] = useState(2);
     const [bridgeMomMonthIdx, setBridgeMomMonthIdx] = useState(99);
-    const [momChartStore, setMomChartStore] = useState('');
+    const [momChartStore, setMomChartStore] = useState('__consolidated__');
     const [momSortCol, setMomSortCol] = useState('fatCurrent26');
     const [momSortDir, setMomSortDir] = useState('desc');
     const [dailyStore, setDailyStore] = useState('');
@@ -1047,7 +1156,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
       try {
         const loaded = await Promise.all(missing.map(async partition => {
           const response = await fetch(`custom-compare-facts/${partition}.json`);
-          if (!response.ok) throw new Error(`partition ${partition} ${response.status}`);
+          if (!response.ok) return [partition, []]; // mês sem base de cartão: a aba segue com a base diária
           return [partition, await response.json()];
         }));
         setCustomFactsPartitions(prev => {
@@ -1102,7 +1211,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
       const lastUpdateDate = new Date(lastUpdate + 'T12:00:00');
       const lastUpdateMonth = lastUpdateDate.getMonth() + 1;
       const lastUpdateDay = lastUpdateDate.getDate();
-      const months2026 = Object.keys(DATA.stores[Object.keys(DATA.stores)[0]]?.['2026'] || {}).map(Number);
+      const months2026 = [...new Set(Object.values(DATA.stores).flatMap(st => Object.keys(st?.['2026'] || {})))].map(Number);
       const maxMonth2026 = Math.max(...months2026);
 
       // Determine full months (partial month handled via DAILY_DATA in YTD/MTD)
@@ -1114,9 +1223,9 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
       for (let m = 1; m <= lastFullMonth; m++) monthRange.push(m);
 
       const periodLabel = monthRange.length === 1 ? MESES[monthRange[0]-1] : MESES[monthRange[0]-1] + '-' + MESES[monthRange[monthRange.length-1]-1];
-      const stores2026 = Object.keys(DATA.stores).filter(s => s !== 'CD Sancashop');
+      const stores2026 = Object.keys(DATA.stores).filter(s => s !== LOJA_EXCLUIDA);
       const stores2026Set = new Set(stores2026);
-      const allHistStoreNames = Object.keys(HISTORICAL).filter(s => s !== 'CD Sancashop');
+      const allHistStoreNames = Object.keys(HISTORICAL).filter(s => s !== LOJA_EXCLUIDA);
 
       const storeRows = stores2026.map(name => {
         const d2026 = DATA.stores[name]?.['2026'] || {};
@@ -1468,7 +1577,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
         const storesInBothYears = new Set();
         const allStores2026 = new Set();
         dates2026.forEach(d => {
-          if (days[d]) Object.keys(days[d]).forEach(s => { if (s !== 'CD Sancashop') allStores2026.add(s); });
+          if (days[d]) Object.keys(days[d]).forEach(s => { if (s !== LOJA_EXCLUIDA) allStores2026.add(s); });
         });
         allStores2026.forEach(s => {
           // Check if store has at least some 2025 data
@@ -1492,11 +1601,11 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
               // Consolidated - sum all stores (or same stores only)
               if (days[d25]) {
                 fat25 = 0;
-                Object.entries(days[d25]).forEach(([s, v]) => { if (s !== 'CD Sancashop' && (!isSameFilter || sameSet.has(s))) fat25 += v.fat; });
+                Object.entries(days[d25]).forEach(([s, v]) => { if (s !== LOJA_EXCLUIDA && (!isSameFilter || sameSet.has(s))) fat25 += v.fat; });
               }
               if (days[d26]) {
                 fat26 = 0;
-                Object.entries(days[d26]).forEach(([s, v]) => { if (s !== 'CD Sancashop' && (!isSameFilter || sameSet.has(s))) fat26 += v.fat; });
+                Object.entries(days[d26]).forEach(([s, v]) => { if (s !== LOJA_EXCLUIDA && (!isSameFilter || sameSet.has(s))) fat26 += v.fat; });
               }
             } else {
               fat25 = days[d25]?.[storeName]?.fat ?? null;
@@ -1557,7 +1666,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
             if (!storeName || storeName === '' || isSameFilter) {
               if (days[dateStr]) {
                 Object.entries(days[dateStr]).forEach(([s, v]) => {
-                  if (s !== 'CD Sancashop' && (!isSameFilter || sameSet.has(s))) { fat += v.fat; vendas += v.vendas; }
+                  if (s !== LOJA_EXCLUIDA && (!isSameFilter || sameSet.has(s))) { fat += v.fat; vendas += v.vendas; }
                 });
               }
             } else {
@@ -1587,7 +1696,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
         };
         
         // Per-store table data
-        const storeTableRows = Array.from(allStores2026).filter(s => s !== 'CD Sancashop').map(storeName => {
+        const storeTableRows = Array.from(allStores2026).filter(s => s !== LOJA_EXCLUIDA).map(storeName => {
           const m25 = computeMetrics(dates2025.slice(0, maxDays), storeName);
           const m26 = computeMetrics(dates2026, storeName);
           
@@ -1641,7 +1750,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
           holidayMarkers2026,
           holidayMarkers2025,
           storeTableRows,
-          storeNames: Array.from(allStores2026).filter(s => s !== 'CD Sancashop').sort((a,b) => a.localeCompare(b, 'pt-BR')),
+          storeNames: Array.from(allStores2026).filter(s => s !== LOJA_EXCLUIDA).sort((a,b) => a.localeCompare(b, 'pt-BR')),
         };
       })();
 
@@ -1699,7 +1808,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
           DATA.stores[name]?.['2026']?.[m]
         );
       });
-      const momSameStores = momStoreRows.filter(r => momSameStoreNames.includes(r.name));
+      const momSameStores = momStoreRows.filter(r => _sameStoresSet.has(r.name));
       // (momSummarySame recalculated after DAILY_DATA override — see below)
 
       // ============================================================================
@@ -1747,7 +1856,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
           const isMtdMonth = mm === mtdMonthStr && dd <= mtdDayMax;
 
           Object.entries(stores).forEach(([rawStore, vals]) => {
-            const store = canonicalName(rawStore);
+            const store = canonicalStoreName(rawStore);
             const fat = vals.fat || 0;
             const vendas = vals.vendas || 0;
 
@@ -1775,7 +1884,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
         });
 
         const closedStoreRows = Object.keys(ytdAgg)
-          .filter(name => !stores2026Set.has(name) && ytdAgg[name].fat25 > 0)
+          .filter(name => !stores2026Set.has(name) && name !== LOJA_EXCLUIDA && ytdAgg[name].fat25 > 0)
           .map(name => ({ name, fat2026ytd: 0, fat2025ytd: ytdAgg[name].fat25, varYTD: null, isClosed: true }));
 
         const allStoreRows = [...ytdStoreRows, ...closedStoreRows];
@@ -1794,62 +1903,30 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
 
         const ytdResult = { ytdStoreRows, closedStoreRows, allStoreRows, buildYTDChartData, ytdAgg };
 
-        // --- MTD (cashless-based via PRODUCT_MIX — unified source for all charts) ---
-        const pmByStore = (window.PRODUCT_MIX || {}).byStore || {};
-        const pmAll = (window.PRODUCT_MIX || {}).__all__ || {};
-        const mtdYM26 = '2026-' + mtdMonthStr;
-        const mtdYM25 = '2025-' + mtdMonthStr;
-
+        // --- MTD: base diária completa (VMPay BI + Simpliza) — a MESMA fonte de todas as abas ---
+        // (antes: cartão/PRODUCT_MIX, que não tem Fashion Mall nem Sanca Lev e divergia do resto)
         const mtdStoreRows = stores2026.map(name => {
-          if (UNTRUSTED_CASHLESS_STORES.has(name)) {
-            // Cashless desta loja não é confiável (terminal compartilhado, excluído do
-            // PRODUCT_MIX) — usar BI (DAILY_DATA via mtdPerStore) como fonte do MTD,
-            // mesmo fallback da aba Detalhes (Fix W).
-            const bi = mtdPerStore[name] || {};
-            const fatAbr26 = bi.fat26 || 0;
-            const fatAbr25Raw = bi.fat25 || 0;
-            const fatAbr25 = fatAbr25Raw > 0 ? fatAbr25Raw : null;
-            const varAbr = (fatAbr25 && fatAbr26) ? ((fatAbr26 / fatAbr25) - 1) * 100 : null;
-            return { name, fatAbr26, fatAbr25, varAbr, isBIFallback: true };
-          }
-          const s = pmByStore[name] || {};
-          const fatAbr26 = s.mtdMetrics?.[mtdYM26]?.revenue || 0;
-          const fatAbr25Raw = s.mtdMetrics?.[mtdYM25]?.revenue || 0;
-          const fatAbr25 = fatAbr25Raw > 0 ? fatAbr25Raw : null;
+          const bi = mtdPerStore[name] || {};
+          const fatAbr26 = bi.fat26 || 0;
+          const fatAbr25 = (bi.fat25 || 0) > 0 ? bi.fat25 : null;
           const varAbr = (fatAbr25 && fatAbr26) ? ((fatAbr26 / fatAbr25) - 1) * 100 : null;
           return { name, fatAbr26, fatAbr25, varAbr };
         });
 
-        const closedMtdRows = allHistStoreNames
-          .filter(name => !stores2026Set.has(name) && (pmByStore[name]?.mtdMetrics?.[mtdYM25]?.revenue || 0) > 0)
-          .map(name => {
-            const fatAbr25 = pmByStore[name].mtdMetrics[mtdYM25].revenue;
-            return { name, fatAbr26: 0, fatAbr25, varAbr: null, isClosed: true };
-          });
+        const closedMtdRows = Object.keys(mtdPerStore)
+          .filter(name => !stores2026Set.has(name) && name !== LOJA_EXCLUIDA && (mtdPerStore[name].fat25 || 0) > 0)
+          .map(name => ({ name, fatAbr26: 0, fatAbr25: mtdPerStore[name].fat25, varAbr: null, isClosed: true }));
         const allMtdRows = [...mtdStoreRows, ...closedMtdRows];
 
         const buildMTDChartData = (storeFilter) => {
-          if (storeFilter === '__consolidated__') {
-            // PM.__all__ exclui as lojas em UNTRUSTED_CASHLESS_STORES (cashless não
-            // confiável, ver build-product-mix.js isExcludedFromAnalytics) — somar o BI
-            // (mtdPerStore) dessas lojas ao total "todas as lojas" sem dupla contagem.
-            let fatAbr25 = pmAll.mtdMetrics?.[mtdYM25]?.revenue || 0;
-            let fatAbr26 = pmAll.mtdMetrics?.[mtdYM26]?.revenue || 0;
-            const biFallbackStores = [];
-            UNTRUSTED_CASHLESS_STORES.forEach(name => {
-              const bi = mtdPerStore[name] || {};
-              if ((bi.fat26 || 0) > 0 || (bi.fat25 || 0) > 0) biFallbackStores.push(name);
-              fatAbr25 += bi.fat25 || 0;
-              fatAbr26 += bi.fat26 || 0;
-            });
-            return { fatAbr25, fatAbr26, biFallbackStores };
-          }
           let relevantStores;
-          if (!storeFilter) relevantStores = mtdStoreRows.filter(s => allYearsStores.find(r => r.name === s.name));
+          if (storeFilter === '__consolidated__') relevantStores = allMtdRows;
+          else if (storeFilter === '__same__') relevantStores = allMtdRows.filter(s => _sameStoresSet.has(s.name));
+          else if (!storeFilter) relevantStores = mtdStoreRows.filter(s => allYearsStores.find(r => r.name === s.name));
           else relevantStores = allMtdRows.filter(s => s.name === storeFilter);
           return {
             fatAbr25: relevantStores.reduce((sum, s) => sum + (s.fatAbr25 || 0), 0),
-            fatAbr26: relevantStores.reduce((sum, s) => sum + s.fatAbr26, 0),
+            fatAbr26: relevantStores.reduce((sum, s) => sum + (s.fatAbr26 || 0), 0),
           };
         };
 
@@ -1893,7 +1970,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
       // "Consolidado" must include closed stores (same as charts)
       // Build closed-store storeRow-like objects from ytdAgg
       const closedStoreRowsFull = ytdAggData ? Object.keys(ytdAggData)
-        .filter(name => !stores2026Set.has(name) && name !== 'CD Sancashop')
+        .filter(name => !stores2026Set.has(name) && name !== LOJA_EXCLUIDA)
         .filter(name => ytdAggData[name].fat25 > 0 || ytdAggData[name].fat26 > 0)
         .map(name => {
           const d = ytdAggData[name];
@@ -1912,7 +1989,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
       const allStoreRowsFull = [...storeRows, ...closedStoreRowsFull];
       // Rebuild yoySummaryAll with ALL stores (active + closed), after DAILY_DATA override
       const yoySummaryAllFinal = buildSummaryRow('Consolidado (todas as lojas)', allStoreRowsFull);
-      const yoySummarySameFinal = buildSummaryRow(_sameStoresLabel, comparableStores);
+      const yoySummarySameFinal = buildSummaryRow(_sameStoresLabel, storeRows.filter(r => _sameStoresSet.has(r.name)));
 
       // MoM: rebuild with closed stores included for "Consolidado"
       // Add closed-store momStoreRow-like objects from HISTORICAL
@@ -1932,7 +2009,7 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
       const momSummaryAllFinal = buildMomSummaryRow('Consolidado (todas as lojas)', allMomStoreRows);
       const momSummarySameFinal = buildMomSummaryRow(_sameStoresLabel, momSameStores);
       const momSummaryAllMtd = computeMTD.buildMTDChartData('__consolidated__');
-      const momSummarySameMtd = computeMTD.buildMTDChartData('');
+      const momSummarySameMtd = computeMTD.buildMTDChartData('__same__');
       momSummaryAllFinal.fatMTD25 = momSummaryAllMtd.fatAbr25 || null;
       momSummaryAllFinal.fatMTD26 = momSummaryAllMtd.fatAbr26 || 0;
       momSummaryAllFinal.varMTD = momSummaryAllMtd.fatAbr25 ? ((momSummaryAllMtd.fatAbr26 / momSummaryAllMtd.fatAbr25) - 1) * 100 : null;
@@ -2006,6 +2083,44 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
           }
         )
       );
+
+      // ===== AUTOCHECAGEM DE CONSISTÊNCIA ENTRE ABAS =====
+      // No console do navegador: console.table(SANCA_CONSISTENCIA)
+      try {
+        const DDc = (window.DAILY_DATA?.days || window.DAILY_DATA || {});
+        const somaBase = (a, b) => {
+          let t = 0;
+          Object.keys(DDc).forEach(d => {
+            if (d < a || d > b) return;
+            Object.entries(DDc[d] || {}).forEach(([s, v]) => { if (s !== LOJA_EXCLUIDA) t += Number(v?.fat) || 0; });
+          });
+          return t;
+        };
+        const luC = DATA.lastUpdate;
+        const mmC = luC.substring(5, 7);
+        const padC = n => String(n).padStart(2, '0');
+        const fimMesC = (y, m) => `${y}-${padC(m)}-${padC(new Date(y, m, 0).getDate())}`;
+        const ytdC = computeYTD.buildYTDChartData('__consolidated__');
+        const mtdC = computeMTD.buildMTDChartData('__consolidated__');
+        const checksC = [
+          ['Anual · YTD 2026 (consolidado)', ytdC.fat2026ytd, somaBase('2026-01-01', luC)],
+          ['Anual · YTD 2025 (consolidado)', ytdC.fat2025ytd, somaBase('2025-01-01', '2025-' + luC.substring(5))],
+          ['Mensal · MTD 2026 (gráfico)', mtdC.fatAbr26, somaBase(`2026-${mmC}-01`, luC)],
+          ['Mensal · MTD 2025 (gráfico)', mtdC.fatAbr25, somaBase(`2025-${mmC}-01`, '2025-' + luC.substring(5))],
+          ['Mensal · MTD 2026 (tabela)', momSummaryAllFinal.fatMTD26, somaBase(`2026-${mmC}-01`, luC)],
+        ];
+        momChartConsolidated.forEach((row, i) => {
+          const m = momMonths[i];
+          checksC.push([`Mensal · ${MESES[m - 1]}/2026 (consolidado)`, row['2026'], somaBase(`2026-${padC(m)}-01`, fimMesC(2026, m))]);
+          checksC.push([`Mensal · ${MESES[m - 1]}/2025 (consolidado)`, row['2025'], somaBase(`2025-${padC(m)}-01`, fimMesC(2025, m))]);
+          checksC.push([`Mensal · ${MESES[m - 1]}/2026 (tabela)`, momSummaryAllFinal.monthData?.[m]?.fat26, somaBase(`2026-${padC(m)}-01`, fimMesC(2026, m))]);
+        });
+        const resC = checksC.map(([nome, painel, base]) => ({ nome, painel: Math.round(painel || 0), base: Math.round(base), ok: Math.abs((painel || 0) - base) < 1 }));
+        window.SANCA_CONSISTENCIA = resC;
+        const badC = resC.filter(r => !r.ok);
+        if (badC.length) console.warn('[SANCA] Divergência entre abas e base diária:', badC);
+        else console.info('[SANCA] Consistência OK —', resC.length, 'checagens');
+      } catch (e) { console.warn('[SANCA] autochecagem falhou', e); }
 
 return {
         storeRows, comparableStores, totalFat2026, totalFat2025, varTotal,
@@ -2179,7 +2294,7 @@ return {
     }, [chartStore, computed]);
 
     const chartSubtitle = useMemo(() => {
-      if (chartStore === '__consolidated__') return `Consolidado — todas as ${computed.storeRows.length} lojas ativas`;
+      if (chartStore === '__consolidated__') return 'Consolidado — todas as lojas (VMPay + Simpliza; inclui CD e lojas fechadas no período)';
       if (!chartStore) return `Todas as lojas presentes nos 4 anos (${computed.allYearsStores.length} lojas)`;
       return chartStore;
     }, [chartStore, computed]);
@@ -2219,7 +2334,7 @@ return {
     }, [momChartStore, computed]);
 
     const momChartSubtitle = useMemo(() => {
-      if (momChartStore === '__consolidated__') return `Consolidado — todas as ${computed.storeRows.length} lojas ativas`;
+      if (momChartStore === '__consolidated__') return 'Consolidado — todas as lojas (VMPay + Simpliza; inclui CD e lojas fechadas no período)';
       if (!momChartStore) return `Todas as lojas presentes nos 4 anos (${computed.momAllYearsCount} lojas)`;
       return momChartStore;
     }, [momChartStore, computed]);
@@ -2447,8 +2562,8 @@ return {
                   </div>
                   <select value={chartStore} onChange={e => setChartStore(e.target.value)}
                     className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full sm:w-auto sm:min-w-[260px]">
-                    <option value="">Histórico comparável (todos os anos)</option>
                     <option value="__consolidated__">Consolidado (todas as lojas)</option>
+                    <option value="">Só lojas presentes nos 4 anos (2023–2026)</option>
                     {computed.storeNames2026.filter(name => !CLOSED_STORES.has(name)).map(name => <option key={name} value={name}>{name}</option>)}
                   </select>
                 </div>
@@ -2512,7 +2627,7 @@ return {
                         const isAll = s.name.includes('todas');
                         const ytdRow = isAll
                           ? computed.computeYTD.allStoreRows  // includes closed stores
-                          : computed.computeYTD.ytdStoreRows.filter(r => computed.allYearsStores.find(a => a.name === r.name));
+                          : computed.computeYTD.ytdStoreRows.filter(r => _sameStoresSet.has(r.name));
                         const ytd25 = ytdRow.reduce((sum, r) => sum + (r.fat2025ytd || 0), 0);
                         const ytd26 = ytdRow.reduce((sum, r) => sum + r.fat2026ytd, 0);
                         const varYTD = ytd25 > 0 ? ((ytd26 / ytd25) - 1) * 100 : null;
@@ -2709,8 +2824,8 @@ return {
                   </div>
                   <select value={momChartStore} onChange={e => setMomChartStore(e.target.value)}
                     className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm w-full sm:w-auto sm:min-w-[260px]">
-                    <option value="">Histórico comparável (todos os anos)</option>
                     <option value="__consolidated__">Consolidado (todas as lojas)</option>
+                    <option value="">Só lojas presentes nos 4 anos (2023–2026)</option>
                     {computed.storeNames2026.filter(name => !CLOSED_STORES.has(name)).map(name => <option key={name} value={name}>{name}</option>)}
                   </select>
                 </div>
@@ -3175,7 +3290,7 @@ return {
             const ddDays = (window.DAILY_DATA?.days || window.DAILY_DATA || {});
             Object.values(ddDays).forEach(stores => {
               if (typeof stores === 'object' && stores !== null) {
-                Object.keys(stores).forEach(s => allStoresSet.add(s));
+                Object.keys(stores).forEach(s => { if (s !== LOJA_EXCLUIDA) allStoresSet.add(s); });
               }
             });
             const trendStoreNames = [...allStoresSet].sort((a,b) => a.localeCompare(b, 'pt-BR'));
@@ -3506,7 +3621,7 @@ return {
 
           {/* ============ MIX DE PRODUTOS TAB ============ */}
           {activeTab === 'mix' && (() => {
-            const storeKeys = [...new Set([...Object.keys(DATA.stores).filter(s => s !== 'CD Sancashop'), ...Object.keys(PM.byStore || {})])].sort((a,b) => a.localeCompare(b, 'pt-BR'));
+            const storeKeys = [...new Set([...Object.keys(DATA.stores).filter(s => s !== LOJA_EXCLUIDA), ...Object.keys(PM.byStore || {})])].sort((a,b) => a.localeCompare(b, 'pt-BR'));
             const isUntrustedCashless = mixStore !== '__all__' && UNTRUSTED_CASHLESS_STORES.has(mixStore);
             const selData = mixStore === '__all__' ? PM.__all__ : (PM.byStore[mixStore] || (isUntrustedCashless ? {} : null));
             if (!selData) return <div className="text-slate-400">Nenhum dado disponível.</div>;
@@ -3542,7 +3657,7 @@ return {
 
               {/* ── Mix de Categorias + Métricas Operacionais + Heatmap ── */}
               {(() => {
-                const CAT_COLORS = {'Bebidas':'#3b82f6','Chocolates/Doces':'#f59e0b','Sorvetes/Gelatos':'#ec4899','Snacks/Salgadinhos':'#10b981','Padaria/Pães':'#f97316','Congelados/Refeições':'#8b5cf6','Laticínios/Frios':'#06b6d4','Tabaco':'#ef4444','Mercearia':'#84cc16','Limpeza/Higiene':'#6366f1','Outros':'#64748b','Não Mapeado':'#475569','PROJAC':'#a855f7','AJUSTE BI':'#e11d48'};
+                const CAT_COLORS = {'Bebidas':'#3b82f6','Chocolates/Doces':'#f59e0b','Sorvetes/Gelatos':'#ec4899','Snacks/Salgadinhos':'#10b981','Padaria/Pães':'#f97316','Congelados/Refeições':'#8b5cf6','Laticínios/Frios':'#06b6d4','Tabaco':'#ef4444','Mercearia':'#84cc16','Limpeza/Higiene':'#6366f1','Outros':'#64748b','Não Mapeado':'#475569','PROJAC':'#a855f7','Sem detalhe':'#e11d48'};
                 const mc = selData.monthlyCategories;
                 const mm = selData.monthlyMetrics;
 
@@ -3555,6 +3670,7 @@ return {
                     Object.entries(DD).forEach(([date, stores]) => {
                       const ym = date.substring(0, 7);
                       Object.entries(stores).forEach(([rawStore, vals]) => {
+                        if (rawStore === LOJA_EXCLUIDA) return;
                         result[ym] = (result[ym] || 0) + (vals.fat || 0);
                       });
                     });
@@ -3659,7 +3775,7 @@ return {
                 const filterLabel = isCardSelected ? selectedClientOption?.label || ('Cartão ' + mixCardFilter) : (mixStore !== '__all__' ? mixStore : 'Consolidado');
                 const biReconBase = PM.biReconciliation || {};
                 const mtdBiReconBase = PM.mtdBiReconciliation || {};
-                const mtdDayMax = PM.mtdInfo?.dayMax || parseInt((DATA.lastUpdate || '').substring(8, 10)) || 9;
+                const mtdDayMax = parseInt((DATA.lastUpdate || '').substring(8, 10)) || PM.mtdInfo?.dayMax || 9;
                 const sumBucketValues = (bucket) => Object.values(bucket || {}).reduce((s, v) => s + (v || 0), 0);
                 const scopedBiMtd = (() => {
                   const DD = (window.DAILY_DATA?.days || window.DAILY_DATA || {});
@@ -3669,7 +3785,7 @@ return {
                     const ym = date.substring(0, 7);
                     if (mixStore === '__all__') {
                       Object.entries(stores || {}).forEach(([rawStore, vals]) => {
-                        if (rawStore === 'CD Sancashop') return;
+                        if (rawStore === LOJA_EXCLUIDA) return;
                         result[ym] = (result[ym] || 0) + (vals.fat || 0);
                       });
                     } else {
@@ -3682,26 +3798,51 @@ return {
                   });
                   return result;
                 })();
+                // Base diária do recorte (todas as lojas, ou a loja escolhida): vendas e Sanca Lev
+                const ddScopeExtra = (() => {
+                  const DD = (window.DAILY_DATA?.days || window.DAILY_DATA || {});
+                  const out = { vendas: {}, vendasMtd: {}, projac: {}, projacMtd: {} };
+                  const inScope = (rawStore) => mixStore === '__all__'
+                    ? rawStore !== LOJA_EXCLUIDA
+                    : (rawStore === mixStore || rawStore.startsWith(mixStore + ' - '));
+                  Object.entries(DD).forEach(([date, stores]) => {
+                    const ym = date.substring(0, 7);
+                    const isMtdDay = parseInt(date.substring(8, 10), 10) <= mtdDayMax;
+                    Object.entries(stores || {}).forEach(([rawStore, vals]) => {
+                      if (!inScope(rawStore)) return;
+                      const n = Number(vals?.vendas) || 0;
+                      out.vendas[ym] = (out.vendas[ym] || 0) + n;
+                      if (isMtdDay) out.vendasMtd[ym] = (out.vendasMtd[ym] || 0) + n;
+                      if (mixStore === '__all__' && rawStore === 'PROJAC - Sanca Lev') {
+                        const f = Number(vals?.fat) || 0;
+                        out.projac[ym] = (out.projac[ym] || 0) + f;
+                        if (isMtdDay) out.projacMtd[ym] = (out.projacMtd[ym] || 0) + f;
+                      }
+                    });
+                  });
+                  return out;
+                })();
+                // Reconciliação SEMPRE contra a base diária: categorias/pagamentos (cartão) + Sanca Lev +
+                // "Sem detalhe" (Fashion Mall/Simpliza e diferenças) = faturamento das abas Comparativo.
                 const buildScopedRecon = (monthlySource, mtdSource) => {
                   if (isCardSelected) return { monthly: {}, mtd: {} };
-                  if (mixStore === '__all__') return { monthly: biReconBase, mtd: mtdBiReconBase };
-                  const monthly = {};
-                  const mtd = {};
-                  const monthlyKeys = new Set([...Object.keys(ddMonthlyForStore || {}), ...Object.keys(monthlySource || {})]);
-                  [...monthlyKeys].sort().forEach(ym => {
-                    const bi = Math.round(((ddMonthlyForStore || {})[ym] || 0) * 100) / 100;
-                    const cashless = Math.round(sumBucketValues((monthlySource || {})[ym]) * 100) / 100;
-                    const delta = Math.round((bi - cashless) * 100) / 100;
-                    if (Math.abs(delta) > 0.01) monthly[ym] = { bi, cashless, delta, projac: 0, residual: delta };
-                  });
-                  const mtdKeys = new Set([...Object.keys(scopedBiMtd || {}), ...Object.keys(mtdSource || {})]);
-                  [...mtdKeys].sort().forEach(ym => {
-                    const bi = Math.round((scopedBiMtd[ym] || 0) * 100) / 100;
-                    const cashless = Math.round(sumBucketValues((mtdSource || {})[ym]) * 100) / 100;
-                    const delta = Math.round((bi - cashless) * 100) / 100;
-                    if (Math.abs(delta) > 0.01) mtd[ym] = { bi, cashless, delta, projac: 0, residual: delta };
-                  });
-                  return { monthly, mtd };
+                  const r2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
+                  const build = (biMap, srcMap, projacMap) => {
+                    const target = {};
+                    const keys = new Set([...Object.keys(biMap || {}), ...Object.keys(srcMap || {})]);
+                    [...keys].sort().forEach(ym => {
+                      const bi = r2((biMap || {})[ym]);
+                      const cashless = r2(sumBucketValues((srcMap || {})[ym]));
+                      const projac = mixStore === '__all__' ? r2((projacMap || {})[ym]) : 0;
+                      const residual = r2(bi - cashless - projac);
+                      target[ym] = { bi, cashless, delta: r2(bi - cashless), projac, residual };
+                    });
+                    return target;
+                  };
+                  return {
+                    monthly: build(ddMonthlyForStore, monthlySource, ddScopeExtra.projac),
+                    mtd: build(scopedBiMtd, mtdSource, ddScopeExtra.projacMtd),
+                  };
                 };
 
                 // ── Determine months with data in both years ──
@@ -3743,7 +3884,7 @@ return {
                 const showBIRecon = !isCardSelected;
                 // Only add 'Não Mapeado' as separate bar if it's NOT already in top6cats
                 const naoMapeadoInTop6 = top6cats.includes('Não Mapeado');
-                const chartCats = [...top6cats, 'Outros', ...(naoMapeadoInTop6 ? [] : ['Não Mapeado']), ...(showBIRecon ? ['PROJAC', 'AJUSTE BI'] : [])];
+                const chartCats = [...top6cats, 'Outros', ...(naoMapeadoInTop6 ? [] : ['Não Mapeado']), ...(showBIRecon ? ['PROJAC', 'Sem detalhe'] : [])];
                 const buildMixData = () => {
                   if (!mcForChart) return [];
                   const data = [];
@@ -3767,10 +3908,10 @@ return {
                       // Delta ≈ PROJAC revenue (absorbs small pipeline rounding too)
                       const br25 = biRecon['2025-'+m];
                       row['PROJAC_25'] = (br25 && br25.projac > 0) ? br25.projac : 0;
-                      row['AJUSTE BI_25'] = (br25 && Math.abs(br25.residual || 0) > 0.01) ? (br25.residual || 0) : 0;
+                      row['Sem detalhe_25'] = (br25 && Math.abs(br25.residual || 0) > 0.01) ? (br25.residual || 0) : 0;
                       const br26 = biRecon['2026-'+m];
                       row['PROJAC_26'] = (br26 && br26.projac > 0) ? br26.projac : 0;
-                      row['AJUSTE BI_26'] = (br26 && Math.abs(br26.residual || 0) > 0.01) ? (br26.residual || 0) : 0;
+                      row['Sem detalhe_26'] = (br26 && Math.abs(br26.residual || 0) > 0.01) ? (br26.residual || 0) : 0;
                     }
                     data.push(row);
                   });
@@ -3783,7 +3924,7 @@ return {
                     PM.__all__?.mtdCategories || {};
                   const cats26mtd = mtdCatSource['2026-'+nextMonth] || {};
                   const cats25mtd = mtdCatSource['2025-'+nextMonth] || {};
-                  const mtdDayMax = PM.mtdInfo?.dayMax || parseInt((DATA.lastUpdate || '').substring(8, 10)) || 9;
+                  const mtdDayMax = parseInt((DATA.lastUpdate || '').substring(8, 10)) || PM.mtdInfo?.dayMax || 9;
                   const rowMTD = { month: MESES[parseInt(nextMonth)-1] + ' MTD (d1-d' + mtdDayMax + ')' };
                   top6cats.forEach(cat => {
                     rowMTD[cat + '_25'] = cats25mtd[cat] || 0;
@@ -3797,11 +3938,13 @@ return {
                   }
                   if (showBIRecon) {
                     // PROJAC (BI de loja untrusted) empilha no MTD pra bater com o consolidado
-                    // do Comparativo Mensal (W2); AJUSTE BI (resíduo estrutural) não empilha (T2).
+                    // do Comparativo Mensal (W2); Sem detalhe (resíduo estrutural) não empilha (T2).
                     const mtdBr25 = mtdBiRecon['2025-'+nextMonth];
                     const mtdBr26 = mtdBiRecon['2026-'+nextMonth];
                     rowMTD['PROJAC_25'] = (mtdBr25 && mtdBr25.projac > 0) ? mtdBr25.projac : 0;
                     rowMTD['PROJAC_26'] = (mtdBr26 && mtdBr26.projac > 0) ? mtdBr26.projac : 0;
+                    rowMTD['Sem detalhe_25'] = (mtdBr25 && Math.abs(mtdBr25.residual || 0) > 0.01) ? (mtdBr25.residual || 0) : 0;
+                    rowMTD['Sem detalhe_26'] = (mtdBr26 && Math.abs(mtdBr26.residual || 0) > 0.01) ? (mtdBr26.residual || 0) : 0;
                   }
                   data.push(rowMTD);
                   return data;
@@ -3846,8 +3989,8 @@ return {
                     });
                     data.push({ month: ' ', isSpacer: true });
                     let v25a, v26a;
-                    if (isUntrustedCashless) {
-                      // No reliable cashless MTD for this store — use BI (DAILY_DATA), like the monthly bars above
+                    if (isUntrustedCashless || !isCardSelected) {
+                      // Sem filtro de cliente: base diária completa (igual às barras mensais e à aba Mensal)
                       v25a = scopedBiMtd['2025-'+nextMonth] || 0;
                       v26a = scopedBiMtd['2026-'+nextMonth] || 0;
                     } else {
@@ -3858,6 +4001,25 @@ return {
                     }
                     data.push({ month: MESES[parseInt(nextMonth)-1] + ' MTD', '2025': v25a, '2026': v26a });
                     return data;
+                  }
+                  if (!isCardSelected && (opMetric === 'txns' || opMetric === 'ticket')) {
+                    // Transações e ticket da base diária completa (mesmos números das abas Comparativo/Personalizado)
+                    const valOf = (fat, n) => opMetric === 'txns' ? n : (n > 0 ? Math.round(fat / n * 100) / 100 : 0);
+                    const dataD = [];
+                    fullMonths.forEach(m => {
+                      dataD.push({
+                        month: MESES[parseInt(m)-1],
+                        '2025': valOf((ddMonthlyForStore || {})['2025-'+m] || 0, ddScopeExtra.vendas['2025-'+m] || 0),
+                        '2026': valOf((ddMonthlyForStore || {})['2026-'+m] || 0, ddScopeExtra.vendas['2026-'+m] || 0),
+                      });
+                    });
+                    dataD.push({ month: ' ', isSpacer: true });
+                    dataD.push({
+                      month: MESES[parseInt(nextMonth)-1] + ' MTD',
+                      '2025': valOf(scopedBiMtd['2025-'+nextMonth] || 0, ddScopeExtra.vendasMtd['2025-'+nextMonth] || 0),
+                      '2026': valOf(scopedBiMtd['2026-'+nextMonth] || 0, ddScopeExtra.vendasMtd['2026-'+nextMonth] || 0),
+                    });
+                    return dataD;
                   }
                   const src = isRegisteredClientSelected ? clientMonthlyMetrics : isCardSelected ? selectedCardScope?.monthlyMetrics : mm;
                   if (!src) return [];
@@ -4150,7 +4312,7 @@ return {
                       <h3 className="text-white font-semibold text-base">Métricas Operacionais — Comparativo Mensal</h3>
                       <p className="text-slate-400 text-sm">
                         2025 vs 2026 — {filterLabel} — {opLabels[opMetric]}
-                        {opMetric === 'revenue' && isUntrustedCashless ? ' (fonte: BI — cashless desta loja não confiável)' : opMetric === 'revenue' && !isCardSelected && ddMonthlyForStore ? ' (meses fechados: BI)' : opMetric === 'revenue' && isCardSelected ? ' (fonte: cashless)' : ''}
+                        {isCardSelected ? ' (fonte: cartão/cashless)' : opMetric === 'itemsPerTx' ? ' (fonte: cartão/cashless — sem Fashion Mall e Sanca Lev)' : ' (fonte: base completa VMPay + Simpliza)'}
                         {(() => {
                           const has2025 = opData.some(d => !d.isSpacer && d['2025'] > 0);
                           const has2026 = opData.some(d => !d.isSpacer && d['2026'] > 0);
@@ -4252,7 +4414,7 @@ return {
 
                 {/* ── Chart D: Mix de Pagamentos — Comparativo Mensal ── */}
                 {(() => {
-                  const PAY_COLORS = {'Débito':'#3b82f6','Crédito':'#10b981','PIX':'#a855f7','Voucher':'#f59e0b','N/A':'#94a3b8','PicPay':'#a855f7','Indefinido':'#64748b','':'#94a3b8','PROJAC':'#f97316','AJUSTE BI':'#e11d48'};
+                  const PAY_COLORS = {'Débito':'#3b82f6','Crédito':'#10b981','PIX':'#a855f7','Voucher':'#f59e0b','N/A':'#94a3b8','PicPay':'#a855f7','Indefinido':'#64748b','':'#94a3b8','PROJAC':'#f97316','Sem detalhe':'#e11d48'};
                   // Get monthlyPayments from selected store or __all__
                   const mpSrc = (() => {
                     if (isRegisteredClientSelected && clientMonthlyPayments) return clientMonthlyPayments;
@@ -4270,7 +4432,7 @@ return {
                   const biReconPay = paymentScopedReconciliation.monthly;
                   const mtdBiReconPay = paymentScopedReconciliation.mtd;
                   const showBIReconPay = !isCardSelected;
-                  const payTypes = showBIReconPay ? ['Crédito','Débito','PIX','Voucher','N/A','PROJAC','AJUSTE BI'] : ['Crédito','Débito','PIX','Voucher','N/A'];
+                  const payTypes = showBIReconPay ? ['Crédito','Débito','PIX','Voucher','N/A','PROJAC','Sem detalhe'] : ['Crédito','Débito','PIX','Voucher','N/A'];
 
                   // Build chart data
                   const buildPayData = () => {
@@ -4287,10 +4449,10 @@ return {
                       if (showBIReconPay) {
                         const br25 = biReconPay['2025-'+m];
                         row['PROJAC_25'] = (br25 && br25.projac > 0) ? br25.projac : 0;
-                        row['AJUSTE BI_25'] = (br25 && Math.abs(br25.residual || 0) > 0.01) ? (br25.residual || 0) : 0;
+                        row['Sem detalhe_25'] = (br25 && Math.abs(br25.residual || 0) > 0.01) ? (br25.residual || 0) : 0;
                         const br26 = biReconPay['2026-'+m];
                         row['PROJAC_26'] = (br26 && br26.projac > 0) ? br26.projac : 0;
-                        row['AJUSTE BI_26'] = (br26 && Math.abs(br26.residual || 0) > 0.01) ? (br26.residual || 0) : 0;
+                        row['Sem detalhe_26'] = (br26 && Math.abs(br26.residual || 0) > 0.01) ? (br26.residual || 0) : 0;
                       }
                       data.push(row);
                     });
@@ -4304,7 +4466,7 @@ return {
                     })();
                     const p25mtd = mtdPaySrc['2025-'+nextMonth] || {};
                     const p26mtd = mtdPaySrc['2026-'+nextMonth] || {};
-                    const mtdDayMax = PM.mtdInfo?.dayMax || parseInt((DATA.lastUpdate || '').substring(8, 10)) || 9;
+                    const mtdDayMax = parseInt((DATA.lastUpdate || '').substring(8, 10)) || PM.mtdInfo?.dayMax || 9;
                     const rowMTD = { month: MESES[parseInt(nextMonth)-1] + ' MTD (d1-d' + mtdDayMax + ')' };
                     ['Crédito','Débito','PIX','Voucher','N/A'].forEach(pt => {
                       rowMTD[pt + '_25'] = p25mtd[pt] || 0;
@@ -4312,11 +4474,13 @@ return {
                     });
                     if (showBIReconPay) {
                       // PROJAC (BI de loja untrusted) empilha no MTD pra bater com o consolidado
-                      // do Comparativo Mensal (W2); AJUSTE BI (resíduo estrutural) não empilha (T2).
+                      // do Comparativo Mensal (W2); Sem detalhe (resíduo estrutural) não empilha (T2).
                       const mtdBr25 = mtdBiReconPay['2025-'+nextMonth];
                       const mtdBr26 = mtdBiReconPay['2026-'+nextMonth];
                       rowMTD['PROJAC_25'] = (mtdBr25 && mtdBr25.projac > 0) ? mtdBr25.projac : 0;
                       rowMTD['PROJAC_26'] = (mtdBr26 && mtdBr26.projac > 0) ? mtdBr26.projac : 0;
+                    rowMTD['Sem detalhe_25'] = (mtdBr25 && Math.abs(mtdBr25.residual || 0) > 0.01) ? (mtdBr25.residual || 0) : 0;
+                    rowMTD['Sem detalhe_26'] = (mtdBr26 && Math.abs(mtdBr26.residual || 0) > 0.01) ? (mtdBr26.residual || 0) : 0;
                     }
                     data.push(rowMTD);
                     return data;
@@ -4684,7 +4848,7 @@ return {
           {activeTab === 'custom' && (() => {
             const factsMeta = customFactsMeta;
             const minDate = factsMeta?.periodMin || '2025-01-01';
-            const maxDate = factsMeta?.periodMax || '2026-04-29';
+            const maxDate = DATA.lastUpdate || factsMeta?.periodMax || '2026-04-29';
 
             if (!factsMeta) {
               return <Card><p className="text-slate-400 text-center py-4">Carregando fatos unificados...</p></Card>;
@@ -4733,15 +4897,15 @@ return {
             const clientLabel = (clientId) => factsMeta.clients?.[clientId]?.label || '';
             const productLabel = (productId) => factsMeta.products?.[productId]?.[0] || '';
             const categoryLabel = (categoryId) => factsMeta.categories?.[categoryId] || '';
-            const visibleStores = [...new Set([...(factsMeta.stores || []), ...UNTRUSTED_CASHLESS_STORES])]
-              .filter(name => name && name !== 'CD Sancashop' && !CLOSED_STORES.has(name) && !CLOSED_STORES.has(cleanStore(name)))
+            const visibleStores = [...new Set([...(factsMeta.stores || []), ...UNTRUSTED_CASHLESS_STORES, ...Object.keys(Object.assign({}, ...Object.values((DAILY_DATA && (DAILY_DATA.days || DAILY_DATA)) || {}).slice(-60)))])]
+              .filter(name => name && name !== LOJA_EXCLUIDA && !CLOSED_STORES.has(name) && !CLOSED_STORES.has(cleanStore(name)))
               .map(name => ({ name }))
               .sort((a, b) => cleanStore(a.name).localeCompare(cleanStore(b.name), 'pt-BR'));
-            const isUntrustedCashless = UNTRUSTED_CASHLESS_STORES.has(customStore);
+            const isUntrustedCashless = false; // faturamento/vendas/ticket vêm da base diária para TODAS as lojas (inclui Fashion Mall)
             const machineOf = (row) => ((row.txnId || '').split('|')[3] || '');
             const allFactsRows = customFactsRows.filter(row => {
               const storeName = storeLabel(row.storeId);
-              return storeName && storeName !== 'CD Sancashop' && !CLOSED_STORES.has(storeName) && !CLOSED_STORES.has(cleanStore(storeName));
+              return !!storeName; // base de cartão: todas as lojas, inclusive CD e lojas fechadas (o seletor continua escondendo as fechadas)
             });
             const rowsInStoreScope = allFactsRows.filter(row => {
               if (!customStore) return true;
@@ -4847,7 +5011,7 @@ return {
             };
 
             function aggregateUnifiedPeriod({ startDate, endDate, store, machine, clientCards, categoryIds, productIds }) {
-              const storeId = store ? factsMeta.stores.indexOf(store) : -1;
+              const storeId = store ? (factsMeta.stores.indexOf(store) === -1 ? -2 : factsMeta.stores.indexOf(store)) : -1;
               const clientCardSet = (clientCards || []).length ? new Set(clientCards) : null;
               const normalizedCategoryIds = categoryIds || [];
               const normalizedProductIds = productIds || [];
@@ -4879,7 +5043,7 @@ return {
             }
 
             function aggregateUnifiedPaymentMix({ startDate, endDate, store, machine, clientCards, categoryIds, productIds }) {
-              const storeId = store ? factsMeta.stores.indexOf(store) : -1;
+              const storeId = store ? (factsMeta.stores.indexOf(store) === -1 ? -2 : factsMeta.stores.indexOf(store)) : -1;
               const clientCardSet = (clientCards || []).length ? new Set(clientCards) : null;
               const normalizedCategoryIds = categoryIds || [];
               const normalizedProductIds = productIds || [];
@@ -4929,37 +5093,61 @@ return {
               ...aggregationFilters,
             });
 
-            const applyCustomBiReconciliation = (period, mixResult, totalsResult) => {
-              const hasStoreScope = !!period.store;
+            const applyCustomDailyBase = (period, mixResult, totalsResult) => {
+              // Base completa (VMPay BI + Simpliza): TODAS as lojas (inclusive CD), exatamente no intervalo
+              // escolhido — a mesma soma das abas Comparativo Anual/Mensal/Diário. Filtro de cliente, máquina,
+              // categoria ou produto só existe na base de cartão; nesse caso os valores seguem sendo os do cartão.
               const hasClientScope = !!((period.clientCards || []).length);
               const hasItemScope = !!((period.categoryIds || []).length || (period.productIds || []).length);
-              if (hasStoreScope || hasClientScope || hasItemScope) return;
-              const startMonth = String(period.startDate || '').slice(0, 7);
-              const endMonth = String(period.endDate || '').slice(0, 7);
-              const startDay = Number(String(period.startDate || '').slice(8, 10));
-              const endDay = Number(String(period.endDate || '').slice(8, 10));
-              if (!startMonth || startMonth !== endMonth || startDay !== 1 || !endDay) return;
-              const recon = PM?.mtdBiReconciliation?.[startMonth];
-              if (!recon || Math.abs((Number(recon.bi) || 0) - totalsResult.total.fat) <= 0.01) return;
-              const delta = roundMoney((Number(recon.bi) || 0) - totalsResult.total.fat);
-              totalsResult.total.fat = roundMoney(Number(recon.bi) || 0);
-              totalsResult.total.ticket = totalsResult.total.transacoes > 0 ? roundMoney(totalsResult.total.fat / totalsResult.total.transacoes) : 0;
-              if (!mixResult.payTypes.includes('AJUSTE BI')) {
-                mixResult.payTypes = [...mixResult.payTypes, 'AJUSTE BI'];
-                mixResult.mix = [...mixResult.mix, { fat: 0, count: 0 }];
+              if (hasClientScope || hasItemScope || period.machine) return;
+              const dailyDays = DAILY_DATA ? (DAILY_DATA.days || DAILY_DATA) : null;
+              if (!dailyDays || !period.startDate || !period.endDate) return;
+              const matchStore = (nome) => !period.store || nome === period.store
+                || cleanStore(nome) === cleanStore(period.store) || nome.startsWith(period.store + ' - ');
+              const byStore = {};
+              let fat = 0, vendas = 0;
+              Object.keys(dailyDays).forEach(iso => {
+                if (iso < period.startDate || iso > period.endDate) return;
+                const lojas = dailyDays[iso] || {};
+                Object.keys(lojas).forEach(nome => {
+                  if (nome === LOJA_EXCLUIDA || !matchStore(nome)) return;
+                  const v = lojas[nome] || {};
+                  const f = Number(v.fat) || 0;
+                  const n = Number(v.vendas) || 0;
+                  fat += f; vendas += n;
+                  if (!byStore[nome]) byStore[nome] = { fat: 0, transacoes: 0, itens: 0, ticket: 0 };
+                  byStore[nome].fat += f; byStore[nome].transacoes += n;
+                });
+              });
+              if (fat <= 0) return;
+              const cardFat = roundMoney((mixResult.mix || []).reduce((sum, e) => sum + (Number(e.fat) || 0), 0));
+              Object.keys(byStore).forEach(nome => {
+                const b = byStore[nome];
+                b.fat = roundMoney(b.fat);
+                b.itens = (totalsResult.byStore[nome] && totalsResult.byStore[nome].itens) || 0;
+                b.ticket = b.transacoes > 0 ? roundMoney(b.fat / b.transacoes) : 0;
+              });
+              totalsResult.byStore = byStore;
+              totalsResult.total.fat = roundMoney(fat);
+              totalsResult.total.transacoes = vendas;
+              totalsResult.total.ticket = vendas > 0 ? roundMoney(fat / vendas) : 0;
+              const semDetalhe = roundMoney(fat - cardFat);
+              if (semDetalhe > 0.01) {
+                const label = 'Sem detalhe';
+                if (!mixResult.payTypes.includes(label)) {
+                  mixResult.payTypes = [...mixResult.payTypes, label];
+                  mixResult.mix = [...mixResult.mix, { fat: 0, count: 0 }];
+                }
+                const i = mixResult.payTypes.indexOf(label);
+                mixResult.mix[i] = { fat: roundMoney((Number(mixResult.mix[i]?.fat) || 0) + semDetalhe), count: Number(mixResult.mix[i]?.count) || 0 };
               }
-              const reconIdx = mixResult.payTypes.indexOf('AJUSTE BI');
-              mixResult.mix[reconIdx] = {
-                fat: roundMoney((Number(mixResult.mix[reconIdx]?.fat) || 0) + delta),
-                count: Number(mixResult.mix[reconIdx]?.count) || 0,
-              };
             };
-            applyCustomBiReconciliation({
+            applyCustomDailyBase({
               startDate: customPeriod1Start,
               endDate: customPeriod1End,
               ...aggregationFilters,
             }, pm1, p1);
-            applyCustomBiReconciliation({
+            applyCustomDailyBase({
               startDate: customPeriod2Start,
               endDate: customPeriod2End,
               ...aggregationFilters,
@@ -5201,6 +5389,9 @@ return {
                     {effectiveCustomClients.length > 0 ? ` • ${selectedCustomClientOption?.label || `${effectiveCustomClients.length} cartão(ões)`}` : ''}
                   </p>
                   <p className="text-slate-500 text-xs mt-1">Itens filtrados: {p1.total.itens.toLocaleString('pt-BR')} na análise • {p2.total.itens.toLocaleString('pt-BR')} na comparação</p>
+                  {(validCustomMachine || effectiveCustomClients.length > 0 || effectiveCustomCategories.length > 0 || effectiveCustomProducts.length > 0)
+                    ? <p className="text-amber-400 text-xs mt-1">Com filtro de máquina, cliente, categoria ou produto, os valores vêm só da base de cartão (cashless), que não inclui Fashion Mall nem Sanca Lev.</p>
+                    : <p className="text-slate-500 text-xs mt-1">Faturamento, transações e ticket: base completa (VMPay + Simpliza, todas as lojas, inclusive CD e lojas fechadas) — os mesmos números das abas Comparativo. "Sem detalhe" no mix de pagamentos = vendas sem forma de pagamento detalhada (ex.: Fashion Mall).</p>}
                 </Card>
 
                 {isUntrustedCashless ? (
