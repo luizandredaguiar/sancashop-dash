@@ -1059,7 +1059,9 @@ window.CLIENT_DATA = [{"name":"Evandro da Cruz Silva","email":"evandrocruzsilva1
     // (shared terminal — see build-product-mix.js isExcludedFromAnalytics). Single source of truth for
     // dashboard components: revenue views fall back to BI for these stores; composition views (categorias,
     // pagamentos, produtos, heatmap) show a placeholder instead of cashless data.
-    const UNTRUSTED_CASHLESS_STORES = new Set(['PROJAC - Sanca Lev', 'Fashion Mall']);
+    // (15/10) Fashion Mall agora tem produto/categoria/pagamento (Simpliza) e o Sanca Lev entra pela parte
+    // confiável do totem — nenhuma loja fica sem composição. O que não tem detalhe aparece em "Sem detalhe".
+    const UNTRUSTED_CASHLESS_STORES = new Set([]);
     const cleanStore = (n) => { if (!n) return n; if (n.startsWith('Cond. ')) return n.substring(6); if (n.startsWith('Ed. ')) return n.substring(4); if (n.startsWith('Ed.')) return n.substring(3); return n; };
     const normalizeCardMask = (rawCard) => {
       const digits = String(rawCard || '').replace(/\D/g, '');
@@ -3813,7 +3815,7 @@ return {
                       const n = Number(vals?.vendas) || 0;
                       out.vendas[ym] = (out.vendas[ym] || 0) + n;
                       if (isMtdDay) out.vendasMtd[ym] = (out.vendasMtd[ym] || 0) + n;
-                      if (mixStore === '__all__' && rawStore === 'PROJAC - Sanca Lev') {
+                      if (false) { // Sanca Lev entra pelo cartão confiável; o resto fica em "Sem detalhe"
                         const f = Number(vals?.fat) || 0;
                         out.projac[ym] = (out.projac[ym] || 0) + f;
                         if (isMtdDay) out.projacMtd[ym] = (out.projacMtd[ym] || 0) + f;
@@ -3884,7 +3886,7 @@ return {
                 const showBIRecon = !isCardSelected;
                 // Only add 'Não Mapeado' as separate bar if it's NOT already in top6cats
                 const naoMapeadoInTop6 = top6cats.includes('Não Mapeado');
-                const chartCats = [...top6cats, 'Outros', ...(naoMapeadoInTop6 ? [] : ['Não Mapeado']), ...(showBIRecon ? ['PROJAC', 'Sem detalhe'] : [])];
+                const chartCats = [...top6cats, 'Outros', ...(naoMapeadoInTop6 ? [] : ['Não Mapeado']), ...(showBIRecon ? ['Sem detalhe'] : [])];
                 const buildMixData = () => {
                   if (!mcForChart) return [];
                   const data = [];
@@ -4312,7 +4314,7 @@ return {
                       <h3 className="text-white font-semibold text-base">Métricas Operacionais — Comparativo Mensal</h3>
                       <p className="text-slate-400 text-sm">
                         2025 vs 2026 — {filterLabel} — {opLabels[opMetric]}
-                        {isCardSelected ? ' (fonte: cartão/cashless)' : opMetric === 'itemsPerTx' ? ' (fonte: cartão/cashless — sem Fashion Mall e Sanca Lev)' : ' (fonte: base completa VMPay + Simpliza)'}
+                        {isCardSelected ? ' (fonte: cartão/cashless)' : opMetric === 'itemsPerTx' ? ' (fonte: cartão/cashless + PDV da Fashion Mall)' : ' (fonte: base completa VMPay + Simpliza)'}
                         {(() => {
                           const has2025 = opData.some(d => !d.isSpacer && d['2025'] > 0);
                           const has2026 = opData.some(d => !d.isSpacer && d['2026'] > 0);
@@ -4414,7 +4416,7 @@ return {
 
                 {/* ── Chart D: Mix de Pagamentos — Comparativo Mensal ── */}
                 {(() => {
-                  const PAY_COLORS = {'Débito':'#3b82f6','Crédito':'#10b981','PIX':'#a855f7','Voucher':'#f59e0b','N/A':'#94a3b8','PicPay':'#a855f7','Indefinido':'#64748b','':'#94a3b8','PROJAC':'#f97316','Sem detalhe':'#e11d48'};
+                  const PAY_COLORS = {'Débito':'#3b82f6','Crédito':'#10b981','PIX':'#a855f7','Voucher':'#f59e0b','Dinheiro':'#eab308','N/A':'#94a3b8','PicPay':'#a855f7','Indefinido':'#64748b','':'#94a3b8','PROJAC':'#f97316','Sem detalhe':'#e11d48'};
                   // Get monthlyPayments from selected store or __all__
                   const mpSrc = (() => {
                     if (isRegisteredClientSelected && clientMonthlyPayments) return clientMonthlyPayments;
@@ -4432,7 +4434,7 @@ return {
                   const biReconPay = paymentScopedReconciliation.monthly;
                   const mtdBiReconPay = paymentScopedReconciliation.mtd;
                   const showBIReconPay = !isCardSelected;
-                  const payTypes = showBIReconPay ? ['Crédito','Débito','PIX','Voucher','N/A','PROJAC','Sem detalhe'] : ['Crédito','Débito','PIX','Voucher','N/A'];
+                  const payTypes = showBIReconPay ? ['Crédito','Débito','PIX','Voucher','Dinheiro','N/A','Sem detalhe'] : ['Crédito','Débito','PIX','Voucher','Dinheiro','N/A'];
 
                   // Build chart data
                   const buildPayData = () => {
@@ -4442,7 +4444,7 @@ return {
                       const p25 = mpSrc['2025-'+m] || {};
                       const p26 = mpSrc['2026-'+m] || {};
                       const row = { month: MESES[parseInt(m)-1] };
-                      ['Crédito','Débito','PIX','Voucher','N/A'].forEach(pt => {
+                      ['Crédito','Débito','PIX','Voucher','Dinheiro','N/A'].forEach(pt => {
                         row[pt + '_25'] = p25[pt] || 0;
                         row[pt + '_26'] = p26[pt] || 0;
                       });
@@ -4468,7 +4470,7 @@ return {
                     const p26mtd = mtdPaySrc['2026-'+nextMonth] || {};
                     const mtdDayMax = parseInt((DATA.lastUpdate || '').substring(8, 10)) || PM.mtdInfo?.dayMax || 9;
                     const rowMTD = { month: MESES[parseInt(nextMonth)-1] + ' MTD (d1-d' + mtdDayMax + ')' };
-                    ['Crédito','Débito','PIX','Voucher','N/A'].forEach(pt => {
+                    ['Crédito','Débito','PIX','Voucher','Dinheiro','N/A'].forEach(pt => {
                       rowMTD[pt + '_25'] = p25mtd[pt] || 0;
                       rowMTD[pt + '_26'] = p26mtd[pt] || 0;
                     });
@@ -5027,15 +5029,20 @@ return {
                 if (!filtered.included) return;
                 if (!result.byStore[storeName]) result.byStore[storeName] = { fat: 0, transacoes: 0, itens: 0, ticket: 0 };
                 result.byStore[storeName].fat += filtered.revenue;
-                result.byStore[storeName].transacoes += 1;
+                // linhas agregadas (PDV da Fashion Mall: 1 linha por dia e forma de pagamento) carregam o nº de vendas
+                const txW = row.agg ? (Number(row.txnCount) || 0) * (Number(row.txnRevenue) > 0 ? filtered.revenue / Number(row.txnRevenue) : 0) : 1;
+                result.byStore[storeName].transacoes += txW;
                 result.byStore[storeName].itens += filtered.itemQty;
                 result.total.fat += filtered.revenue;
-                result.total.transacoes += 1;
+                result.total.transacoes += txW;
                 result.total.itens += filtered.itemQty;
               });
               result.total.fat = roundMoney(result.total.fat);
+              result.total.transacoes = Math.round(result.total.transacoes);
+              result.total.itens = Math.round(result.total.itens * 100) / 100;
               result.total.ticket = result.total.transacoes > 0 ? roundMoney(result.total.fat / result.total.transacoes) : 0;
               Object.values(result.byStore).forEach(bucket => {
+                bucket.transacoes = Math.round(bucket.transacoes);
                 bucket.fat = roundMoney(bucket.fat);
                 bucket.ticket = bucket.transacoes > 0 ? roundMoney(bucket.fat / bucket.transacoes) : 0;
               });
@@ -5207,7 +5214,7 @@ return {
                 {v !== null ? `${v >= 0 ? '+' : ''}${v.toFixed(1)}%` : '—'}
               </td>
             );
-            const PAY_COLORS = { 'Crédito':'#10B981', 'Débito':'#3B82F6', 'PIX':'#8B5CF6', 'Voucher':'#F59E0B', 'N/A':'#64748b' };
+            const PAY_COLORS = { 'Crédito':'#10B981', 'Débito':'#3B82F6', 'PIX':'#8B5CF6', 'Voucher':'#F59E0B', 'Dinheiro':'#EAB308', 'N/A':'#64748b', 'Sem detalhe':'#e11d48' };
             const PayBar = ({ data, label, payTypes }) => {
               const total = roundMoney(data.reduce((sum, row) => sum + (Number(row.fat) || 0), 0));
               if (total === 0) return <p className="text-slate-500 text-xs text-center">Sem dados</p>;
@@ -5390,8 +5397,8 @@ return {
                   </p>
                   <p className="text-slate-500 text-xs mt-1">Itens filtrados: {p1.total.itens.toLocaleString('pt-BR')} na análise • {p2.total.itens.toLocaleString('pt-BR')} na comparação</p>
                   {(validCustomMachine || effectiveCustomClients.length > 0 || effectiveCustomCategories.length > 0 || effectiveCustomProducts.length > 0)
-                    ? <p className="text-amber-400 text-xs mt-1">Com filtro de máquina, cliente, categoria ou produto, os valores vêm só da base de cartão (cashless), que não inclui Fashion Mall nem Sanca Lev.</p>
-                    : <p className="text-slate-500 text-xs mt-1">Faturamento, transações e ticket: base completa (VMPay + Simpliza, todas as lojas, inclusive CD e lojas fechadas) — os mesmos números das abas Comparativo. "Sem detalhe" no mix de pagamentos = vendas sem forma de pagamento detalhada (ex.: Fashion Mall).</p>}
+                    ? <p className="text-amber-400 text-xs mt-1">Com filtro de máquina, cliente, categoria ou produto, os valores vêm só da base com detalhe de produto (cartão/cashless das lojas autônomas + PDV da Fashion Mall + totem do Sanca Lev).</p>
+                    : <p className="text-slate-500 text-xs mt-1">Faturamento, transações e ticket: base completa (VMPay + Simpliza, todas as lojas, inclusive CD e lojas fechadas) — os mesmos números das abas Comparativo. "Sem detalhe" no mix de pagamentos = vendas sem forma de pagamento detalhada (ex.: caixa do Sanca Lev fora do totem).</p>}
                 </Card>
 
                 {isUntrustedCashless ? (
