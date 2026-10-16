@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T08:04:06.460Z",
+  "generatedAt": "2026-10-16T07:05:25.020Z",
   "periodMin": "2025-01-01",
   "periodMax": "2026-10-14",
   "stores": [
@@ -743,6 +743,10 @@
       7
     ],
     [
+      "BARRA PROTEICA BOLD COOKIES & CREAM 60G",
+      7
+    ],
+    [
       "Barra Proteica Bold Cookies Black 60 g",
       7
     ],
@@ -1344,6 +1348,10 @@
     ],
     [
       "Bold Tube Avela 40 g",
+      1
+    ],
+    [
+      "BOLD TUBE AVELA 40G",
       1
     ],
     [
@@ -751137,6 +751145,6 @@
   "fmMerged": {
     "dias": 66,
     "linhas": 280,
-    "em": "2026-10-15T08:04:07.358Z"
+    "em": "2026-10-16T07:05:25.934Z"
   }
 }
