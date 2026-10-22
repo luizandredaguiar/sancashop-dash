@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-22T07:04:23.592Z",
+  "generatedAt": "2026-10-22T22:54:28.655Z",
   "periodMin": "2025-01-01",
   "periodMax": "2026-10-21",
   "stores": [
@@ -760787,8 +760787,8 @@
     "matchedRevenuePct": 99.18
   },
   "fmMerged": {
-    "dias": 72,
-    "linhas": 306,
-    "em": "2026-10-22T07:04:24.541Z"
+    "dias": 73,
+    "linhas": 309,
+    "em": "2026-10-22T22:54:29.544Z"
   }
 }
